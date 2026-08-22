@@ -1,16 +1,97 @@
 # LastEdge App
 
-Control center, Web Dashboard, Mobile App, Discord & Telegram bots for LastEdge.
+> **Repository:** `lastedge-app`  
+> **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
+> **Status:** Production Ready  
 
-## Overview
-- **Web Dashboard**: Decoupled HTTP interface on port `8080` with dark mode telemetry.
-- **Mobile App**: React Native / Expo application for real-time monitoring.
-- **Messaging Adapters**: Decoupled Telegram and Discord bot adapters.
-- **Resilient Clients**: `TradingClient` and `ResearchClient` with automatic offline graceful degradation.
+---
 
-## Quick Start
+## 1. Overview
+
+**LastEdge App** is the control plane and user-facing monitoring suite for the LastEdge ecosystem. It provides real-time visibility into live trading positions, account metrics, risk telemetry, research experiments, and messaging alerts.
+
+### Key Capabilities:
+- **Web Dashboard**: Modern, responsive dark-mode dashboard running on port `8080` (`services/dashboard_server.py`).
+- **Mobile Application**: Cross-platform React Native / Expo application for Android and iOS (`mobile-app/`).
+- **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
+- **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are offline.
+- **Messaging Adapters**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`).
+
+---
+
+## 2. Architecture & Modules
+
+```text
+LastEdge App/
+├── dashboard/                      # Web Dashboard frontend (HTML, CSS, JS)
+├── mobile-app/                     # React Native / Expo mobile application
+├── services/
+│   ├── dashboard_server.py         # Standalone Web Dashboard HTTP server (:8080)
+│   ├── telegram_adapter.py         # Decoupled Telegram Bot adapter
+│   ├── commands_refactored.py      # Decoupled Discord Slash command adapter
+│   ├── notification_dispatcher.py  # Central notification router
+│   ├── charts.py                   # Chart generation helpers
+│   └── clients/                    # Decoupled HTTP REST Clients
+│       ├── trading_client.py       # Client for Trading Engine (:8081)
+│       └── research_client.py      # Client for Strategy Lab (:8082)
+├── tests/                          # 11 automated unit & degradation tests
+└── docs/                           # Technical documentation
+```
+
+---
+
+## 3. Quick Start & Installation
+
+### Requirements:
+- Python 3.10+ (For Web Dashboard and Bot Adapters)
+- Node.js 18+ & PNPM (Optional, for Mobile App development)
+
+### Step 1: Install Python Dependencies
 ```bash
 pip install -r requirements.txt
+```
+
+### Step 2: Configure Environment
+```bash
 cp .env.example .env
+```
+Default `.env` configuration:
+```ini
+APP_PORT=8080
+TRADING_ENGINE_URL=http://localhost:8081
+STRATEGY_LAB_URL=http://localhost:8082
+API_TIMEOUT_SECONDS=2.0
+```
+
+### Step 3: Start Web Dashboard Server
+```bash
 python -m services.dashboard_server 8080
 ```
+Open your browser at `http://localhost:8080` to access the live dashboard.
+
+---
+
+## 4. Running Tests
+
+```bash
+python -m pytest tests/
+```
+Current test suite status: **11 / 11 passed (100% Green)**.
+
+---
+
+## 5. Documentation Index
+
+For detailed guides, refer to the documentation in [`docs/`](docs/):
+
+- 🏛️ [**Architecture**](docs/ARCHITECTURE.md): Control plane design, REST clients, and adapters.
+- ⚙️ [**Installation**](docs/INSTALLATION.md): Setup for Dashboard, Discord, Telegram, and Mobile.
+- 🔧 [**Configuration**](docs/CONFIGURATION.md): `.env` parameters, backend URLs, and API tokens.
+- 💻 [**Web Dashboard**](docs/DASHBOARD.md): UI layout, real-time polling, and static asset serving.
+- 🌐 [**REST API**](docs/API.md): App proxy endpoints and health check schemas on port `8080`.
+- 🤖 [**Discord Bot**](docs/DISCORD.md): Slash commands setup, bot authorization, and embeds.
+- 📱 [**Telegram Bot**](docs/TELEGRAM.md): Asynchronous polling bot, command list, and notifications.
+- 📱 [**Mobile App**](docs/MOBILE.md): React Native, Expo, build scripts, and tabs architecture.
+- 🔌 [**Service Connections**](docs/SERVICE_CONNECTIONS.md): HTTP communication with Trading and Research engines.
+- 🛡️ [**Degraded Mode**](docs/DEGRADED_MODE.md): Safe operation when one or both backends are offline.
+- 🧪 [**Testing Guide**](docs/TESTING.md): Unit tests, degradation matrix, and mock client tests.
