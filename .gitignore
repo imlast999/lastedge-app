@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment & Secrets
+.env
+*.keystore
+*.jks
+*.key
+*.pem
+
+# Mobile App & Frontend
+node_modules/
+mobile-app/node_modules/
+mobile-app/.expo/
+mobile-app/dist/
+mobile-app/web-build/
+.expo/
+dist/
+
+# Logs
+logs/
+*.log

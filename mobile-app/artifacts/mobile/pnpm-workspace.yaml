@@ -1,0 +1,4 @@
+# Workspace standalone para EAS Build.
+# Este archivo hace que pnpm trate artifacts/mobile como proyecto raíz
+# independiente, evitando que EAS herede el catálogo del workspace padre.
+packages: []

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <title>Quant Trading Bot Dashboard</title>
+</head>
+
+<body>
+
+    <!-- 1. Work In Progress Screen (For regular non-admin users) -->
+    <section id="work-in-progress" class="wip-container wip-hidden" aria-hidden="true">
+        <div class="wip-content">
+            <span class="wip-badge">
+                <span class="wip-dot"></span>
+                Status
+            </span>
+            <h1 class="wip-title">WORK IN PROGRESS</h1>
+            <p class="wip-subtitle">This website is currently under development.</p>
+        </div>
+    </section>
+
+    <!-- 2. Auth Container (Login / Register Modal) -->
+    <div class="container" id="container">
+        
+        <!-- Sign Up Form -->
+        <div class="form-container sign-up">
+            <form id="form-signup" novalidate>
+                <h1>Create Account</h1>
+                <div class="social-icons">
+                    <a href="#" class="icon"><i class="fa-brands fa-google-plus-g"></i></a>
+                    <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
+                    <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                </div>
+                <span>or use your email for registration</span>
+                <div class="field-group">
+                    <input type="text" id="signup-name" placeholder="Name" required>
+                    <span class="error-msg" id="err-signup-name"></span>
+                </div>
+                <div class="field-group">
+                    <input type="email" id="signup-email" placeholder="Email" required>
+                    <span class="error-msg" id="err-signup-email"></span>
+                </div>
+                <div class="field-group">
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                    <span class="error-msg" id="err-signup-password"></span>
+                </div>
+                <button type="submit">Sign Up</button>
+            </form>
+        </div>
+
+        <!-- Sign In Form -->
+        <div class="form-container sign-in">
+            <form id="form-signin" novalidate>
+                <h1>Sign In</h1>
+                <div class="social-icons">
+                    <a href="#" class="icon"><i class="fa-brands fa-google-plus-g"></i></a>
+                    <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
+                    <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                </div>
+                <span>or use your email password</span>
+                <div class="field-group">
+                    <input type="email" id="signin-email" placeholder="Email" required>
+                    <span class="error-msg" id="err-signin-email"></span>
+                </div>
+                <div class="field-group">
+                    <input type="password" id="signin-password" placeholder="Password" required>
+                    <span class="error-msg" id="err-signin-password"></span>
+                </div>
+                <a href="#" class="forgot-link">Forget Your Password?</a>
+                <button type="submit">Sign In</button>
+            </form>
+        </div>
+
+        <!-- Toggle Panel Container -->
+        <div class="toggle-container">
+            <div class="toggle">
+                <div class="toggle-panel toggle-left">
+                    <h1>Welcome Back!</h1>
+                    <p>Enter your personal details to use all of site features</p>
+                    <button class="hidden" id="login">Sign In</button>
+                </div>
+                <div class="toggle-panel toggle-right">
+                    <h1>Hello, Friend!</h1>
+                    <p>Register with your personal details to use all of site features</p>
+                    <button class="hidden" id="register">Sign Up</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. Admin Trading Bot Dashboard View (For Admin User) -->
+    <div id="admin-dashboard" class="dashboard-layout wip-hidden" aria-hidden="true">
+        
+        <!-- Header Nav -->
+        <header class="dash-header">
+            <div class="dash-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <span class="brand-title">QUANT TRADING BOT</span>
+                <div class="status-pill">
+                    <span class="status-dot"></span>
+                    SYSTEM ONLINE
+                </div>
+            </div>
+
+            <!-- Header Navigation Tabs -->
+            <nav class="dash-nav">
+                <button class="nav-item active" id="nav-btn-overview" onclick="switchDashTab('overview')">
+                    <i class="fa-solid fa-gauge-high"></i> Overview
+                </button>
+                <button class="nav-item" id="nav-btn-signals" onclick="switchDashTab('signals')">
+                    <i class="fa-solid fa-bolt"></i> Signals History
+                </button>
+                <button class="nav-item" id="nav-btn-analytics" onclick="switchDashTab('analytics')">
+                    <i class="fa-solid fa-chart-pie"></i> Analytics & Performance
+                </button>
+                <button class="nav-item" id="nav-btn-system" onclick="switchDashTab('system')">
+                    <i class="fa-solid fa-shield-halved"></i> System & Audits
+                </button>
+            </nav>
+
+            <!-- User Menu Trigger -->
+            <div class="dash-user-controls">
+                <div class="user-profile-btn" id="user-profile-trigger" onclick="toggleUserMenu(event)">
+                    <div class="user-avatar"><i class="fa-solid fa-user-shield"></i></div>
+                    <span class="user-name">Admin</span>
+                    <i class="fa-solid fa-chevron-down caret-icon"></i>
+                </div>
+
+                <!-- User Profile & Settings Dropdown Menu -->
+                <div id="user-dropdown-menu" class="user-dropdown-menu wip-hidden" onclick="event.stopPropagation()">
+                    <div class="user-menu-header">
+                        <div class="user-menu-avatar">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="user-menu-info">
+                            <span class="user-menu-title">Admin User</span>
+                            <span class="user-menu-email">admin@quant.com</span>
+                        </div>
+                    </div>
+
+                    <!-- Theme Switcher Row inside User Menu -->
+                    <div class="menu-switch-row">
+                        <div class="switch-label">
+                            <i class="fa-solid fa-moon" id="theme-icon"></i>
+                            <span id="theme-mode-label">Dark Mode</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="theme-toggle-switch" onchange="toggleThemeMode()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- MT5 Account Form inside User Menu -->
+                    <form id="form-mt5-settings" onsubmit="saveMT5Settings(event)">
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">
+                            MetaTrader 5 Credentials
+                        </div>
+
+                        <div class="setting-form-group" style="margin-bottom: 8px;">
+                            <label for="mt5-account-id">Account Login</label>
+                            <input type="text" id="mt5-account-id" placeholder="e.g. 5019823" required>
+                        </div>
+
+                        <div class="setting-form-group" style="margin-bottom: 8px;">
+                            <label for="mt5-password">Password</label>
+                            <input type="password" id="mt5-password" placeholder="••••••••••••">
+                        </div>
+
+                        <div class="setting-form-group" style="margin-bottom: 8px;">
+                            <label for="mt5-server">Server Name</label>
+                            <input type="text" id="mt5-server" placeholder="e.g. MetaQuotes-Demo" required>
+                        </div>
+
+                        <div class="setting-form-group" style="margin-bottom: 12px;">
+                            <label for="mt5-risk">Risk % Per Trade</label>
+                            <input type="number" step="0.1" id="mt5-risk" placeholder="0.5" value="0.5">
+                        </div>
+
+                        <button type="submit" class="btn-action btn-green" style="width: 100%; justify-content: center;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                        </button>
+                    </form>
+
+                    <button class="menu-logout-btn" onclick="logoutAdmin()">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Container -->
+        <main class="dash-content">
+
+            <!-- TAB 1: OVERVIEW -->
+            <div id="tab-sec-overview">
+                <!-- Key Stat Cards -->
+                <div class="stats-grid">
+                    
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">Session Balance / Equity</span>
+                            <div class="stat-icon-wrapper">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-equity">$5,420.50</div>
+                        <div class="stat-footer">
+                            <span class="trend-badge trend-up"><i class="fa-solid fa-arrow-trend-up"></i> +8.41%</span>
+                            <span>Base: $5,000.00</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">Win Rate & Profit</span>
+                            <div class="stat-icon-wrapper">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-winrate">78.5%</div>
+                        <div class="stat-footer">
+                            <span class="trend-badge trend-up"><i class="fa-solid fa-circle-check"></i> +$420.50</span>
+                            <span>33 W / 9 L</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">Signals Executed</span>
+                            <div class="stat-icon-wrapper">
+                                <i class="fa-solid fa-bolt-lightning"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-signals">42 / 48</div>
+                        <div class="stat-footer">
+                            <span class="trend-badge trend-up">Auto-Execute: ON</span>
+                            <span>High Confidence</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">System Health & Latency</span>
+                            <div class="stat-icon-wrapper">
+                                <i class="fa-solid fa-server"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-health">24 ms</div>
+                        <div class="stat-footer">
+                            <span class="trend-badge trend-up"><i class="fa-solid fa-wifi"></i> 99.98% Uptime</span>
+                            <span>MT5 Connected</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Recent Activity Preview Card -->
+                <div class="dash-card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Recent Signals Preview
+                        </div>
+                        <button class="btn-action" onclick="switchDashTab('signals')">
+                            View All Signals <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="trading-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Time</th>
+                                    <th>Symbol</th>
+                                    <th>Strategy</th>
+                                    <th>Type</th>
+                                    <th>Entry</th>
+                                    <th>SL</th>
+                                    <th>TP</th>
+                                    <th>Status / PnL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overview-signals-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: FULL SIGNALS HISTORY -->
+            <div id="tab-sec-signals" class="dash-card wip-hidden">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-list-check"></i> Complete Signals & Positions Log
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-action btn-green" onclick="exportSignalsCSV()">
+                            <i class="fa-solid fa-file-export"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filter-bar">
+                    <input type="text" id="signal-search" class="filter-input" placeholder="Search symbol or strategy..." onkeyup="filterSignals()">
+                    <select id="filter-status" class="filter-select" onchange="filterSignals()">
+                        <option value="ALL">All Statuses</option>
+                        <option value="WIN">WIN</option>
+                        <option value="LOSS">LOSS</option>
+                        <option value="OPEN">OPEN</option>
+                    </select>
+                    <select id="filter-type" class="filter-select" onchange="filterSignals()">
+                        <option value="ALL">All Types</option>
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="trading-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;"></th>
+                                <th>Timestamp Entry</th>
+                                <th>Symbol</th>
+                                <th>Strategy</th>
+                                <th>Type</th>
+                                <th>Confidence</th>
+                                <th>Entry Price</th>
+                                <th>SL</th>
+                                <th>TP</th>
+                                <th>Status / PnL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signal-table-body">
+                            <!-- Populated dynamically via JS with expandable rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: ANALYTICS & PERFORMANCE -->
+            <div id="tab-sec-analytics" class="dash-card wip-hidden">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-chart-pie"></i> Detailed Strategy & Performance Analytics
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">Profit Factor</span>
+                            <div class="stat-icon-wrapper"><i class="fa-solid fa-calculator"></i></div>
+                        </div>
+                        <div class="stat-value">2.48</div>
+                        <div class="stat-footer">Gross Win: $1,240 / Loss: $500</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">Average Risk/Reward</span>
+                            <div class="stat-icon-wrapper"><i class="fa-solid fa-scale-balanced"></i></div>
+                        </div>
+                        <div class="stat-value">1 : 2.15</div>
+                        <div class="stat-footer">Avg Win: +$142 / Avg Loss: -$65</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-label">Max Drawdown</span>
+                            <div class="stat-icon-wrapper"><i class="fa-solid fa-chart-line-down"></i></div>
+                        </div>
+                        <div class="stat-value" style="color: #10B981;">1.84%</div>
+                        <div class="stat-footer">Daily Cap: 5.0% Max</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SYSTEM & AUDITS -->
+            <div id="tab-sec-system" class="dash-card wip-hidden">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-microchip"></i> System Health, Broker Audits & Backups
+                    </div>
+                </div>
+                
+                <div class="readiness-grid">
+                    <div class="check-item">
+                        <div class="check-info">
+                            <i class="fa-solid fa-circle-check check-icon"></i>
+                            <div>
+                                <div class="check-name">MT5 Connection Bridge</div>
+                                <div class="check-desc">Latency: 14ms - Protocol: TCP Socket</div>
+                            </div>
+                        </div>
+                        <span class="tag-buy">ONLINE</span>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="check-info">
+                            <i class="fa-solid fa-circle-check check-icon"></i>
+                            <div>
+                                <div class="check-name">Broker Certification</div>
+                                <div class="check-desc">Order execution verification passed</div>
+                            </div>
+                        </div>
+                        <span class="tag-buy">PASSED</span>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="check-info">
+                            <i class="fa-solid fa-circle-check check-icon"></i>
+                            <div>
+                                <div class="check-name">Operational Readiness Audit</div>
+                                <div class="check-desc">Risk metrics & account balance checks</div>
+                            </div>
+                        </div>
+                        <span class="tag-buy">READY</span>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="check-info">
+                            <i class="fa-solid fa-circle-check check-icon"></i>
+                            <div>
+                                <div class="check-name">Forward Validation Engine</div>
+                                <div class="check-desc">Live simulation active</div>
+                            </div>
+                        </div>
+                        <span class="tag-buy">ACTIVE</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

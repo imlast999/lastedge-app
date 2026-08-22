@@ -1,0 +1,10 @@
+# LastEdge App & Web Dashboard Requirements
+# No MT5 or heavy scientific packages required — operates purely via REST/WebSocket
+requests>=2.31.0
+urllib3>=2.0.0
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+matplotlib>=3.7.0
+# Optional Discord/Telegram bot libraries
+discord.py>=2.3.0
+python-telegram-bot>=20.0
