@@ -1,5 +1,7 @@
 # LastEdge App
 
+[![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
+
 > **Repository:** `lastedge-app`  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
@@ -71,12 +73,19 @@ Open your browser at `http://localhost:8080` to access the live dashboard.
 
 ---
 
-## 4. Running Tests
+## 4. Running Tests & Continuous Integration
 
 ```bash
-python -m pytest tests/
+# Run all App tests locally
+python -m pytest tests/ -v
 ```
 Current test suite status: **11 / 11 passed (100% Green)**.
+
+### CI / Continuous Integration:
+- **Pipeline**: Automated on every push and pull request to `main` via [GitHub Actions](.github/workflows/ci.yml).
+- **Environment**: Multi-Python matrix (3.10, 3.11, 3.12) on `ubuntu-latest`.
+- **Degraded Mode & Fallbacks**: Tests verify that App and clients never crash when backends are offline.
+- For complete CI details, see [docs/ci_cd_setup.md](docs/ci_cd_setup.md).
 
 ---
 
@@ -84,6 +93,7 @@ Current test suite status: **11 / 11 passed (100% Green)**.
 
 For detailed guides, refer to the documentation in [`docs/`](docs/):
 
+- 🔄 [**CI/CD Setup**](docs/ci_cd_setup.md): GitHub Actions workflow and local parity.
 - 🏛️ [**Architecture**](docs/ARCHITECTURE.md): Control plane design, REST clients, and adapters.
 - ⚙️ [**Installation**](docs/INSTALLATION.md): Setup for Dashboard, Discord, Telegram, and Mobile.
 - 🔧 [**Configuration**](docs/CONFIGURATION.md): `.env` parameters, backend URLs, and API tokens.
