@@ -83,9 +83,8 @@ Current test suite status: **11 / 11 passed (100% Green)**.
 
 ### CI / Continuous Integration:
 - **Pipeline**: Automated on every push and pull request to `main` via [GitHub Actions](.github/workflows/ci.yml).
-- **Environment**: Multi-Python matrix (3.10, 3.11, 3.12) on `ubuntu-latest`.
+- **Environment**: Multi-Python matrix (3.10, 3.11, 3.12, 3.13) on Ubuntu and Windows.
 - **Degraded Mode & Fallbacks**: Tests verify that App and clients never crash when backends are offline.
-- For complete CI details, see [docs/ci_cd_setup.md](docs/ci_cd_setup.md).
 
 ---
 
@@ -93,15 +92,12 @@ Current test suite status: **11 / 11 passed (100% Green)**.
 
 For detailed guides, refer to the documentation in [`docs/`](docs/):
 
-- 🔄 [**CI/CD Setup**](docs/ci_cd_setup.md): GitHub Actions workflow and local parity.
 - 🏛️ [**Architecture**](docs/ARCHITECTURE.md): Control plane design, REST clients, and adapters.
 - ⚙️ [**Installation**](docs/INSTALLATION.md): Setup for Dashboard, Discord, Telegram, and Mobile.
 - 🔧 [**Configuration**](docs/CONFIGURATION.md): `.env` parameters, backend URLs, and API tokens.
 - 💻 [**Web Dashboard**](docs/DASHBOARD.md): UI layout, real-time polling, and static asset serving.
 - 🌐 [**REST API**](docs/API.md): App proxy endpoints and health check schemas on port `8080`.
-- 🤖 [**Discord Bot**](docs/DISCORD.md): Slash commands setup, bot authorization, and embeds.
-- 📱 [**Telegram Bot**](docs/TELEGRAM.md): Asynchronous polling bot, command list, and notifications.
+- 🤖 [**Bots Integration**](docs/BOTS.md): Discord slash commands, Telegram polling adapter, and notifications.
 - 📱 [**Mobile App**](docs/MOBILE.md): React Native, Expo, build scripts, and tabs architecture.
-- 🔌 [**Service Connections**](docs/SERVICE_CONNECTIONS.md): HTTP communication with Trading and Research engines.
-- 🛡️ [**Degraded Mode**](docs/DEGRADED_MODE.md): Safe operation when one or both backends are offline.
-- 🧪 [**Testing Guide**](docs/TESTING.md): Unit tests, degradation matrix, and mock client tests.
+- 🔌 [**Service Connections & Degradation**](docs/SERVICE_CONNECTIONS.md): HTTP communication with backend engines and offline handling.
+- 🧪 [**Testing & CI/CD**](docs/TESTING.md): Unit tests, degradation matrix, and GitHub Actions specification.
