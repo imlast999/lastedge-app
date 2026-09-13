@@ -4,7 +4,7 @@
 
 # LastEdge App
 
-[![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
+[![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
