@@ -1,3 +1,7 @@
+<div align="center">
+
+<img src="branding/LastEdge_Logo.png" alt="LastEdge App Logo" width="160">
+
 # LastEdge App
 
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
@@ -6,6 +10,8 @@
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
 > **Tests:** 11 / 11 Passed (100% Green)  
+
+</div>
 
 ---
 
