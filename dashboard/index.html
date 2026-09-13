@@ -77,6 +77,17 @@
         <!-- Main Content Container -->
         <main class="dash-content">
 
+            <!-- Real-Time System Failure / Outage Alert Banner -->
+            <div id="system-alert-banner" class="wip-hidden" style="padding: 14px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 18px; flex-shrink: 0;"></i>
+                    <div id="system-alert-message" style="font-size: 13px; font-weight: 600; line-height: 1.4;"></div>
+                </div>
+                <button class="btn-action" style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); flex-shrink: 0;" onclick="refreshDashboardData()">
+                    <i class="fa-solid fa-rotate"></i> Reintentar
+                </button>
+            </div>
+
             <!-- ============================================================ -->
             <!-- TAB 1: OVERVIEW -->
             <!-- ============================================================ -->

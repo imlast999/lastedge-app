@@ -126,7 +126,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             # ── Unified Ecosystem Aggregated Payload ──────────────────────────
             elif path in ("/api/data", "/api/dashboard/data"):
                 from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=6) as ex:
+                with ThreadPoolExecutor(max_workers=7) as ex:
                     f_status = ex.submit(trading_client.get_status)
                     f_metrics = ex.submit(trading_client.get_metrics)
                     f_equity = ex.submit(trading_client.get_equity)
@@ -135,6 +135,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     f_signals = ex.submit(trading_client.get_signals)
                     f_checklist = ex.submit(trading_client.get_checklist)
                     f_exp = ex.submit(research_client.get_experiments)
+                    f_lab_stat = ex.submit(research_client.get_status)
 
                 t_stat = f_status.result()
                 t_metrics = f_metrics.result()
@@ -144,11 +145,18 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 t_sig = f_signals.result()
                 t_check = f_checklist.result()
                 r_exp = f_exp.result()
+                r_stat = f_lab_stat.result()
+
+                t_online = t_stat.get("status") == "ONLINE" or (t_stat.get("ok") and not t_stat.get("offline"))
+                r_online = r_stat.get("status") != "OFFLINE" and (r_stat.get("ok") and not r_stat.get("offline"))
 
                 self._send_json(200, {
                     "ok": True,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "trading_engine_online": bool(t_online),
+                    "strategy_lab_online": bool(r_online),
                     "trading_engine": t_stat,
+                    "strategy_lab": r_stat,
                     "metrics": t_metrics.get("metrics", {}),
                     "equity": t_equity.get("equity", {}),
                     "positions": t_pos.get("positions", []),
