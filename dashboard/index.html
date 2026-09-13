@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -50,10 +50,10 @@
                     <i class="fa-solid fa-gauge-high"></i> Overview
                 </button>
                 <button class="nav-item" id="nav-btn-positions" onclick="switchDashTab('positions')">
-                    <i class="fa-solid fa-chart-line"></i> Posiciones MT5 (<span id="tab-count-positions">0</span>)
+                    <i class="fa-solid fa-chart-line"></i> MT5 Positions (<span id="tab-count-positions">0</span>)
                 </button>
                 <button class="nav-item" id="nav-btn-signals" onclick="switchDashTab('signals')">
-                    <i class="fa-solid fa-bolt"></i> Señales & Journal
+                    <i class="fa-solid fa-bolt"></i> Signals & Journal
                 </button>
                 <button class="nav-item" id="nav-btn-research" onclick="switchDashTab('research')">
                     <i class="fa-solid fa-flask"></i> Strategy Lab
@@ -65,10 +65,10 @@
 
             <!-- Quick Controls -->
             <div class="dash-user-controls" style="gap: 10px;">
-                <button class="btn-action" style="padding: 6px 12px;" onclick="refreshDashboardData()" title="Refrescar datos ahora">
-                    <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Sincronizar
+                <button class="btn-action" style="padding: 6px 12px;" onclick="refreshDashboardData()" title="Sync data now">
+                    <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Sync
                 </button>
-                <button class="btn-action" style="padding: 6px 12px;" onclick="toggleThemeMode()" title="Cambiar tema claro/oscuro">
+                <button class="btn-action" style="padding: 6px 12px;" onclick="toggleThemeMode()" title="Toggle light/dark theme">
                     <i class="fa-solid fa-moon" id="theme-toggle-icon"></i>
                 </button>
             </div>
@@ -84,7 +84,7 @@
                     <div id="system-alert-message" style="font-size: 13px; font-weight: 600; line-height: 1.4;"></div>
                 </div>
                 <button class="btn-action" style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); flex-shrink: 0;" onclick="refreshDashboardData()">
-                    <i class="fa-solid fa-rotate"></i> Reintentar
+                    <i class="fa-solid fa-rotate"></i> Retry
                 </button>
             </div>
 
@@ -98,7 +98,7 @@
                     <!-- Balance & Equity Card -->
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Balance & Equity MT5</span>
+                            <span class="stat-label">MT5 Balance & Equity</span>
                             <div class="stat-icon-wrapper">
                                 <i class="fa-solid fa-wallet"></i>
                             </div>
@@ -113,7 +113,7 @@
                     <!-- Broker & Terminal Card -->
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Bróker & Terminal</span>
+                            <span class="stat-label">Broker & Terminal</span>
                             <div class="stat-icon-wrapper">
                                 <i class="fa-solid fa-building-columns"></i>
                             </div>
@@ -121,7 +121,7 @@
                         <div class="stat-value" id="val-broker" style="font-size: 20px;">MetaTrader 5</div>
                         <div class="stat-footer">
                             <span class="trend-badge trend-up" id="val-account-mode">DEMO</span>
-                            <span id="val-account-info">Cuenta: — | Ping: — ms</span>
+                            <span id="val-account-info">Account: — | Ping: — ms</span>
                         </div>
                     </div>
 
@@ -133,22 +133,22 @@
                                 <i class="fa-solid fa-shield-halved"></i>
                             </div>
                         </div>
-                        <div class="stat-value" id="val-cb-status" style="font-size: 20px; color: var(--accent-green);">OPERATIVO</div>
+                        <div class="stat-value" id="val-cb-status" style="font-size: 20px; color: var(--accent-green);">OPERATIONAL</div>
                         <div class="stat-footer">
                             <span class="trend-badge trend-up" id="val-risk-rate">0.5% / Trade</span>
-                            <span id="val-exposure-info">Exposición: 0.00 Lots | Máx DD: 3.0%</span>
+                            <span id="val-exposure-info">Exposure: 0.00 Lots | Max DD: 3.0%</span>
                         </div>
                     </div>
 
                     <!-- AutoSignals Status -->
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">AutoSeñales & Escaneo</span>
+                            <span class="stat-label">AutoSignals & Scanner</span>
                             <div class="stat-icon-wrapper">
                                 <i class="fa-solid fa-satellite-dish"></i>
                             </div>
                         </div>
-                        <div class="stat-value" id="val-autosignals" style="font-size: 20px;">ACTIVO</div>
+                        <div class="stat-value" id="val-autosignals" style="font-size: 20px;">ACTIVE</div>
                         <div class="stat-footer">
                             <span class="trend-badge trend-up">Scan: 60s</span>
                             <span id="val-symbols-list">EURUSD, XAUUSD, BTCEUR</span>
@@ -161,9 +161,9 @@
                 <div class="dash-card" style="margin-top: 24px;">
                     <div class="card-header">
                         <div class="card-title">
-                            <i class="fa-solid fa-chart-line"></i> Posiciones Abiertas en MT5
+                            <i class="fa-solid fa-chart-line"></i> Open Positions in MT5
                         </div>
-                        <span style="font-size: 12px; color: var(--text-muted);" id="positions-last-update">Sincronizado</span>
+                        <span style="font-size: 12px; color: var(--text-muted);" id="positions-last-update">Synchronized</span>
                     </div>
 
                     <div class="table-responsive">
@@ -171,21 +171,21 @@
                             <thead>
                                 <tr>
                                     <th>Ticket</th>
-                                    <th>Símbolo</th>
-                                    <th>Tipo</th>
-                                    <th>Volumen</th>
-                                    <th>Precio Entrada</th>
-                                    <th>Precio Actual</th>
+                                    <th>Symbol</th>
+                                    <th>Type</th>
+                                    <th>Volume</th>
+                                    <th>Open Price</th>
+                                    <th>Current Price</th>
                                     <th>Stop Loss</th>
                                     <th>Take Profit</th>
-                                    <th>PnL Flotante</th>
-                                    <th>Acción</th>
+                                    <th>Floating PnL</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="overview-positions-body">
                                 <tr>
                                     <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 24px;">
-                                        Sin posiciones abiertas actualmente en MT5.
+                                        No open positions currently in MT5.
                                     </td>
                                 </tr>
                             </tbody>
@@ -197,10 +197,10 @@
                 <div class="dash-card" style="margin-top: 24px;">
                     <div class="card-header">
                         <div class="card-title">
-                            <i class="fa-solid fa-clock-rotate-left"></i> Señales Detectadas Recientes
+                            <i class="fa-solid fa-clock-rotate-left"></i> Recent Detected Signals
                         </div>
                         <button class="btn-action" onclick="switchDashTab('signals')">
-                            Ver Historial Completo <i class="fa-solid fa-arrow-right"></i>
+                            View Full History <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
 
@@ -208,21 +208,21 @@
                         <table class="trading-table">
                             <thead>
                                 <tr>
-                                    <th>Hora (UTC)</th>
-                                    <th>Símbolo</th>
-                                    <th>Estrategia</th>
-                                    <th>Dirección</th>
-                                    <th>Confianza</th>
-                                    <th>Precio</th>
+                                    <th>Time (UTC)</th>
+                                    <th>Symbol</th>
+                                    <th>Strategy</th>
+                                    <th>Direction</th>
+                                    <th>Confidence</th>
+                                    <th>Price</th>
                                     <th>SL</th>
                                     <th>TP</th>
-                                    <th>Estado</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody id="overview-signals-body">
                                 <tr>
                                     <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
-                                        Esperando nuevas señales del motor de AutoSeñales...
+                                        Waiting for new signals from AutoSignals engine...
                                     </td>
                                 </tr>
                             </tbody>
@@ -237,7 +237,7 @@
             <div id="tab-sec-positions" class="dash-card wip-hidden">
                 <div class="card-header">
                     <div class="card-title">
-                        <i class="fa-solid fa-chart-line"></i> Gestor de Posiciones Activas en MetaTrader 5
+                        <i class="fa-solid fa-chart-line"></i> MetaTrader 5 Active Positions Manager
                     </div>
                 </div>
 
@@ -246,21 +246,21 @@
                         <thead>
                             <tr>
                                 <th>Ticket</th>
-                                <th>Símbolo</th>
-                                <th>Tipo</th>
-                                <th>Lotes</th>
-                                <th>Precio Apertura</th>
-                                <th>Precio Mercado</th>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Lots</th>
+                                <th>Open Price</th>
+                                <th>Market Price</th>
                                 <th>SL</th>
                                 <th>TP</th>
-                                <th>Beneficio Flotante</th>
-                                <th>Acción</th>
+                                <th>Floating Profit</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="full-positions-body">
                             <tr>
                                 <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                                    No hay posiciones abiertas en este momento.
+                                    No open positions at this moment.
                                 </td>
                             </tr>
                         </tbody>
@@ -274,20 +274,20 @@
             <div id="tab-sec-signals" class="dash-card wip-hidden">
                 <div class="card-header">
                     <div class="card-title">
-                        <i class="fa-solid fa-bolt"></i> Flujo de Señales & Registro de Decisiones
+                        <i class="fa-solid fa-bolt"></i> Signal Stream & Decision Journal
                     </div>
                     <div class="card-actions">
                         <button class="btn-action btn-green" onclick="exportSignalsCSV()">
-                            <i class="fa-solid fa-file-export"></i> Exportar CSV
+                            <i class="fa-solid fa-file-export"></i> Export CSV
                         </button>
                     </div>
                 </div>
 
                 <!-- Filters -->
                 <div class="filter-bar">
-                    <input type="text" id="signal-search" class="filter-input" placeholder="Buscar por símbolo o estrategia..." onkeyup="filterSignals()">
+                    <input type="text" id="signal-search" class="filter-input" placeholder="Search by symbol or strategy..." onkeyup="filterSignals()">
                     <select id="filter-type" class="filter-select" onchange="filterSignals()">
-                        <option value="ALL">Todas las Direcciones</option>
+                        <option value="ALL">All Directions</option>
                         <option value="BUY">BUY</option>
                         <option value="SELL">SELL</option>
                     </select>
@@ -297,21 +297,21 @@
                     <table class="trading-table">
                         <thead>
                             <tr>
-                                <th>Fecha/Hora UTC</th>
-                                <th>Símbolo</th>
-                                <th>Estrategia</th>
-                                <th>Tipo</th>
-                                <th>Confianza</th>
-                                <th>Precio Entrada</th>
+                                <th>Date/Time (UTC)</th>
+                                <th>Symbol</th>
+                                <th>Strategy</th>
+                                <th>Type</th>
+                                <th>Confidence</th>
+                                <th>Entry Price</th>
                                 <th>Stop Loss</th>
                                 <th>Take Profit</th>
-                                <th>Estado</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="signal-table-body">
                             <tr>
                                 <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                                    Sin señales registradas en la sesión actual.
+                                    No signals recorded in current session.
                                 </td>
                             </tr>
                         </tbody>
@@ -327,44 +327,44 @@
                     <div class="card-title">
                         <i class="fa-solid fa-flask"></i> LastEdge Strategy Lab — Research Store
                     </div>
-                    <span style="font-size: 12px; color: var(--text-muted);">Repositorio Cuantitativo (research.db)</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">Quantitative Repository (research.db)</span>
                 </div>
 
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Total Investigaciones</span>
+                            <span class="stat-label">Total Research</span>
                             <div class="stat-icon-wrapper"><i class="fa-solid fa-database"></i></div>
                         </div>
                         <div class="stat-value" id="val-research-total">0</div>
-                        <div class="stat-footer">Experimentos registrados</div>
+                        <div class="stat-footer">Registered experiments</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Estrategias Promovidas</span>
+                            <span class="stat-label">Promoted Strategies</span>
                             <div class="stat-icon-wrapper"><i class="fa-solid fa-circle-check"></i></div>
                         </div>
                         <div class="stat-value" id="val-research-promoted" style="color: var(--accent-green);">0</div>
-                        <div class="stat-footer">Listas para producción</div>
+                        <div class="stat-footer">Production ready</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Candidatas en Validación</span>
+                            <span class="stat-label">Candidate Strategies</span>
                             <div class="stat-icon-wrapper"><i class="fa-solid fa-vial"></i></div>
                         </div>
                         <div class="stat-value" id="val-research-candidates" style="color: var(--color-warning);">0</div>
-                        <div class="stat-footer">En Walk Forward / Monte Carlo</div>
+                        <div class="stat-footer">In Walk Forward / Monte Carlo</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Estrategias Rechazadas</span>
+                            <span class="stat-label">Rejected Strategies</span>
                             <div class="stat-icon-wrapper"><i class="fa-solid fa-ban"></i></div>
                         </div>
                         <div class="stat-value" id="val-research-rejected" style="color: var(--color-sell);">0</div>
-                        <div class="stat-footer">No superaron rigor estadístico</div>
+                        <div class="stat-footer">Failed statistical rigor</div>
                     </div>
                 </div>
 
@@ -372,21 +372,21 @@
                     <table class="trading-table">
                         <thead>
                             <tr>
-                                <th>ID Exp</th>
-                                <th>Hipótesis / Estrategia</th>
-                                <th>Símbolo</th>
+                                <th>Exp ID</th>
+                                <th>Hypothesis / Strategy</th>
+                                <th>Symbol</th>
                                 <th>Timeframe</th>
                                 <th>Sharpe</th>
                                 <th>Sortino</th>
                                 <th>Max DD</th>
                                 <th>Win Rate</th>
-                                <th>Estado Decisión</th>
+                                <th>Decision Status</th>
                             </tr>
                         </thead>
                         <tbody id="research-table-body">
                             <tr>
                                 <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                                    Consultando investigaciones del Strategy Lab...
+                                    Querying Strategy Lab research...
                                 </td>
                             </tr>
                         </tbody>
@@ -400,12 +400,12 @@
             <div id="tab-sec-checklist" class="dash-card wip-hidden">
                 <div class="card-header">
                     <div class="card-title">
-                        <i class="fa-solid fa-shield-halved"></i> Auditoría Pre-Producción (Go-Live Checklist P5.1)
+                        <i class="fa-solid fa-shield-halved"></i> Pre-Production Audit (Go-Live Checklist P5.1)
                     </div>
                     <div class="card-actions">
                         <span id="checklist-summary-badge" class="trend-badge trend-up">12 PASS | 5 WARN | 0 FAIL</span>
                         <button class="btn-action btn-green" onclick="refreshChecklist()">
-                            <i class="fa-solid fa-rotate"></i> Re-Auditar Todo
+                            <i class="fa-solid fa-rotate"></i> Re-Audit All
                         </button>
                     </div>
                 </div>

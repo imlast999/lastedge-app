@@ -82,7 +82,7 @@ async function fetchLiveDashboardData() {
     try {
         const response = await fetch('/api/data');
         if (!response.ok) {
-            showDashboardOfflineState(`El servidor Dashboard respondió con código HTTP ${response.status}`);
+            showDashboardOfflineState(`Dashboard server responded with HTTP status ${response.status}`);
             return;
         }
 
@@ -90,7 +90,7 @@ async function fetchLiveDashboardData() {
         liveDataCache = data;
         processDashboardData(data);
     } catch (err) {
-        showDashboardOfflineState('No se puede conectar con el servidor Dashboard en el puerto 8080. ' + err);
+        showDashboardOfflineState('Unable to reach Dashboard server on port 8080. ' + err);
     }
 }
 
@@ -105,7 +105,7 @@ function showDashboardOfflineState(errorMsg) {
     const banner = document.getElementById('system-alert-banner');
     const bannerMsg = document.getElementById('system-alert-message');
     if (banner && bannerMsg) {
-        bannerMsg.innerHTML = `<strong>DASHBOARD OFFLINE:</strong> ${errorMsg}. Ejecuta <code>lastedge.bat</code> (opción 4 o 2) para iniciar el servidor web.`;
+        bannerMsg.innerHTML = `<strong>DASHBOARD OFFLINE:</strong> ${errorMsg}. Please ensure the dashboard service is running on port 8080.`;
         banner.classList.remove('wip-hidden');
     }
 
@@ -133,8 +133,10 @@ function processDashboardData(data) {
     const research = data.research || {};
 
     // 1. Precise MT5 Connection Check
-    const isMT5Connected = isEngineOnline && (
+    const isMT5Connected = isEngineOnline && Boolean(
         metrics.mt5_connected === true ||
+        tEngine.mt5_connected === true ||
+        (tEngine.health && tEngine.health.mt5_connected === true) ||
         (tEngine.health && tEngine.health.mt5 && tEngine.health.mt5.connected === true)
     );
 
@@ -149,22 +151,22 @@ function processDashboardData(data) {
     const outages = [];
 
     if (!isEngineOnline) {
-        outages.push('<strong>Trading Engine (:8081) fuera de línea</strong>');
+        outages.push('<strong>Trading Engine (:8081) is offline</strong>');
     } else if (!isMT5Connected) {
-        outages.push('<strong>MetaTrader 5 no conectado</strong> (Abre MT5 e inicia sesión con el bróker)');
+        outages.push('<strong>MetaTrader 5 terminal is disconnected</strong> (Launch MT5 and log in to your broker)');
     }
 
     if (!isLabOnline) {
-        outages.push('<strong>Strategy Lab (:8082) fuera de línea</strong>');
+        outages.push('<strong>Strategy Lab (:8082) is offline</strong>');
     }
 
     if (cbTripped) {
-        outages.push('<strong>Circuit Breaker DISPARADO</strong> (Límite de riesgo alcanzado)');
+        outages.push('<strong>Circuit Breaker TRIPPED</strong> (Trading halted by risk safeguards)');
     }
 
     if (banner && bannerMsg) {
         if (outages.length > 0) {
-            bannerMsg.innerHTML = outages.join(' &bull; ') + ' &mdash; <span style="font-weight: 400; color: var(--text-muted);">Usa <code>lastedge.bat</code> opción 4 para iniciar todo.</span>';
+            bannerMsg.innerHTML = outages.join(' &bull; ') + ' &mdash; <span style="font-weight: 400; color: var(--text-muted);">Please start the required backend services.</span>';
             banner.classList.remove('wip-hidden');
         } else {
             banner.classList.add('wip-hidden');
@@ -184,22 +186,22 @@ function processDashboardData(data) {
             eqElem.innerHTML = '<span style="color: var(--color-sell); font-size: 20px;">OFFLINE</span>';
         }
         if (floatBadge) {
-            floatBadge.textContent = 'ENGINE CAÍDO';
+            floatBadge.textContent = 'ENGINE DOWN';
             floatBadge.className = 'trend-badge trend-down';
         }
         if (balElem) {
-            balElem.textContent = 'Motor :8081 inaccesible';
+            balElem.textContent = 'Trading Engine :8081 unreachable';
         }
     } else if (!isMT5Connected) {
         if (eqElem) {
-            eqElem.innerHTML = '<span style="color: var(--color-warning); font-size: 20px;">SIN MT5</span>';
+            eqElem.innerHTML = '<span style="color: var(--color-warning); font-size: 20px;">NO MT5</span>';
         }
         if (floatBadge) {
-            floatBadge.textContent = 'MT5 DESCONECTADO';
+            floatBadge.textContent = 'MT5 DISCONNECTED';
             floatBadge.className = 'trend-badge trend-down';
         }
         if (balElem) {
-            balElem.textContent = 'Terminal MT5 no iniciada';
+            balElem.textContent = 'MT5 terminal not connected';
         }
     } else {
         const curEquity = equity.equity !== undefined ? equity.equity : (metrics.account_equity || 0.0);
@@ -226,7 +228,7 @@ function processDashboardData(data) {
 
     if (!isEngineOnline) {
         if (brokerElem) {
-            brokerElem.textContent = 'DESCONECTADO';
+            brokerElem.textContent = 'DISCONNECTED';
             brokerElem.style.color = 'var(--color-sell)';
         }
         if (modeBadge) {
@@ -234,19 +236,19 @@ function processDashboardData(data) {
             modeBadge.className = 'trend-badge trend-down';
         }
         if (accInfoElem) {
-            accInfoElem.textContent = 'Motor de trading apagado (:8081)';
+            accInfoElem.textContent = 'Trading engine is stopped (:8081)';
         }
     } else if (!isMT5Connected) {
         if (brokerElem) {
-            brokerElem.textContent = 'MT5 DESCONECTADO';
+            brokerElem.textContent = 'MT5 DISCONNECTED';
             brokerElem.style.color = 'var(--color-sell)';
         }
         if (modeBadge) {
-            modeBadge.textContent = 'SIN CONEXIÓN';
+            modeBadge.textContent = 'NO CONNECTION';
             modeBadge.className = 'trend-badge trend-down';
         }
         if (accInfoElem) {
-            accInfoElem.textContent = 'Abre MetaTrader 5 en Windows';
+            accInfoElem.textContent = 'Launch MetaTrader 5 in Windows';
         }
     } else {
         if (brokerElem) {
@@ -262,7 +264,7 @@ function processDashboardData(data) {
         if (accInfoElem) {
             const login = metrics.account_number || (tEngine.health && tEngine.health.mt5 ? tEngine.health.mt5.login : '—');
             const ping = (tEngine.health && tEngine.health.mt5 ? tEngine.health.mt5.ping_ms : 0);
-            accInfoElem.textContent = `Cuenta: ${login || '—'} | Ping: ${ping ? ping + ' ms' : 'Live'}`;
+            accInfoElem.textContent = `Account: ${login || '—'} | Ping: ${ping ? ping + ' ms' : 'Live'}`;
         }
     }
 
@@ -273,7 +275,7 @@ function processDashboardData(data) {
 
     if (!isEngineOnline) {
         if (cbElem) {
-            cbElem.textContent = 'MOTOR INACCESIBLE';
+            cbElem.textContent = 'ENGINE UNREACHABLE';
             cbElem.style.color = 'var(--color-sell)';
         }
         if (riskRateBadge) {
@@ -281,23 +283,23 @@ function processDashboardData(data) {
             riskRateBadge.className = 'trend-badge trend-down';
         }
         if (expElem) {
-            expElem.textContent = 'Sin telemetría de riesgo';
+            expElem.textContent = 'Risk telemetry unavailable';
         }
     } else if (cbTripped) {
         if (cbElem) {
-            cbElem.textContent = 'DISPARADO (PROTECCIÓN)';
+            cbElem.textContent = 'TRIPPED (PROTECTION)';
             cbElem.style.color = 'var(--color-sell)';
         }
         if (riskRateBadge) {
-            riskRateBadge.textContent = 'BLOQUEADO';
+            riskRateBadge.textContent = 'HALTED';
             riskRateBadge.className = 'trend-badge trend-down';
         }
         if (expElem) {
-            expElem.textContent = 'Límite de riesgo alcanzado';
+            expElem.textContent = 'Daily risk limit reached — Trading halted';
         }
     } else {
         if (cbElem) {
-            cbElem.textContent = 'NORMAL (OPERATIVO)';
+            cbElem.textContent = 'OPERATIONAL (NORMAL)';
             cbElem.style.color = 'var(--accent-green)';
         }
         if (riskRateBadge) {
@@ -308,7 +310,7 @@ function processDashboardData(data) {
         if (expElem) {
             const expLots = risk.total_exposure_lots || 0.0;
             const maxDD = risk.max_daily_dd_pct || 3.0;
-            expElem.textContent = `Exposición: ${expLots.toFixed(2)} Lots | Máx DD: ${maxDD}%`;
+            expElem.textContent = `Exposure: ${expLots.toFixed(2)} Lots | Max DD: ${maxDD}%`;
         }
     }
 
@@ -318,16 +320,16 @@ function processDashboardData(data) {
 
     if (!isEngineOnline) {
         if (autoSignalsElem) {
-            autoSignalsElem.textContent = 'INACTIVO';
+            autoSignalsElem.textContent = 'INACTIVE';
             autoSignalsElem.style.color = 'var(--color-sell)';
         }
         if (symbolsElem) {
-            symbolsElem.textContent = 'Motor de señales detenido';
+            symbolsElem.textContent = 'Signal scanner stopped';
         }
     } else {
         const isAuto = metrics.autosignals_enabled !== false;
         if (autoSignalsElem) {
-            autoSignalsElem.textContent = isAuto ? 'ACTIVO (Auto-Trade)' : 'PAUSADO';
+            autoSignalsElem.textContent = isAuto ? 'ACTIVE (Auto-Trade)' : 'PAUSED';
             autoSignalsElem.style.color = isAuto ? 'var(--accent-green)' : 'var(--color-warning)';
         }
         if (symbolsElem && Array.isArray(metrics.monitored_symbols)) {
@@ -365,13 +367,13 @@ function updateHeaderBadges(isEngineOnline, isLabOnline, isMT5Connected, cbCanTr
     const badgeMT5Text = document.getElementById('badge-mt5-text');
     if (badgeMT5 && badgeMT5Text) {
         if (!isEngineOnline) {
-            badgeMT5Text.textContent = 'MT5: INACCESIBLE';
+            badgeMT5Text.textContent = 'MT5: INACCESSIBLE';
             badgeMT5.className = 'status-pill pill-red';
         } else if (isMT5Connected) {
-            badgeMT5Text.textContent = 'MT5: CONECTADO';
+            badgeMT5Text.textContent = 'MT5: CONNECTED';
             badgeMT5.className = 'status-pill pill-green';
         } else {
-            badgeMT5Text.textContent = 'MT5: DESCONECTADO';
+            badgeMT5Text.textContent = 'MT5: DISCONNECTED';
             badgeMT5.className = 'status-pill pill-red';
         }
     }
@@ -389,7 +391,7 @@ function updateHeaderBadges(isEngineOnline, isLabOnline, isMT5Connected, cbCanTr
     const badgeCBText = document.getElementById('badge-cb-text');
     if (badgeCB && badgeCBText) {
         if (!isEngineOnline) {
-            badgeCBText.textContent = 'CIRCUIT BREAKER: DESCONOCIDO';
+            badgeCBText.textContent = 'CIRCUIT BREAKER: UNKNOWN';
             badgeCB.className = 'status-pill pill-red';
         } else if (cbCanTrade) {
             badgeCBText.textContent = 'CIRCUIT BREAKER: NORMAL';
@@ -417,11 +419,11 @@ function renderPositionsTables(positions, isEngineOnline, isMT5Connected) {
             <tr>
                 <td colspan="10" style="text-align: center; padding: 28px;">
                     <div style="color: #EF4444; font-weight: 700; font-size: 14px; margin-bottom: 6px;">
-                        <i class="fa-solid fa-triangle-exclamation"></i> TRADING ENGINE FUERA DE LÍNEA (:8081)
+                        <i class="fa-solid fa-triangle-exclamation"></i> TRADING ENGINE IS OFFLINE (:8081)
                     </div>
                     <div style="color: var(--text-muted); font-size: 12px; line-height: 1.5;">
-                        No se pueden consultar las posiciones de MT5 porque el motor no responde.<br>
-                        Inicia el motor de trading ejecutando la opción 1 o 4 de <code>lastedge.bat</code>.
+                        Unable to query MT5 positions because the trading engine is not responding.<br>
+                        Please start the Trading Engine service on port 8081.
                     </div>
                 </td>
             </tr>
@@ -437,11 +439,11 @@ function renderPositionsTables(positions, isEngineOnline, isMT5Connected) {
             <tr>
                 <td colspan="10" style="text-align: center; padding: 28px;">
                     <div style="color: #F59E0B; font-weight: 700; font-size: 14px; margin-bottom: 6px;">
-                        <i class="fa-solid fa-plug-circle-xmark"></i> METATRADER 5 NO CONECTADO
+                        <i class="fa-solid fa-plug-circle-xmark"></i> METATRADER 5 NOT CONNECTED
                     </div>
                     <div style="color: var(--text-muted); font-size: 12px; line-height: 1.5;">
-                        El motor de trading está activo pero no puede comunicarse con MetaTrader 5.<br>
-                        Abre la terminal MT5 en Windows e inicia sesión en tu cuenta con el bróker FXLiveCapital.
+                        The Trading Engine is online but cannot communicate with the MetaTrader 5 terminal.<br>
+                        Launch MetaTrader 5 on Windows and log in to your broker account.
                     </div>
                 </td>
             </tr>
@@ -457,7 +459,7 @@ function renderPositionsTables(positions, isEngineOnline, isMT5Connected) {
             <tr>
                 <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 24px;">
                     <i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>
-                    Conectado a MT5. Sin posiciones abiertas en este momento.
+                    Connected to MT5. No open positions currently.
                 </td>
             </tr>
         `;
@@ -486,7 +488,7 @@ function renderPositionsTables(positions, isEngineOnline, isMT5Connected) {
                 <td style="font-weight: 700; color: ${pnlColor};">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</td>
                 <td>
                     <button class="btn-action btn-danger" style="padding: 3px 8px; font-size: 11px; background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);" onclick="closePosition(${pos.ticket})">
-                        <i class="fa-solid fa-xmark"></i> Cerrar
+                        <i class="fa-solid fa-xmark"></i> Close
                     </button>
                 </td>
             </tr>
@@ -501,7 +503,7 @@ function renderPositionsTables(positions, isEngineOnline, isMT5Connected) {
  * Close MT5 Position via API
  */
 async function closePosition(ticket) {
-    if (!confirm(`¿Confirmas cerrar la posición #${ticket} en MT5?`)) return;
+    if (!confirm(`Are you sure you want to close position #${ticket} on MT5?`)) return;
     try {
         const res = await fetch('/api/positions/close', {
             method: 'POST',
@@ -510,13 +512,13 @@ async function closePosition(ticket) {
         });
         const data = await res.json();
         if (data.ok) {
-            alert(`Posición #${ticket} cerrada correctamente.`);
+            alert(`Position #${ticket} successfully closed.`);
             fetchLiveDashboardData();
         } else {
-            alert(`Error cerrando posición: ${data.message || data.error}`);
+            alert(`Error closing position: ${data.message || data.error}`);
         }
     } catch (e) {
-        alert(`Fallo de conexión al cerrar: ${e}`);
+        alert(`Connection failure closing position: ${e}`);
     }
 }
 
@@ -531,7 +533,7 @@ function renderSignalsTable(signals, isEngineOnline) {
         const offlineRow = `
             <tr>
                 <td colspan="9" style="text-align: center; padding: 24px; color: #EF4444;">
-                    <i class="fa-solid fa-triangle-exclamation"></i> Trading Engine fuera de línea (:8081). Señales en vivo no disponibles.
+                    <i class="fa-solid fa-triangle-exclamation"></i> Trading Engine is offline (:8081). Live signals are unavailable.
                 </td>
             </tr>
         `;
@@ -545,7 +547,7 @@ function renderSignalsTable(signals, isEngineOnline) {
             <tr>
                 <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
                     <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--accent-green); margin-right: 6px;"></i>
-                    Motor activo. Escaneando el mercado en busca de señales...
+                    Engine active. Scanning market for entry setups...
                 </td>
             </tr>
         `;
@@ -573,7 +575,7 @@ function renderSignalsTable(signals, isEngineOnline) {
                     <td>${sig.entry_price || sig.price || '—'}</td>
                     <td>${sig.sl || '—'}</td>
                     <td>${sig.tp || '—'}</td>
-                    <td><span class="status-pill pill-green" style="font-size: 10px; padding: 2px 6px;">REGISTRADA</span></td>
+                    <td><span class="status-pill pill-green" style="font-size: 10px; padding: 2px 6px;">RECORDED</span></td>
                 </tr>
             `,
             full: `
@@ -586,7 +588,7 @@ function renderSignalsTable(signals, isEngineOnline) {
                     <td>${sig.entry_price || sig.price || '—'}</td>
                     <td>${sig.sl || '—'}</td>
                     <td>${sig.tp || '—'}</td>
-                    <td><span class="status-pill pill-green" style="font-size: 10px; padding: 2px 6px;">REGISTRADA</span></td>
+                    <td><span class="status-pill pill-green" style="font-size: 10px; padding: 2px 6px;">RECORDED</span></td>
                 </tr>
             `
         };
@@ -638,11 +640,11 @@ function renderStrategyLab(research, isLabOnline) {
                 <tr>
                     <td colspan="9" style="text-align: center; padding: 32px;">
                         <div style="color: #EF4444; font-weight: 700; font-size: 14px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-triangle-exclamation"></i> STRATEGY LAB FUERA DE LÍNEA (:8082)
+                            <i class="fa-solid fa-triangle-exclamation"></i> STRATEGY LAB IS OFFLINE (:8082)
                         </div>
                         <div style="color: var(--text-muted); font-size: 12px; line-height: 1.5;">
-                            El servicio de investigación cuantitativa en el puerto 8082 no responde.<br>
-                            Inicia Strategy Lab ejecutando la opción 3 o 4 de <code>lastedge.bat</code>.
+                            The quantitative research service on port 8082 is not responding.<br>
+                            Please start the Strategy Lab service on port 8082.
                         </div>
                     </td>
                 </tr>
@@ -665,7 +667,7 @@ function renderStrategyLab(research, isLabOnline) {
             <tr>
                 <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
                     <i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>
-                    Strategy Lab conectado (:8082). 0 experimentos en investigación activa (research.db).
+                    Strategy Lab connected (:8082). 0 active experiments recorded (research.db).
                 </td>
             </tr>
         `;
@@ -680,7 +682,7 @@ function renderStrategyLab(research, isLabOnline) {
         return `
             <tr>
                 <td style="font-family: monospace; font-weight: 700;">#${exp.id || '—'}</td>
-                <td style="font-weight: 600;">${exp.hypothesis || exp.strategy_name || 'Estrategia Cuantitativa'}</td>
+                <td style="font-weight: 600;">${exp.hypothesis || exp.strategy_name || 'Quantitative Strategy'}</td>
                 <td>${exp.symbol || 'EURUSD'}</td>
                 <td>${exp.timeframe || 'H1'}</td>
                 <td>${metrics.sharpe_ratio !== undefined ? metrics.sharpe_ratio.toFixed(2) : '—'}</td>
@@ -704,16 +706,16 @@ function renderChecklist(checklist, isEngineOnline) {
 
     if (!isEngineOnline) {
         if (summaryBadge) {
-            summaryBadge.textContent = 'FALLO | MOTOR APAGADO';
+            summaryBadge.textContent = 'FAIL | ENGINE OFFLINE';
             summaryBadge.className = 'trend-badge trend-down';
         }
         grid.innerHTML = `
             <div style="grid-column: 1 / -1; padding: 24px; text-align: center; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px;">
                 <i class="fa-solid fa-triangle-exclamation" style="color: #EF4444; font-size: 28px; margin-bottom: 8px;"></i>
-                <div style="font-weight: 700; color: #EF4444; font-size: 14px;">CHECKLIST PRE-FLIGHT NO DISPONIBLE</div>
+                <div style="font-weight: 700; color: #EF4444; font-size: 14px;">PRE-FLIGHT AUDIT UNAVAILABLE</div>
                 <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">
-                    El Trading Engine (:8081) debe estar en ejecución para auditar los 17 puntos pre-producción.<br>
-                    Inícialo con la opción 1 o 4 de <code>lastedge.bat</code>.
+                    Trading Engine (:8081) must be running to perform the 17-point pre-production readiness audit.<br>
+                    Please start the Trading Engine service on port 8081.
                 </div>
             </div>
         `;
@@ -773,7 +775,7 @@ async function refreshChecklist() {
  */
 function exportSignalsCSV() {
     if (!liveDataCache || !liveDataCache.signals || liveDataCache.signals.length === 0) {
-        alert('No hay señales disponibles para exportar.');
+        alert('No signals available to export.');
         return;
     }
     const sigs = liveDataCache.signals;
