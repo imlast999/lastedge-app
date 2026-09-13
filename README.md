@@ -2,26 +2,40 @@
 
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 
-> **Repository:** `lastedge-app`  
+> **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
+> **Tests:** 11 / 11 Passed (100% Green)  
 
 ---
 
 ## 1. Overview
 
-**LastEdge App** is the control plane and user-facing monitoring suite for the LastEdge ecosystem. It provides real-time visibility into live trading positions, account metrics, risk telemetry, research experiments, and messaging alerts.
+**LastEdge App** is the control plane and user-facing monitoring suite for the LastEdge quantitative platform. It provides real-time visibility and control into live trading positions, account metrics, risk telemetry, research experiments, and messaging alerts.
 
 ### Key Capabilities:
 - **Web Dashboard**: Modern, responsive dark-mode dashboard running on port `8080` (`services/dashboard_server.py`).
 - **Mobile Application**: Cross-platform React Native / Expo application for Android and iOS (`mobile-app/`).
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
-- **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are offline.
+- **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are temporarily offline.
 - **Messaging Adapters**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`).
 
 ---
 
-## 2. Architecture & Modules
+## 2. Ecosystem & Sister Repositories
+
+LastEdge App sits at the presentation layer of the LastEdge ecosystem, connecting traders and researchers with the underlying engines:
+
+| Repository | Role | Integration Point |
+| :--- | :--- | :--- |
+| ⚡ [**LastEdge Trading Engine**](https://github.com/imlast999/lastedge-trading-engine) | MT5 Execution & Risk Engine v2 | **Live Execution Telemetry**: App connects via [`services/clients/trading_client.py`](services/clients/trading_client.py) to `http://localhost:8081` to display active positions, daily drawdown, trailing stops, and account equity. |
+| 🔬 [**LastEdge Strategy Lab**](https://github.com/imlast999/lastedge-strategy-lab) | Quantitative Research & Validation | **Research Telemetry & Control**: App connects via [`services/clients/research_client.py`](services/clients/research_client.py) to `http://localhost:8082` to display backtest metrics, candidate statuses, and trigger research pipeline jobs. |
+
+If either backend engine is offline, LastEdge App continues serving user requests smoothly using cached telemetry and graceful fallback states.
+
+---
+
+## 3. Architecture & Directory Structure
 
 ```text
 LastEdge App/
@@ -33,6 +47,7 @@ LastEdge App/
 │   ├── commands_refactored.py      # Decoupled Discord Slash command adapter
 │   ├── notification_dispatcher.py  # Central notification router
 │   ├── charts.py                   # Chart generation helpers
+│   ├── i18n.py                     # Multi-language support (ES, EN)
 │   └── clients/                    # Decoupled HTTP REST Clients
 │       ├── trading_client.py       # Client for Trading Engine (:8081)
 │       └── research_client.py      # Client for Strategy Lab (:8082)
@@ -42,7 +57,7 @@ LastEdge App/
 
 ---
 
-## 3. Quick Start & Installation
+## 4. Quick Start & Installation
 
 ### Requirements:
 - Python 3.10+ (For Web Dashboard and Bot Adapters)
@@ -73,7 +88,7 @@ Open your browser at `http://localhost:8080` to access the live dashboard.
 
 ---
 
-## 4. Running Tests & Continuous Integration
+## 5. Running Tests & Continuous Integration
 
 ```bash
 # Run all App tests locally
@@ -88,9 +103,9 @@ Current test suite status: **11 / 11 passed (100% Green)**.
 
 ---
 
-## 5. Documentation Index
+## 6. Documentation Index
 
-For detailed guides, refer to the documentation in [`docs/`](docs/):
+For detailed guides, refer to [`docs/`](docs/):
 
 - 🏛️ [**Architecture**](docs/ARCHITECTURE.md): Control plane design, REST clients, and adapters.
 - ⚙️ [**Installation**](docs/INSTALLATION.md): Setup for Dashboard, Discord, Telegram, and Mobile.
