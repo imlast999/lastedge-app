@@ -160,6 +160,22 @@ class TradingClient:
             return {"ok": False, "checklist": {}, "offline": True}
         return res
 
+    def get_risk(self) -> Dict[str, Any]:
+        """Gets real-time Risk Engine v2 telemetry and circuit breaker state."""
+        res = self._get("/api/trading/risk")
+        if res.get("offline"):
+            return {
+                "ok": False,
+                "can_trade": False,
+                "circuit_breaker": {"can_trade": False, "reason": "Trading Engine offline"},
+                "open_positions_count": 0,
+                "total_exposure_lots": 0.0,
+                "total_floating_pnl": 0.0,
+                "account_equity": 0.0,
+                "offline": True
+            }
+        return res
+
     def close_position(self, ticket: int) -> Dict[str, Any]:
         """Requests closing an open MT5 position."""
         return self._post("/api/trading/positions/close", {"ticket": ticket})

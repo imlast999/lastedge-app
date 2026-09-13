@@ -123,12 +123,50 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
 
+            # ── Unified Ecosystem Aggregated Payload ──────────────────────────
+            elif path in ("/api/data", "/api/dashboard/data"):
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=6) as ex:
+                    f_status = ex.submit(trading_client.get_status)
+                    f_metrics = ex.submit(trading_client.get_metrics)
+                    f_equity = ex.submit(trading_client.get_equity)
+                    f_pos = ex.submit(trading_client.get_positions)
+                    f_risk = ex.submit(trading_client.get_risk)
+                    f_signals = ex.submit(trading_client.get_signals)
+                    f_checklist = ex.submit(trading_client.get_checklist)
+                    f_exp = ex.submit(research_client.get_experiments)
+
+                t_stat = f_status.result()
+                t_metrics = f_metrics.result()
+                t_equity = f_equity.result()
+                t_pos = f_pos.result()
+                t_risk = f_risk.result()
+                t_sig = f_signals.result()
+                t_check = f_checklist.result()
+                r_exp = f_exp.result()
+
+                self._send_json(200, {
+                    "ok": True,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "trading_engine": t_stat,
+                    "metrics": t_metrics.get("metrics", {}),
+                    "equity": t_equity.get("equity", {}),
+                    "positions": t_pos.get("positions", []),
+                    "risk": t_risk,
+                    "signals": t_sig.get("signals", []),
+                    "checklist": t_check.get("checklist", {}),
+                    "research": r_exp,
+                })
+
             # ── Trading Engine Proxies ────────────────────────────────────────
             elif path in ("/api/metrics", "/api/trading/metrics"):
                 self._send_json(200, trading_client.get_metrics())
 
             elif path in ("/api/positions", "/api/trading/positions"):
                 self._send_json(200, trading_client.get_positions())
+
+            elif path in ("/api/risk", "/api/trading/risk"):
+                self._send_json(200, trading_client.get_risk())
 
             elif path in ("/api/equity", "/api/trading/equity"):
                 self._send_json(200, trading_client.get_equity())
@@ -152,7 +190,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             # ── Static UI Assets ──────────────────────────────────────────────
             else:
                 base_dir = Path(__file__).parent.parent
-                search_dirs = [base_dir / "dashboard", base_dir / "static"]
+                search_dirs = [base_dir / "dashboard", base_dir / "branding", base_dir / "static"]
                 req_path = self.path.split("?")[0].lstrip("/")
 
                 target_file = None

@@ -68,13 +68,13 @@
 
 body {
     background-color: var(--bg-main);
-    background: radial-gradient(circle at 50% 20%, var(--bg-card) 0%, var(--bg-main) 80%);
+    background: radial-gradient(circle at 50% 10%, var(--bg-card) 0%, var(--bg-main) 80%);
     min-height: 100vh;
     overflow-x: hidden;
     color: var(--text-main);
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-start;
     flex-direction: column;
     transition: background-color 0.25s ease, color 0.25s ease;
 }
@@ -479,15 +479,32 @@ body {
     color: var(--accent-green);
     background: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.2);
-    padding: 3px 10px;
+    padding: 4px 10px;
     border-radius: 20px;
-    margin-left: 8px;
+}
+
+.status-pill.pill-red {
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-pill.pill-amber {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.status-pill.pill-blue {
+    color: #3B82F6;
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 .status-dot {
     width: 6px;
     height: 6px;
-    background-color: var(--accent-green);
+    background-color: currentColor;
     border-radius: 50%;
     animation: pulseDot 2s infinite;
 }
