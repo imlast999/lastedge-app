@@ -99,11 +99,11 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                         fut_t = executor.submit(trading_client.is_online)
                         fut_r = executor.submit(research_client.is_online)
                         try:
-                            t_online = fut_t.result(timeout=1.5)
+                            t_online = fut_t.result(timeout=2.5)
                         except (FuturesTimeout, Exception):
                             t_online = False
                         try:
-                            r_online = fut_r.result(timeout=1.5)
+                            r_online = fut_r.result(timeout=2.5)
                         except (FuturesTimeout, Exception):
                             r_online = False
                 except Exception:

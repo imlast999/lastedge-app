@@ -19,8 +19,8 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_URL = os.getenv("STRATEGY_LAB_URL", "http://localhost:8082")
-_DEFAULT_TIMEOUT = float(os.getenv("API_TIMEOUT_SECONDS", "2.0"))
+_DEFAULT_URL = os.getenv("STRATEGY_LAB_URL", "http://127.0.0.1:8082")
+_DEFAULT_TIMEOUT = float(os.getenv("API_TIMEOUT_SECONDS", "2.5"))
 
 
 class ResearchClient:
@@ -75,8 +75,11 @@ class ResearchClient:
 
     def is_online(self) -> bool:
         """Checks if Strategy Lab is online."""
-        res = self._get("/api/research/health")
-        return res.get("ok") is True
+        res = self._get("/")
+        if res.get("ok") is True:
+            return True
+        res_health = self._get("/api/research/health")
+        return res_health.get("ok") is True
 
     def get_status(self) -> Dict[str, Any]:
         """Gets Strategy Lab status and experiment count."""

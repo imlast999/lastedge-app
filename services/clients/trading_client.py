@@ -20,8 +20,8 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_URL = os.getenv("TRADING_ENGINE_URL", "http://localhost:8081")
-_DEFAULT_TIMEOUT = float(os.getenv("API_TIMEOUT_SECONDS", "2.0"))
+_DEFAULT_URL = os.getenv("TRADING_ENGINE_URL", "http://127.0.0.1:8081")
+_DEFAULT_TIMEOUT = float(os.getenv("API_TIMEOUT_SECONDS", "2.5"))
 
 
 class TradingClient:
@@ -76,8 +76,11 @@ class TradingClient:
 
     def is_online(self) -> bool:
         """Checks if Trading Engine is online and responsive."""
-        res = self.get_health()
-        return res.get("ok") is True
+        res = self._get("/")
+        if res.get("ok") is True:
+            return True
+        res_health = self.get_health()
+        return res_health.get("ok") is True
 
     def get_health(self) -> Dict[str, Any]:
         """Gets Trading Engine health metrics."""
