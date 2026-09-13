@@ -91,19 +91,30 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
         try:
             # ── App Health & Overview (Parallel Probes) ───────────────────────
             if path in ("/api/app/health", "/api/health", "/health"):
-                from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=2) as executor:
-                    fut_t = executor.submit(trading_client.is_online)
-                    fut_r = executor.submit(research_client.is_online)
-                    t_online = fut_t.result()
-                    r_online = fut_r.result()
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+                t_online = False
+                r_online = False
+                try:
+                    with ThreadPoolExecutor(max_workers=2) as executor:
+                        fut_t = executor.submit(trading_client.is_online)
+                        fut_r = executor.submit(research_client.is_online)
+                        try:
+                            t_online = fut_t.result(timeout=1.5)
+                        except (FuturesTimeout, Exception):
+                            t_online = False
+                        try:
+                            r_online = fut_r.result(timeout=1.5)
+                        except (FuturesTimeout, Exception):
+                            r_online = False
+                except Exception:
+                    pass
 
                 self._send_json(200, {
                     "ok": True,
                     "service": "LastEdge App & Dashboard",
                     "status": "ONLINE",
-                    "trading_engine_online": t_online,
-                    "strategy_lab_online": r_online,
+                    "trading_engine_online": bool(t_online),
+                    "strategy_lab_online": bool(r_online),
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
 
