@@ -320,14 +320,163 @@
             </div>
 
             <!-- ============================================================ -->
-            <!-- TAB 4: STRATEGY LAB (QUANT RESEARCH) -->
+            <!-- TAB 4: STRATEGY LAB (QUANT RESEARCH & BACKTEST RUNNER) -->
             <!-- ============================================================ -->
             <div id="tab-sec-research" class="dash-card wip-hidden">
                 <div class="card-header">
                     <div class="card-title">
-                        <i class="fa-solid fa-flask"></i> LastEdge Strategy Lab — Research Store
+                        <i class="fa-solid fa-flask"></i> LastEdge Strategy Lab — Quantitative Evaluator
                     </div>
-                    <span style="font-size: 12px; color: var(--text-muted);">Quantitative Repository (research.db)</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">Institutional Replay & Statistical Validation</span>
+                </div>
+
+                <!-- Backtest Configuration & Runner Panel -->
+                <div class="dash-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); margin-bottom: 20px; padding: 18px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fa-solid fa-microchip" style="color: var(--accent-green); font-size: 18px;"></i>
+                            <span style="font-weight: 700; font-size: 14px;">Backtest & Reliability Auditor</span>
+                        </div>
+                        <span style="font-size: 11px; color: var(--text-muted);">Executes bar-by-bar simulation & multi-gate statistical evaluation</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: flex-end;">
+                        <!-- Symbol -->
+                        <div>
+                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Symbol</label>
+                            <select id="bt-symbol" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                <option value="EURUSD" selected>EURUSD (Euro / US Dollar)</option>
+                                <option value="XAUUSD">XAUUSD (Gold Spot)</option>
+                                <option value="BTCEUR">BTCEUR (Bitcoin / Euro)</option>
+                            </select>
+                        </div>
+
+                        <!-- Strategy -->
+                        <div>
+                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Strategy Model</label>
+                            <select id="bt-strategy" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                <option value="eurusd_simple" selected>EURUSD Simple (Trend Pullback)</option>
+                                <option value="xauusd_partial">XAUUSD Partial Exit Strategy</option>
+                                <option value="btceur_partial">BTCEUR Trend Guard Strategy</option>
+                            </select>
+                        </div>
+
+                        <!-- Timeframe -->
+                        <div>
+                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Timeframe</label>
+                            <select id="bt-timeframe" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                <option value="H1" selected>H1 (1 Hour)</option>
+                                <option value="M15">M15 (15 Minutes)</option>
+                                <option value="H4">H4 (4 Hours)</option>
+                                <option value="D1">D1 (Daily)</option>
+                            </select>
+                        </div>
+
+                        <!-- Historical Depth -->
+                        <div>
+                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Bar Depth</label>
+                            <select id="bt-bars" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                <option value="2000">2,000 Bars (Quick Check)</option>
+                                <option value="5000" selected>5,000 Bars (Standard)</option>
+                                <option value="10000">10,000 Bars (Deep Sample)</option>
+                                <option value="20000">20,000 Bars (Full Cycle)</option>
+                            </select>
+                        </div>
+
+                        <!-- Run Button -->
+                        <div>
+                            <button id="btn-run-backtest" class="btn-action btn-green" style="width: 100%; height: 38px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="runBacktestFromUI()">
+                                <i class="fa-solid fa-play" id="btn-run-icon"></i>
+                                <span id="btn-run-text">Run Backtest & Audit</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Backtest Scientific Verdict Card (Hidden until run) -->
+                <div id="backtest-verdict-card" class="wip-hidden" style="margin-bottom: 24px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-card); box-shadow: var(--shadow-card);">
+                    <!-- Dynamic Header / Banner -->
+                    <div id="bt-verdict-banner" style="padding: 20px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 16px; align-items: flex-start;">
+                            <div id="bt-verdict-icon-box" style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; background: rgba(16, 185, 129, 0.2); color: var(--accent-green);">
+                                <i id="bt-verdict-icon" class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                                    <h3 id="bt-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ESTRATEGIA ALTAMENTE FIABLE</h3>
+                                    <span id="bt-verdict-badge" class="trend-badge trend-up" style="font-size: 11px; padding: 3px 8px;">RELIABLE</span>
+                                </div>
+                                <p id="bt-verdict-summary" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5; max-width: 820px;"></p>
+                            </div>
+                        </div>
+                        <div style="text-align: right; font-size: 11px; color: var(--text-muted);">
+                            <span id="bt-sim-duration">Simulation: 0 ms</span><br>
+                            <span id="bt-sim-meta" style="font-weight: 600; color: var(--text-main);">EURUSD H1 · 5,000 bars</span>
+                        </div>
+                    </div>
+
+                    <!-- 8 Key Metrics Chips Grid -->
+                    <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.15);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                            <!-- Profit Factor -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Profit Factor</span>
+                                <div class="stat-value" id="bt-metric-pf" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">Threshold: ≥ 1.30</span>
+                            </div>
+                            <!-- Sharpe -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Annualized Sharpe</span>
+                                <div class="stat-value" id="bt-metric-sharpe" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">Threshold: ≥ 1.40</span>
+                            </div>
+                            <!-- Max DD % -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Max Drawdown</span>
+                                <div class="stat-value" id="bt-metric-dd" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">Threshold: ≤ 15.0%</span>
+                            </div>
+                            <!-- Win Rate -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Win Rate</span>
+                                <div class="stat-value" id="bt-metric-wr" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                <span style="font-size: 10px; color: var(--text-muted);"><span id="bt-metric-trades-count">0</span> trades</span>
+                            </div>
+                            <!-- Expectancy -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Expectancy</span>
+                                <div class="stat-value" id="bt-metric-expectancy" style="font-size: 18px; margin: 4px 0;">0.0 pips</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">Per trade payoff</span>
+                            </div>
+                            <!-- Total Net Pips -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Net Profit Pips</span>
+                                <div class="stat-value" id="bt-metric-pips" style="font-size: 18px; margin: 4px 0;">+0.0</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">Spread deducted</span>
+                            </div>
+                            <!-- Ruin Probability -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Monte Carlo Ruin</span>
+                                <div class="stat-value" id="bt-metric-ruin" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">20% DD Risk</span>
+                            </div>
+                            <!-- Risk/Reward -->
+                            <div class="stat-card" style="padding: 12px; margin: 0;">
+                                <span class="stat-label" style="font-size: 10px;">Avg Risk:Reward</span>
+                                <div class="stat-value" id="bt-metric-rr" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                <span style="font-size: 10px; color: var(--text-muted);">Avg Win / Avg Loss</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scientific Guidance & Actionable Recommendations -->
+                    <div style="padding: 20px 24px;">
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+                            <i class="fa-solid fa-list-check" style="margin-right: 6px; color: var(--accent-green);"></i> Actionable Recommendations & Next Steps
+                        </div>
+                        <ul id="bt-recommendations-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.5;">
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="stats-grid">

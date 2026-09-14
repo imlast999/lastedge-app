@@ -114,6 +114,50 @@ class ResearchClient:
         """Promotes a candidate strategy to production."""
         return self._post("/api/research/promote", {"candidate_id": candidate_id, "approver": approver})
 
+    def run_backtest(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Runs a quantitative backtest simulation on Strategy Lab with extended timeout."""
+        url = f"{self.base_url}/api/research/backtest"
+        try:
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json", "User-Agent": "LastEdgeAppClient/1.0"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=60.0) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            try:
+                err_json = json.loads(e.read().decode("utf-8"))
+                return err_json
+            except Exception:
+                return {"ok": False, "status_code": e.code, "message": str(e)}
+        except Exception as e:
+            logger.error(f"[ResearchClient] run_backtest error ({url}): {e}")
+            return {
+                "ok": False,
+                "offline": True,
+                "message": f"Strategy Lab failed to execute backtest: {e}"
+            }
+
+    def get_strategies(self) -> Dict[str, Any]:
+        """Gets available strategies registry from Strategy Lab with resilient fallback."""
+        res = self._get("/api/research/strategies")
+        if res.get("offline"):
+            return {
+                "ok": False,
+                "offline": True,
+                "strategies": {
+                    "EURUSD": ["eurusd_partial", "eurusd_fixed", "eurusd_trend"],
+                    "XAUUSD": ["xauusd_partial", "xauusd_scalp", "xauusd_breakout"],
+                    "BTCEUR": ["btceur_trend", "btceur_momentum", "btceur_volatility"],
+                },
+                "timeframes": ["M5", "M15", "H1", "H4", "D1"],
+            }
+        return res
+
+
 
 _research_client: Optional[ResearchClient] = None
 

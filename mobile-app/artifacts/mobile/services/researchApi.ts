@@ -391,3 +391,87 @@ export async function fetchReopenPayload(
   );
   return data.reproducible_payload;
 }
+
+// ── Backtest Runner & Verbose Verdict Engine ───────────────────────────────────
+
+export type VerdictTier = "TIER_1_RELIABLE" | "TIER_2_OPTIMIZE" | "TIER_3_REJECTED";
+
+export interface BacktestVerdict {
+  tier: VerdictTier;
+  badge: string;
+  badge_color: "emerald" | "amber" | "rose";
+  title: string;
+  summary: string;
+  recommendations: string[];
+}
+
+export interface BacktestRunMetrics {
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate_pct: number;
+  profit_factor: number;
+  expectancy_pips: number;
+  net_profit_pips: number;
+  max_drawdown_pct: number;
+  max_drawdown_usd: number;
+  sharpe_ratio: number;
+  sortino_ratio: number;
+  calmar_ratio: number;
+  risk_reward_ratio: number;
+  monte_carlo_ruin_prob_pct: number;
+  max_consecutive_losses: number;
+}
+
+export interface BacktestRunResult {
+  ok: boolean;
+  symbol: string;
+  strategy: string;
+  timeframe: string;
+  bars_count: number;
+  data_source: string;
+  period_start: string;
+  period_end: string;
+  metrics: BacktestRunMetrics;
+  verdict: BacktestVerdict;
+  experiment_id?: string;
+  message?: string;
+}
+
+export interface RunBacktestParams {
+  symbol: string;
+  strategy?: string;
+  timeframe?: string;
+  bars_count?: number;
+  initial_balance?: number;
+  risk_per_trade_pct?: number;
+}
+
+export async function runBacktest(
+  params: RunBacktestParams,
+  overrides?: { url?: string; token?: string }
+): Promise<BacktestRunResult> {
+  const { url, token } = resolveApiConfig(overrides);
+  const res = await fetch(`${url}/api/research/backtest`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(params),
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) {
+    throw new Error((data as any).error ?? (data as any).message ?? `HTTP ${res.status}`);
+  }
+  return data as BacktestRunResult;
+}
+
+export async function fetchAvailableStrategies(
+  overrides?: { url?: string; token?: string }
+): Promise<{ ok: boolean; strategies: Record<string, string[]>; timeframes: string[] }> {
+  return await apiFetch<{ ok: boolean; strategies: Record<string, string[]>; timeframes: string[] }>(
+    `/api/research/strategies`,
+    overrides
+  );
+}

@@ -791,3 +791,195 @@ function exportSignalsCSV() {
     a.download = `LastEdge_Signals_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
 }
+
+/**
+ * Adjust default strategy dropdown based on symbol selection
+ */
+function updateStrategySelector() {
+    const sym = (document.getElementById('bt-symbol')?.value || 'EURUSD').toUpperCase();
+    const stratSelect = document.getElementById('bt-strategy');
+    if (!stratSelect) return;
+
+    if (sym === 'EURUSD') {
+        stratSelect.innerHTML = `
+            <option value="eurusd_simple" selected>EURUSD Simple (Trend Pullback)</option>
+            <option value="eurusd_partial">EURUSD Partial Exit Strategy</option>
+        `;
+    } else if (sym === 'XAUUSD') {
+        stratSelect.innerHTML = `
+            <option value="xauusd_partial" selected>XAUUSD Partial Exit Strategy</option>
+            <option value="xauusd_simple">XAUUSD Trend Strategy</option>
+        `;
+    } else if (sym === 'BTCEUR') {
+        stratSelect.innerHTML = `
+            <option value="btceur_partial" selected>BTCEUR Trend Guard Strategy</option>
+            <option value="btceur_simple">BTCEUR Simple Strategy</option>
+        `;
+    }
+}
+
+/**
+ * Execute Backtest & Scientific Quant Audit from Dashboard UI
+ */
+async function runBacktestFromUI() {
+    const symbol = document.getElementById('bt-symbol')?.value || 'EURUSD';
+    const strategy = document.getElementById('bt-strategy')?.value || 'eurusd_simple';
+    const timeframe = document.getElementById('bt-timeframe')?.value || 'H1';
+    const bars = parseInt(document.getElementById('bt-bars')?.value || '5000', 10);
+
+    const btn = document.getElementById('btn-run-backtest');
+    const icon = document.getElementById('btn-run-icon');
+    const text = document.getElementById('btn-run-text');
+
+    if (btn) btn.disabled = true;
+    if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
+    if (text) text.textContent = 'Simulating Replay...';
+
+    try {
+        const payload = { symbol, strategy, timeframe, bars };
+        const response = await fetch('/api/research/backtest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) {
+            alert(`Backtest Execution Error: ${data.error || data.message || 'Strategy Lab rejected simulation request.'}`);
+            return;
+        }
+
+        renderBacktestVerdict(data);
+
+        // Instantly refresh the historical experiments table
+        fetchLiveDashboardData();
+
+    } catch (err) {
+        alert(`Failed to communicate with Strategy Lab: ${err}`);
+    } finally {
+        if (btn) btn.disabled = false;
+        if (icon) icon.className = 'fa-solid fa-play';
+        if (text) text.textContent = 'Run Backtest & Audit';
+    }
+}
+
+/**
+ * Render Verbose Reliability Verdict & Key Metric Matrix
+ */
+function renderBacktestVerdict(data) {
+    const card = document.getElementById('backtest-verdict-card');
+    if (!card) return;
+    card.classList.remove('wip-hidden');
+
+    const v = data.verdict || {};
+    const m = data.metrics || {};
+
+    // 1. Banner Color, Icon & Title
+    const banner = document.getElementById('bt-verdict-banner');
+    const iconBox = document.getElementById('bt-verdict-icon-box');
+    const icon = document.getElementById('bt-verdict-icon');
+    const title = document.getElementById('bt-verdict-title');
+    const badge = document.getElementById('bt-verdict-badge');
+    const summary = document.getElementById('bt-verdict-summary');
+    const metaSpan = document.getElementById('bt-sim-meta');
+    const durationSpan = document.getElementById('bt-sim-duration');
+
+    const tier = v.tier || 'TIER_2_OPTIMIZE';
+    let bgStyle = 'rgba(16, 185, 129, 0.12)';
+    let borderStyle = '1px solid rgba(16, 185, 129, 0.3)';
+    let badgeClass = 'trend-badge trend-up';
+    let iconClass = 'fa-solid fa-circle-check';
+    let iconColor = '#10B981';
+
+    if (tier === 'TIER_3_REJECTED') {
+        bgStyle = 'rgba(239, 68, 68, 0.12)';
+        borderStyle = '1px solid rgba(239, 68, 68, 0.35)';
+        badgeClass = 'trend-badge trend-down';
+        iconClass = 'fa-solid fa-ban';
+        iconColor = '#EF4444';
+    } else if (tier === 'TIER_2_OPTIMIZE') {
+        bgStyle = 'rgba(245, 158, 11, 0.12)';
+        borderStyle = '1px solid rgba(245, 158, 11, 0.35)';
+        badgeClass = 'trend-badge';
+        iconClass = 'fa-solid fa-triangle-exclamation';
+        iconColor = '#F59E0B';
+    }
+
+    if (banner) {
+        banner.style.background = bgStyle;
+        banner.style.borderBottom = borderStyle;
+    }
+    if (iconBox) {
+        iconBox.style.background = `${iconColor}25`;
+        iconBox.style.color = iconColor;
+    }
+    if (icon) icon.className = iconClass;
+    if (title) {
+        title.textContent = v.title || 'EVALUACIÓN CUANTITATIVA FINALIZADA';
+        title.style.color = iconColor;
+    }
+    if (badge) {
+        badge.textContent = v.badge || 'PROCESADO';
+        badge.className = badgeClass;
+    }
+    if (summary) summary.textContent = v.summary || '';
+    if (metaSpan) metaSpan.textContent = `${data.symbol} ${data.timeframe} · ${data.bars_analyzed.toLocaleString()} bars · ${data.strategy}`;
+    if (durationSpan) durationSpan.textContent = `Simulation: ${data.duration_ms} ms`;
+
+    // 2. Metric Chips
+    const elPf = document.getElementById('bt-metric-pf');
+    const elSharpe = document.getElementById('bt-metric-sharpe');
+    const elDd = document.getElementById('bt-metric-dd');
+    const elWr = document.getElementById('bt-metric-wr');
+    const elTrades = document.getElementById('bt-metric-trades-count');
+    const elExp = document.getElementById('bt-metric-expectancy');
+    const elPips = document.getElementById('bt-metric-pips');
+    const elRuin = document.getElementById('bt-metric-ruin');
+    const elRr = document.getElementById('bt-metric-rr');
+
+    if (elPf) {
+        elPf.textContent = (m.profit_factor !== undefined) ? m.profit_factor.toFixed(2) : '0.00';
+        elPf.style.color = m.profit_factor >= 1.30 ? '#10B981' : (m.profit_factor >= 1.05 ? '#F59E0B' : '#EF4444');
+    }
+    if (elSharpe) {
+        elSharpe.textContent = (m.sharpe_ratio !== undefined) ? m.sharpe_ratio.toFixed(2) : '0.00';
+        elSharpe.style.color = m.sharpe_ratio >= 1.40 ? '#10B981' : (m.sharpe_ratio >= 0.80 ? '#F59E0B' : '#EF4444');
+    }
+    if (elDd) {
+        elDd.textContent = (m.max_drawdown_pct !== undefined) ? `${m.max_drawdown_pct.toFixed(1)}%` : '0.0%';
+        elDd.style.color = m.max_drawdown_pct <= 15.0 ? '#10B981' : (m.max_drawdown_pct <= 25.0 ? '#F59E0B' : '#EF4444');
+    }
+    if (elWr) elWr.textContent = (m.win_rate_pct !== undefined) ? `${m.win_rate_pct.toFixed(1)}%` : '0.0%';
+    if (elTrades) elTrades.textContent = m.total_trades || 0;
+    if (elExp) {
+        const expVal = m.expectancy_pips || 0.0;
+        elExp.textContent = `${expVal > 0 ? '+' : ''}${expVal.toFixed(1)} pips`;
+        elExp.style.color = expVal > 0 ? '#10B981' : '#EF4444';
+    }
+    if (elPips) {
+        const netPips = m.net_profit_pips || 0.0;
+        elPips.textContent = `${netPips > 0 ? '+' : ''}${netPips.toFixed(1)}`;
+        elPips.style.color = netPips > 0 ? '#10B981' : '#EF4444';
+    }
+    if (elRuin) {
+        elRuin.textContent = `${m.monte_carlo_ruin_prob_pct || 0.0}%`;
+        elRuin.style.color = (m.monte_carlo_ruin_prob_pct || 0) < 1.5 ? '#10B981' : '#EF4444';
+    }
+    if (elRr) elRr.textContent = (m.risk_reward_ratio !== undefined) ? `${m.risk_reward_ratio.toFixed(2)} R:R` : '0.00';
+
+    // 3. Recommendations List
+    const recList = document.getElementById('bt-recommendations-list');
+    if (recList && Array.isArray(v.recommendations)) {
+        recList.innerHTML = v.recommendations.map(r => `
+            <li style="display: flex; align-items: flex-start; gap: 10px; color: var(--text-main);">
+                <i class="fa-solid fa-angle-right" style="color: ${iconColor}; margin-top: 3px;"></i>
+                <span>${r}</span>
+            </li>
+        `).join('');
+    }
+
+    // Scroll to verdict smoothly
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+

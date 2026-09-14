@@ -34,7 +34,11 @@ import {
   updateResearchExperiment,
   fetchReopenPayload,
   runExitResearch,
+  runBacktest,
+  fetchAvailableStrategies,
   type ResearchExperiment,
+  type BacktestRunResult,
+  type VerdictTier,
 } from "@/services/researchApi";
 
 export default function LabScreen() {
@@ -75,6 +79,51 @@ export default function LabScreen() {
   const [formTitle, setFormTitle] = useState("");
   const [formHypothesis, setFormHypothesis] = useState("");
   const [isReopenMode, setIsReopenMode] = useState(false);
+
+  // ── Backtest Runner & Verbose Diagnostic State ──
+  const [btSymbol, setBtSymbol] = useState("EURUSD");
+  const [btStrategy, setBtStrategy] = useState("eurusd_partial");
+  const [btTimeframe, setBtTimeframe] = useState("M15");
+  const [btBars, setBtBars] = useState<number>(1000);
+  const [btLoading, setBtLoading] = useState(false);
+  const [btResult, setBtResult] = useState<BacktestRunResult | null>(null);
+  const [btRunnerExpanded, setBtRunnerExpanded] = useState(true);
+
+  const availableStrategies: Record<string, string[]> = {
+    EURUSD: ["eurusd_partial", "eurusd_fixed", "eurusd_trend"],
+    XAUUSD: ["xauusd_partial", "xauusd_scalp", "xauusd_breakout"],
+    BTCEUR: ["btceur_trend", "btceur_momentum", "btceur_volatility"],
+  };
+
+  const handleSelectBtSymbol = (sym: string) => {
+    setBtSymbol(sym);
+    const strats = availableStrategies[sym] || ["eurusd_partial"];
+    setBtStrategy(strats[0]);
+  };
+
+  const handleRunBacktestAction = async () => {
+    setBtLoading(true);
+    setError(null);
+    try {
+      const res = await runBacktest(
+        {
+          symbol: btSymbol,
+          strategy: btStrategy,
+          timeframe: btTimeframe,
+          bars_count: btBars,
+          initial_balance: 10000,
+          risk_per_trade_pct: 1.0,
+        },
+        apiOverrides
+      );
+      setBtResult(res);
+      await loadExperiments();
+    } catch (e) {
+      Alert.alert("Backtest Failed", e instanceof Error ? e.message : String(e));
+    } finally {
+      setBtLoading(false);
+    }
+  };
 
   const bottomPad = insets.bottom + 120;
   const hasActiveFilters = searchQuery !== "" || selectedSymbol !== "ALL" || selectedStatus !== "ALL";
@@ -226,6 +275,36 @@ export default function LabScreen() {
     }
   };
 
+  const getVerdictColors = (tier: VerdictTier) => {
+    switch (tier) {
+      case "TIER_1_RELIABLE":
+        return {
+          bg: "rgba(16, 185, 129, 0.12)",
+          border: "#10b981",
+          badgeBg: "#065f46",
+          text: "#34d399",
+          icon: "check-circle",
+        };
+      case "TIER_2_OPTIMIZE":
+        return {
+          bg: "rgba(245, 158, 11, 0.12)",
+          border: "#f59e0b",
+          badgeBg: "#78350f",
+          text: "#fbbf24",
+          icon: "alert-triangle",
+        };
+      case "TIER_3_REJECTED":
+      default:
+        return {
+          bg: "rgba(244, 63, 94, 0.12)",
+          border: "#f43f5e",
+          badgeBg: "#881337",
+          text: "#fb7185",
+          icon: "alert-octagon",
+        };
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -240,9 +319,9 @@ export default function LabScreen() {
       {/* Header con botón de Crear e Ajustes */}
       <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
         <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Research Database</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>Strategy Lab</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Trazabilidad, reproducibilidad y dictamen de experimentos
+            Quantitative backtests, statistical audits & research
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -261,6 +340,283 @@ export default function LabScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── Interactive Backtest Runner Card ── */}
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.sectionHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Feather name="cpu" size={16} color={colors.primary} />
+            <Text style={[styles.cardSectionTitle, { color: colors.foreground }]}>
+              Interactive Backtest Runner
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => setBtRunnerExpanded(!btRunnerExpanded)}>
+            <Feather
+              name={btRunnerExpanded ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={colors.mutedForeground}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {btRunnerExpanded && (
+          <View style={{ gap: 10, marginTop: 4 }}>
+            {/* Symbol Chips */}
+            <View>
+              <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>SYMBOL</Text>
+              <View style={styles.inlineChips}>
+                {["EURUSD", "XAUUSD", "BTCEUR"].map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => handleSelectBtSymbol(s)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: btSymbol === s ? colors.primary : colors.secondary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: btSymbol === s ? colors.primaryForeground : colors.foreground,
+                        fontSize: 12,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {s}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Strategy Chips */}
+            <View>
+              <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>STRATEGY</Text>
+              <View style={styles.inlineChips}>
+                {(availableStrategies[btSymbol] || ["eurusd_partial"]).map((strat) => (
+                  <TouchableOpacity
+                    key={strat}
+                    onPress={() => setBtStrategy(strat)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: btStrategy === strat ? colors.primary : colors.secondary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: btStrategy === strat ? colors.primaryForeground : colors.foreground,
+                        fontSize: 11,
+                        fontWeight: "500",
+                      }}
+                    >
+                      {strat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Timeframe & Bar Depth Row */}
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>TIMEFRAME</Text>
+                <View style={styles.inlineChips}>
+                  {["M5", "M15", "H1", "H4"].map((tf) => (
+                    <TouchableOpacity
+                      key={tf}
+                      onPress={() => setBtTimeframe(tf)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: btTimeframe === tf ? colors.primary : colors.secondary,
+                          borderColor: colors.border,
+                          paddingHorizontal: 8,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: btTimeframe === tf ? colors.primaryForeground : colors.foreground,
+                          fontSize: 11,
+                          fontWeight: "500",
+                        }}
+                      >
+                        {tf}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>BAR DEPTH</Text>
+                <View style={styles.inlineChips}>
+                  {[500, 1000, 2000].map((bars) => (
+                    <TouchableOpacity
+                      key={bars}
+                      onPress={() => setBtBars(bars)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: btBars === bars ? colors.primary : colors.secondary,
+                          borderColor: colors.border,
+                          paddingHorizontal: 8,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: btBars === bars ? colors.primaryForeground : colors.foreground,
+                          fontSize: 11,
+                          fontWeight: "500",
+                        }}
+                      >
+                        {bars}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Run Button */}
+            <TouchableOpacity
+              onPress={handleRunBacktestAction}
+              disabled={btLoading}
+              style={[
+                styles.runBacktestBtn,
+                { backgroundColor: colors.primary, opacity: btLoading ? 0.7 : 1 },
+              ]}
+            >
+              {btLoading ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.primaryForeground} />
+                  <Text style={[styles.runBacktestBtnText, { color: colors.primaryForeground }]}>
+                    Running Replay & Audit...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Feather name="play" size={16} color={colors.primaryForeground} />
+                  <Text style={[styles.runBacktestBtnText, { color: colors.primaryForeground }]}>
+                    Run Backtest & Scientific Audit
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* ── Verbose Verdict Diagnostic Card ── */}
+      {btResult && (
+        <View
+          style={[
+            styles.verdictCard,
+            {
+              backgroundColor: getVerdictColors(btResult.verdict.tier).bg,
+              borderColor: getVerdictColors(btResult.verdict.tier).border,
+            },
+          ]}
+        >
+          {/* Header Badge */}
+          <View style={styles.verdictHeader}>
+            <View
+              style={[
+                styles.verdictBadge,
+                { backgroundColor: getVerdictColors(btResult.verdict.tier).badgeBg },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.verdictBadgeText,
+                  { color: getVerdictColors(btResult.verdict.tier).text },
+                ]}
+              >
+                {btResult.verdict.badge}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setBtResult(null)}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Title & Verbose Summary */}
+          <Text style={[styles.verdictTitle, { color: colors.foreground }]}>
+            {btResult.verdict.title}
+          </Text>
+          <Text style={[styles.verdictSummary, { color: colors.foreground }]}>
+            {btResult.verdict.summary}
+          </Text>
+
+          {/* Core Quantitative Metrics Grid */}
+          <View style={styles.metricsGrid}>
+            <MetricCard
+              label="PROFIT FACTOR"
+              value={btResult.metrics.profit_factor.toFixed(2)}
+              colors={colors}
+            />
+            <MetricCard
+              label="SHARPE RATIO"
+              value={btResult.metrics.sharpe_ratio.toFixed(2)}
+              colors={colors}
+            />
+            <MetricCard
+              label="MAX DRAWDOWN"
+              value={`${btResult.metrics.max_drawdown_pct.toFixed(1)}%`}
+              colors={colors}
+            />
+            <MetricCard
+              label="WIN RATE"
+              value={`${btResult.metrics.win_rate_pct.toFixed(1)}%`}
+              colors={colors}
+            />
+            <MetricCard
+              label="SORTINO RATIO"
+              value={btResult.metrics.sortino_ratio.toFixed(2)}
+              colors={colors}
+            />
+            <MetricCard
+              label="EXPECTANCY"
+              value={`${btResult.metrics.expectancy_pips > 0 ? "+" : ""}${btResult.metrics.expectancy_pips.toFixed(1)} pips`}
+              colors={colors}
+            />
+            <MetricCard
+              label="RUIN PROBABILITY"
+              value={`${btResult.metrics.monte_carlo_ruin_prob_pct.toFixed(1)}%`}
+              colors={colors}
+            />
+            <MetricCard
+              label="TOTAL TRADES"
+              value={`${btResult.metrics.total_trades} (${btResult.metrics.winning_trades}W / ${btResult.metrics.losing_trades}L)`}
+              colors={colors}
+            />
+          </View>
+
+          {/* Actionable Recommendations */}
+          <View style={styles.recsContainer}>
+            <Text style={[styles.recsTitle, { color: colors.foreground }]}>
+              Actionable Recommendations & Protocol:
+            </Text>
+            {btResult.verdict.recommendations.map((rec, idx) => (
+              <View key={idx} style={styles.recItem}>
+                <Feather
+                  name={getVerdictColors(btResult.verdict.tier).icon as any}
+                  size={14}
+                  color={getVerdictColors(btResult.verdict.tier).text}
+                  style={{ marginTop: 2 }}
+                />
+                <Text style={[styles.recText, { color: colors.foreground }]}>{rec}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Buscador de Investigaciones */}
       <View style={[styles.searchBar, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -728,4 +1084,19 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   emptyText: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  cardSectionTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  controlLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", marginBottom: 4 },
+  inlineChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  runBacktestBtn: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 12, borderRadius: 10, marginTop: 6 },
+  runBacktestBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  verdictCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 10 },
+  verdictHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  verdictBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  verdictBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  verdictTitle: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 2 },
+  verdictSummary: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  recsContainer: { gap: 6, marginTop: 4, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 8 },
+  recsTitle: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  recItem: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  recText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 16 },
 });

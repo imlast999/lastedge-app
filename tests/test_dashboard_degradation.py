@@ -45,6 +45,29 @@ def test_dashboard_server_starts_and_handles_offline_backends():
         exp_data = json.loads(req_exp.read().decode("utf-8"))
         assert exp_data.get("experiments") == []
 
+        # 4. Strategy registry and backtest graceful degradation
+        req_strat = urllib.request.urlopen(f"http://localhost:{port}/api/research/strategies")
+        assert req_strat.status == 200
+        strat_data = json.loads(req_strat.read().decode("utf-8"))
+        assert "strategies" in strat_data
+
+        # 5. Backtest POST when Strategy Lab offline returns clean 400 error payload
+        bt_payload = json.dumps({"symbol": "EURUSD", "strategy": "eurusd_partial"}).encode("utf-8")
+        bt_req = urllib.request.Request(
+            f"http://localhost:{port}/api/research/backtest",
+            data=bt_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(bt_req) as bt_resp:
+                pass
+        except urllib.error.HTTPError as http_err:
+            assert http_err.code == 400
+            err_data = json.loads(http_err.read().decode("utf-8"))
+            assert err_data.get("ok") is False
+            assert "Strategy Lab" in err_data.get("message", "")
+
     finally:
         server.stop()
         time.sleep(0.2)

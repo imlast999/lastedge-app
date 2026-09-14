@@ -199,6 +199,9 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/research/status",):
                 self._send_json(200, research_client.get_status())
 
+            elif path in ("/api/research/strategies", "/api/strategies"):
+                self._send_json(200, research_client.get_strategies())
+
             # ── Static UI Assets ──────────────────────────────────────────────
             else:
                 base_dir = Path(__file__).parent.parent
@@ -262,6 +265,10 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(400, {"ok": False, "error": "Missing 'candidate_id' parameter."})
                     return
                 res = research_client.promote_candidate(candidate_id, approver)
+                self._send_json(200 if res.get("ok") else 400, res)
+
+            elif path in ("/api/research/backtest", "/api/backtest"):
+                res = research_client.run_backtest(body_data)
                 self._send_json(200 if res.get("ok") else 400, res)
 
             else:
