@@ -148,12 +148,71 @@ class ResearchClient:
             return {
                 "ok": False,
                 "offline": True,
+                "symbols": ["EURUSD", "XAUUSD", "BTCEUR"],
                 "strategies": {
-                    "EURUSD": ["eurusd_partial", "eurusd_fixed", "eurusd_trend"],
-                    "XAUUSD": ["xauusd_partial", "xauusd_scalp", "xauusd_breakout"],
-                    "BTCEUR": ["btceur_trend", "btceur_momentum", "btceur_volatility"],
-                },
-                "timeframes": ["M5", "M15", "H1", "H4", "D1"],
+                    "EURUSD": [
+                        {
+                            "id": "eurusd_partial",
+                            "name": "EURUSD Partial Close (v1.1)",
+                            "description": "Trend momentum with EMA20/50/200, RSI and dynamic ATR partial closes",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        }
+                    ],
+                    "XAUUSD": [
+                        {
+                            "id": "xauusd_partial",
+                            "name": "XAUUSD Partial Close (v1.1)",
+                            "description": "Selective Gold momentum reversal with multi-stage partial TP",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        },
+                        {
+                            "id": "xauusd_simple",
+                            "name": "XAUUSD Simple Baseline",
+                            "description": "Gold trend baseline with EMA200 trend filter and RSI momentum",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        }
+                    ],
+                    "BTCEUR": [
+                        {
+                            "id": "btceur_partial",
+                            "name": "BTCEUR Partial Close (v1.1)",
+                            "description": "Simplified Bitcoin trend & volatility with partial take profit",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        },
+                        {
+                            "id": "btceur_simple",
+                            "name": "BTCEUR Simple Baseline",
+                            "description": "Baseline trend & volatility breakout for Bitcoin EUR",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        },
+                        {
+                            "id": "btc_trend_pullback_v1",
+                            "name": "BTC Trend Pullback v1",
+                            "description": "Swing trading combining H4 macro trend filter with H1 EMA20 pullbacks",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        },
+                        {
+                            "id": "btceur_regime_momentum",
+                            "name": "BTCEUR Regime Momentum",
+                            "description": "Daily regime filter (EMA50>200, ADX>20) + H4 Donchian breakout (Long only)",
+                            "allowed_timeframes": ["H4"],
+                            "default_timeframe": "H4",
+                        },
+                        {
+                            "id": "btceur_weekly_breakout",
+                            "name": "BTCEUR Weekly Breakout",
+                            "description": "Weekly range breakout capturing institutional weekly expansion waves",
+                            "allowed_timeframes": ["H1"],
+                            "default_timeframe": "H1",
+                        }
+                    ]
+                }
             }
         return res
 

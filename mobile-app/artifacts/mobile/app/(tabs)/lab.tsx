@@ -39,6 +39,7 @@ import {
   type ResearchExperiment,
   type BacktestRunResult,
   type VerdictTier,
+  type StrategyMetaItem,
 } from "@/services/researchApi";
 
 export default function LabScreen() {
@@ -80,25 +81,113 @@ export default function LabScreen() {
   const [formHypothesis, setFormHypothesis] = useState("");
   const [isReopenMode, setIsReopenMode] = useState(false);
 
-  // ── Backtest Runner & Verbose Diagnostic State ──
+  // ── Backtest Runner & Dynamic Strategy Catalog State ──
+  const [strategyCatalog, setStrategyCatalog] = useState<Record<string, StrategyMetaItem[]>>({
+    EURUSD: [
+      {
+        id: "eurusd_partial",
+        name: "EURUSD Partial Close (v1.1)",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+    ],
+    XAUUSD: [
+      {
+        id: "xauusd_partial",
+        name: "XAUUSD Partial Close (v1.1)",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+      {
+        id: "xauusd_simple",
+        name: "XAUUSD Simple Baseline",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+    ],
+    BTCEUR: [
+      {
+        id: "btceur_partial",
+        name: "BTCEUR Partial Close (v1.1)",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+      {
+        id: "btceur_simple",
+        name: "BTCEUR Simple Baseline",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+      {
+        id: "btc_trend_pullback_v1",
+        name: "BTC Trend Pullback v1",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+      {
+        id: "btceur_regime_momentum",
+        name: "BTCEUR Regime Momentum",
+        allowed_timeframes: ["H4"],
+        default_timeframe: "H4",
+      },
+      {
+        id: "btceur_weekly_breakout",
+        name: "BTCEUR Weekly Breakout",
+        allowed_timeframes: ["H1"],
+        default_timeframe: "H1",
+      },
+    ],
+  });
+
+  const [catalogSymbols, setCatalogSymbols] = useState<string[]>(["EURUSD", "XAUUSD", "BTCEUR"]);
   const [btSymbol, setBtSymbol] = useState("EURUSD");
   const [btStrategy, setBtStrategy] = useState("eurusd_partial");
-  const [btTimeframe, setBtTimeframe] = useState("M15");
+  const [btTimeframe, setBtTimeframe] = useState("H1");
   const [btBars, setBtBars] = useState<number>(1000);
   const [btLoading, setBtLoading] = useState(false);
   const [btResult, setBtResult] = useState<BacktestRunResult | null>(null);
   const [btRunnerExpanded, setBtRunnerExpanded] = useState(true);
 
-  const availableStrategies: Record<string, string[]> = {
-    EURUSD: ["eurusd_partial", "eurusd_fixed", "eurusd_trend"],
-    XAUUSD: ["xauusd_partial", "xauusd_scalp", "xauusd_breakout"],
-    BTCEUR: ["btceur_trend", "btceur_momentum", "btceur_volatility"],
-  };
+  // Fetch catalog on mount
+  useEffect(() => {
+    async function loadCatalog() {
+      try {
+        const cat = await fetchAvailableStrategies(apiOverrides);
+        if (cat && cat.strategies) {
+          setStrategyCatalog(cat.strategies);
+          const syms = cat.symbols || Object.keys(cat.strategies);
+          if (syms.length > 0) {
+            setCatalogSymbols(syms);
+          }
+        }
+      } catch (err) {
+        // Pre-loaded fallback remains active
+      }
+    }
+    loadCatalog();
+  }, [apiOverrides]);
 
   const handleSelectBtSymbol = (sym: string) => {
     setBtSymbol(sym);
-    const strats = availableStrategies[sym] || ["eurusd_partial"];
-    setBtStrategy(strats[0]);
+    const strats = strategyCatalog[sym] || [];
+    if (strats.length > 0) {
+      const firstStrat = strats[0];
+      setBtStrategy(firstStrat.id);
+      const allowedTfs = firstStrat.allowed_timeframes || ["H1"];
+      setBtTimeframe(firstStrat.default_timeframe || allowedTfs[0]);
+    }
+  };
+
+  const handleSelectBtStrategy = (stratId: string) => {
+    setBtStrategy(stratId);
+    const strats = strategyCatalog[btSymbol] || [];
+    const meta = strats.find((s) => s.id === stratId);
+    if (meta) {
+      const allowed = meta.allowed_timeframes || ["H1"];
+      if (!allowed.includes(btTimeframe)) {
+        setBtTimeframe(meta.default_timeframe || allowed[0]);
+      }
+    }
   };
 
   const handleRunBacktestAction = async () => {
@@ -365,7 +454,7 @@ export default function LabScreen() {
             <View>
               <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>SYMBOL</Text>
               <View style={styles.inlineChips}>
-                {["EURUSD", "XAUUSD", "BTCEUR"].map((s) => (
+                {catalogSymbols.map((s) => (
                   <TouchableOpacity
                     key={s}
                     onPress={() => handleSelectBtSymbol(s)}
@@ -393,63 +482,75 @@ export default function LabScreen() {
 
             {/* Strategy Chips */}
             <View>
-              <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>STRATEGY</Text>
+              <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>
+                STRATEGY ({strategyCatalog[btSymbol]?.length || 0})
+              </Text>
               <View style={styles.inlineChips}>
-                {(availableStrategies[btSymbol] || ["eurusd_partial"]).map((strat) => (
-                  <TouchableOpacity
-                    key={strat}
-                    onPress={() => setBtStrategy(strat)}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: btStrategy === strat ? colors.primary : colors.secondary,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        color: btStrategy === strat ? colors.primaryForeground : colors.foreground,
-                        fontSize: 11,
-                        fontWeight: "500",
-                      }}
+                {(strategyCatalog[btSymbol] || []).map((strat) => {
+                  const stratId = strat.id;
+                  const isSelected = btStrategy === stratId;
+                  return (
+                    <TouchableOpacity
+                      key={stratId}
+                      onPress={() => handleSelectBtStrategy(stratId)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected ? colors.primary : colors.secondary,
+                          borderColor: colors.border,
+                        },
+                      ]}
                     >
-                      {strat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={{
+                          color: isSelected ? colors.primaryForeground : colors.foreground,
+                          fontSize: 11,
+                          fontWeight: "500",
+                        }}
+                      >
+                        {strat.name || stratId}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
             {/* Timeframe & Bar Depth Row */}
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>TIMEFRAME</Text>
+                <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>
+                  ALLOWED TIMEFRAMES
+                </Text>
                 <View style={styles.inlineChips}>
-                  {["M5", "M15", "H1", "H4"].map((tf) => (
-                    <TouchableOpacity
-                      key={tf}
-                      onPress={() => setBtTimeframe(tf)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor: btTimeframe === tf ? colors.primary : colors.secondary,
-                          borderColor: colors.border,
-                          paddingHorizontal: 8,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: btTimeframe === tf ? colors.primaryForeground : colors.foreground,
-                          fontSize: 11,
-                          fontWeight: "500",
-                        }}
+                  {(() => {
+                    const currentMeta = (strategyCatalog[btSymbol] || []).find((s) => s.id === btStrategy);
+                    const allowedTfs = currentMeta?.allowed_timeframes || ["H1"];
+                    return allowedTfs.map((tf) => (
+                      <TouchableOpacity
+                        key={tf}
+                        onPress={() => setBtTimeframe(tf)}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: btTimeframe === tf ? colors.primary : colors.secondary,
+                            borderColor: colors.border,
+                            paddingHorizontal: 8,
+                          },
+                        ]}
                       >
-                        {tf}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={{
+                            color: btTimeframe === tf ? colors.primaryForeground : colors.foreground,
+                            fontSize: 11,
+                            fontWeight: "500",
+                          }}
+                        >
+                          {tf}
+                        </Text>
+                      </TouchableOpacity>
+                    ));
+                  })()}
                 </View>
               </View>
 

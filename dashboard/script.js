@@ -15,6 +15,7 @@ let pollingTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
     initThemeSetting();
     fetchLiveDashboardData();
+    fetchStrategyCatalog();
     pollingTimer = setInterval(fetchLiveDashboardData, 3000);
 });
 
@@ -792,31 +793,120 @@ function exportSignalsCSV() {
     a.click();
 }
 
-/**
- * Adjust default strategy dropdown based on symbol selection
- */
-function updateStrategySelector() {
-    const sym = (document.getElementById('bt-symbol')?.value || 'EURUSD').toUpperCase();
-    const stratSelect = document.getElementById('bt-strategy');
-    if (!stratSelect) return;
+let dynamicStrategyCatalog = null;
 
-    if (sym === 'EURUSD') {
-        stratSelect.innerHTML = `
-            <option value="eurusd_simple" selected>EURUSD Simple (Trend Pullback)</option>
-            <option value="eurusd_partial">EURUSD Partial Exit Strategy</option>
-        `;
-    } else if (sym === 'XAUUSD') {
-        stratSelect.innerHTML = `
-            <option value="xauusd_partial" selected>XAUUSD Partial Exit Strategy</option>
-            <option value="xauusd_simple">XAUUSD Trend Strategy</option>
-        `;
-    } else if (sym === 'BTCEUR') {
-        stratSelect.innerHTML = `
-            <option value="btceur_partial" selected>BTCEUR Trend Guard Strategy</option>
-            <option value="btceur_simple">BTCEUR Simple Strategy</option>
-        `;
+/**
+ * Fetch dynamic strategy catalog from Strategy Lab via Dashboard Server proxy
+ */
+async function fetchStrategyCatalog() {
+    try {
+        const resp = await fetch('/api/research/strategies');
+        const data = await resp.json();
+        if (data && data.strategies) {
+            dynamicStrategyCatalog = data;
+            populateStrategySymbols();
+        }
+    } catch (err) {
+        console.warn('Could not load dynamic strategy catalog from Strategy Lab:', err);
     }
 }
+
+/**
+ * Populate symbol selector dynamically from catalog
+ */
+function populateStrategySymbols() {
+    if (!dynamicStrategyCatalog || !dynamicStrategyCatalog.strategies) return;
+    const symSelect = document.getElementById('bt-symbol');
+    if (!symSelect) return;
+
+    const availableSymbols = Object.keys(dynamicStrategyCatalog.strategies);
+    if (availableSymbols.length === 0) return;
+
+    const currentVal = symSelect.value;
+    symSelect.innerHTML = availableSymbols.map(sym => {
+        let label = sym;
+        if (sym === 'EURUSD') label = 'EURUSD (Euro / US Dollar)';
+        else if (sym === 'XAUUSD') label = 'XAUUSD (Gold Spot)';
+        else if (sym === 'BTCEUR') label = 'BTCEUR (Bitcoin / Euro)';
+        return `<option value="${sym}" ${sym === currentVal ? 'selected' : ''}>${label}</option>`;
+    }).join('');
+
+    if (!availableSymbols.includes(currentVal)) {
+        symSelect.value = availableSymbols[0];
+    }
+
+    onBacktestSymbolChange();
+}
+
+/**
+ * Symbol change handler: updates strategy model dropdown dynamically
+ */
+function onBacktestSymbolChange() {
+    const symSelect = document.getElementById('bt-symbol');
+    const stratSelect = document.getElementById('bt-strategy');
+    if (!symSelect || !stratSelect) return;
+
+    const sym = symSelect.value.toUpperCase();
+    const strats = (dynamicStrategyCatalog && dynamicStrategyCatalog.strategies && dynamicStrategyCatalog.strategies[sym])
+        ? dynamicStrategyCatalog.strategies[sym]
+        : [];
+
+    if (strats.length === 0) {
+        stratSelect.innerHTML = `<option value="">No strategies available</option>`;
+        onBacktestStrategyChange();
+        return;
+    }
+
+    stratSelect.innerHTML = strats.map((s, idx) => {
+        const id = s.id || s;
+        const name = s.name || id;
+        return `<option value="${id}" ${idx === 0 ? 'selected' : ''}>${name}</option>`;
+    }).join('');
+
+    onBacktestStrategyChange();
+}
+
+/**
+ * Strategy change handler: updates timeframe dropdown dynamically with only allowed timeframes
+ */
+function onBacktestStrategyChange() {
+    const symSelect = document.getElementById('bt-symbol');
+    const stratSelect = document.getElementById('bt-strategy');
+    const tfSelect = document.getElementById('bt-timeframe');
+    if (!symSelect || !stratSelect || !tfSelect) return;
+
+    const sym = symSelect.value.toUpperCase();
+    const stratId = stratSelect.value;
+
+    const strats = (dynamicStrategyCatalog && dynamicStrategyCatalog.strategies && dynamicStrategyCatalog.strategies[sym])
+        ? dynamicStrategyCatalog.strategies[sym]
+        : [];
+
+    const stratMeta = strats.find(s => (s.id || s) === stratId);
+    const allowedTfs = (stratMeta && Array.isArray(stratMeta.allowed_timeframes))
+        ? stratMeta.allowed_timeframes
+        : ['H1'];
+
+    const defaultTf = (stratMeta && stratMeta.default_timeframe)
+        ? stratMeta.default_timeframe
+        : allowedTfs[0];
+
+    tfSelect.innerHTML = allowedTfs.map(tf => {
+        let label = tf;
+        if (tf === 'M5') label = 'M5 (5 Minutes)';
+        else if (tf === 'M15') label = 'M15 (15 Minutes)';
+        else if (tf === 'H1') label = 'H1 (1 Hour)';
+        else if (tf === 'H4') label = 'H4 (4 Hours)';
+        else if (tf === 'D1') label = 'D1 (Daily)';
+        return `<option value="${tf}" ${tf === defaultTf ? 'selected' : ''}>${label}</option>`;
+    }).join('');
+}
+
+// Backward compatibility alias
+function updateStrategySelector() {
+    onBacktestSymbolChange();
+}
+
 
 /**
  * Execute Backtest & Scientific Quant Audit from Dashboard UI

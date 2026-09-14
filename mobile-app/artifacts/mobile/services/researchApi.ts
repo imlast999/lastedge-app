@@ -467,10 +467,25 @@ export async function runBacktest(
   return data as BacktestRunResult;
 }
 
+export interface StrategyMetaItem {
+  id: string;
+  name: string;
+  description?: string;
+  allowed_timeframes: string[];
+  default_timeframe: string;
+  lookback_min?: number;
+}
+
+export interface StrategyCatalogResponse {
+  ok: boolean;
+  symbols?: string[];
+  strategies: Record<string, StrategyMetaItem[]>;
+}
+
 export async function fetchAvailableStrategies(
   overrides?: { url?: string; token?: string }
-): Promise<{ ok: boolean; strategies: Record<string, string[]>; timeframes: string[] }> {
-  return await apiFetch<{ ok: boolean; strategies: Record<string, string[]>; timeframes: string[] }>(
+): Promise<StrategyCatalogResponse> {
+  return await apiFetch<StrategyCatalogResponse>(
     `/api/research/strategies`,
     overrides
   );

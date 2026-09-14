@@ -344,7 +344,7 @@
                         <!-- Symbol -->
                         <div>
                             <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Symbol</label>
-                            <select id="bt-symbol" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                            <select id="bt-symbol" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onBacktestSymbolChange()">
                                 <option value="EURUSD" selected>EURUSD (Euro / US Dollar)</option>
                                 <option value="XAUUSD">XAUUSD (Gold Spot)</option>
                                 <option value="BTCEUR">BTCEUR (Bitcoin / Euro)</option>
@@ -354,10 +354,8 @@
                         <!-- Strategy -->
                         <div>
                             <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Strategy Model</label>
-                            <select id="bt-strategy" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
-                                <option value="eurusd_simple" selected>EURUSD Simple (Trend Pullback)</option>
-                                <option value="xauusd_partial">XAUUSD Partial Exit Strategy</option>
-                                <option value="btceur_partial">BTCEUR Trend Guard Strategy</option>
+                            <select id="bt-strategy" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onBacktestStrategyChange()">
+                                <option value="eurusd_partial" selected>EURUSD Partial Close (v1.1)</option>
                             </select>
                         </div>
 
@@ -366,9 +364,6 @@
                             <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Timeframe</label>
                             <select id="bt-timeframe" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
                                 <option value="H1" selected>H1 (1 Hour)</option>
-                                <option value="M15">M15 (15 Minutes)</option>
-                                <option value="H4">H4 (4 Hours)</option>
-                                <option value="D1">D1 (Daily)</option>
                             </select>
                         </div>
 
