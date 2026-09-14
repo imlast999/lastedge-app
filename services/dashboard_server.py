@@ -89,25 +89,18 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
         research_client = get_research_client()
 
         try:
-            # ── App Health & Overview (Parallel Probes) ───────────────────────
+            # ── App Health & Overview (Fast Probes) ───────────────────────────
             if path in ("/api/app/health", "/api/health", "/health"):
-                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
-                t_online = False
-                r_online = False
-                try:
-                    with ThreadPoolExecutor(max_workers=2) as executor:
-                        fut_t = executor.submit(trading_client.is_online)
-                        fut_r = executor.submit(research_client.is_online)
-                        try:
-                            t_online = fut_t.result(timeout=2.5)
-                        except (FuturesTimeout, Exception):
-                            t_online = False
-                        try:
-                            r_online = fut_r.result(timeout=2.5)
-                        except (FuturesTimeout, Exception):
-                            r_online = False
-                except Exception:
-                    pass
+                import socket
+                def _fast_probe(p: int) -> bool:
+                    try:
+                        with socket.create_connection(("127.0.0.1", p), timeout=0.25):
+                            return True
+                    except OSError:
+                        return False
+
+                t_online = _fast_probe(8081)
+                r_online = _fast_probe(8082)
 
                 self._send_json(200, {
                     "ok": True,
