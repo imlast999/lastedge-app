@@ -224,23 +224,23 @@ function QuickStat({
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  accent: { width: 3 },
-  body: { flex: 1, padding: 12, gap: 6 },
+  accent: { width: 2.5 },
+  body: { flex: 1, padding: 10, gap: 6 },
 
   mainRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  leftCol: { gap: 4, minWidth: 56 },
+  leftCol: { gap: 3, minWidth: 52 },
   rightCol: { flex: 1, alignItems: "flex-end", gap: 2 },
 
-  tradeNumRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tradeNumRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   tradeNum: {
     fontSize: 10,
     fontFamily: "Inter_500Medium",
@@ -248,9 +248,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   newHighBadge: {
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   newHighText: {
     fontSize: 8,
@@ -259,12 +259,12 @@ const styles = StyleSheet.create({
   },
   resultBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   resultText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_700Bold",
     letterSpacing: 0.5,
   },

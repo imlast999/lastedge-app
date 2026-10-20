@@ -87,19 +87,21 @@ export default function TradesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Safe Area: Header respects top inset */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      {/* Safe Area: Header respects top inset (Institutional Breadcrumbs style) */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerCopy}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Trades</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Pending signals and closed trades
-          </Text>
+          <View style={styles.breadcrumbRow}>
+            <Text style={[styles.breadcrumb, { color: colors.primary }]}>MT5 LIVE</Text>
+            <Text style={[styles.breadcrumbSep, { color: colors.mutedForeground }]}>/</Text>
+            <Text style={[styles.breadcrumb, { color: colors.mutedForeground }]}>EXECUTION</Text>
+          </View>
+          <Text style={[styles.title, { color: colors.foreground }]}>Trades & Signals</Text>
         </View>
         <TouchableOpacity
           onPress={handleOpenSettings}
-          style={[styles.settingsButton, { backgroundColor: colors.secondary }]}
+          style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
         >
-          <Feather name="settings" size={20} color={colors.foreground} />
+          <Feather name="settings" size={16} color={colors.mutedForeground} />
         </TouchableOpacity>
       </View>
 
@@ -355,17 +357,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 4,
-    gap: 12,
+    alignItems: "center",
+    marginBottom: 8,
   },
-  headerCopy: { flex: 1 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold" },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
+  headerCopy: { flex: 1, gap: 2 },
+  breadcrumbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  breadcrumb: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.6,
+  },
+  breadcrumbSep: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+  },
+  title: { fontSize: 20, fontFamily: "Inter_700Bold" },
   settingsButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 8,
+    borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -374,11 +389,11 @@ const styles = StyleSheet.create({
   subTabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subTab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
   },
   subTabInner: {
@@ -387,59 +402,61 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   subTabLabel: {
-    fontSize: 14,
+    fontSize: 13,
   },
   subTabBadge: {
     minWidth: 18,
     height: 18,
-    borderRadius: 9,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
   },
   subTabBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_700Bold",
   },
 
   // Listas
-  list: { paddingHorizontal: 16, paddingTop: 8 },
+  list: { paddingHorizontal: 16, paddingTop: 4 },
   listHeader: { marginBottom: 4 },
 
   // Sumario cerradas
   summaryCard: {
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 10,
   },
-  summaryItem: { flex: 1, alignItems: "center", gap: 4 },
+  summaryItem: { flex: 1, alignItems: "center", gap: 3 },
   summaryValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_700Bold",
     fontVariant: ["tabular-nums"],
   },
   summaryLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
-  sep: { width: 1, marginVertical: 4 },
+  sep: { width: 1, marginVertical: 2 },
 
   // Empty states
-  empty: { alignItems: "center", paddingTop: 60, gap: 12 },
+  empty: { alignItems: "center", paddingTop: 48, gap: 10 },
   emptyIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
+  emptyTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   emptyText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     paddingHorizontal: 32,

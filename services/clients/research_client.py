@@ -96,11 +96,15 @@ class ResearchClient:
             }
         return res
 
-    def get_experiments(self) -> Dict[str, Any]:
+    def get_experiments(self, experiment_type: Optional[str] = None) -> Dict[str, Any]:
         """Gets list of backtest and exit research experiments."""
-        res = self._get("/api/research/experiments")
+        import urllib.parse
+        endpoint = "/api/research/experiments"
+        if experiment_type:
+            endpoint += f"?type={urllib.parse.quote(str(experiment_type))}"
+        res = self._get(endpoint)
         if res.get("offline"):
-            return {"ok": False, "experiments": [], "total": 0, "offline": True}
+            return {"ok": False, "experiments": [], "backtests": [], "research": [], "total": 0, "offline": True}
         return res
 
     def get_candidates(self) -> Dict[str, Any]:
@@ -125,7 +129,7 @@ class ResearchClient:
                 headers={"Content-Type": "application/json", "User-Agent": "LastEdgeAppClient/1.0"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=60.0) as resp:
+            with urllib.request.urlopen(req, timeout=300.0) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             try:
@@ -139,6 +143,33 @@ class ResearchClient:
                 "ok": False,
                 "offline": True,
                 "message": f"Strategy Lab failed to execute backtest: {e}"
+            }
+
+    def run_research(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Runs a quantitative strategy research (WFA + Monte Carlo) simulation on Strategy Lab."""
+        url = f"{self.base_url}/api/research/run"
+        try:
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json", "User-Agent": "LastEdgeAppClient/1.0"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=300.0) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            try:
+                err_json = json.loads(e.read().decode("utf-8"))
+                return err_json
+            except Exception:
+                return {"ok": False, "status_code": e.code, "message": str(e)}
+        except Exception as e:
+            logger.error(f"[ResearchClient] run_research error ({url}): {e}")
+            return {
+                "ok": False,
+                "offline": True,
+                "message": f"Strategy Lab failed to execute research: {e}"
             }
 
     def get_strategies(self) -> Dict[str, Any]:

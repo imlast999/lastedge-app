@@ -17,10 +17,15 @@ function formatDate(isoString: string): string {
 export function TradeCard({ trade }: Props) {
   const colors = useColors();
 
-  const isProfit = trade.profit > 0;
-  const isBuy = trade.type === "BUY";
-  const isTP = trade.closeReason === "TAKE_PROFIT";
-  const isSL = trade.closeReason === "STOP_LOSS";
+  const profitVal = Number(trade?.profit ?? 0);
+  const pipsVal = Number(trade?.pips ?? 0);
+  const openPriceVal = Number(trade?.openPrice ?? 0);
+  const closePriceVal = Number(trade?.closePrice ?? 0);
+  const symbolStr = trade?.symbol || "–";
+  const isProfit = profitVal > 0;
+  const isBuy = trade?.type === "BUY";
+  const isTP = trade?.closeReason === "TAKE_PROFIT";
+  const isSL = trade?.closeReason === "STOP_LOSS";
 
   const typeColor = isBuy ? colors.buy : colors.sell;
   const profitColor = isProfit ? colors.profit : colors.loss;
@@ -32,22 +37,22 @@ export function TradeCard({ trade }: Props) {
         <View style={styles.row}>
           <View style={styles.left}>
             <View style={styles.symbolRow}>
-              <Text style={[styles.symbol, { color: colors.foreground }]}>{trade.symbol}</Text>
+              <Text style={[styles.symbol, { color: colors.foreground }]}>{symbolStr}</Text>
               <View style={[styles.typeBadge, { backgroundColor: `${typeColor}20` }]}>
-                <Text style={[styles.typeText, { color: typeColor }]}>{trade.type}</Text>
+                <Text style={[styles.typeText, { color: typeColor }]}>{trade?.type || "BUY"}</Text>
               </View>
             </View>
             <Text style={[styles.date, { color: colors.mutedForeground }]}>
-              {formatDate(trade.closedAt)}
+              {formatDate(trade?.closedAt || new Date().toISOString())}
             </Text>
           </View>
 
           <View style={styles.right}>
             <Text style={[styles.profit, { color: profitColor }]}>
-              {isProfit ? "+" : ""}{trade.profit.toFixed(2)}€
+              {isProfit ? "+" : ""}{profitVal.toFixed(2)}€
             </Text>
             <Text style={[styles.pips, { color: colors.mutedForeground }]}>
-              {trade.pips > 0 ? "+" : ""}{trade.pips} pips
+              {pipsVal > 0 ? "+" : ""}{pipsVal} pips
             </Text>
           </View>
         </View>
@@ -56,12 +61,12 @@ export function TradeCard({ trade }: Props) {
           <View style={styles.priceRow}>
             <Text style={[styles.priceLabel, { color: colors.mutedForeground }]}>Open</Text>
             <Text style={[styles.priceValue, { color: colors.foreground }]}>
-              {trade.openPrice.toFixed(trade.symbol.includes("JPY") || trade.symbol.includes("XAU") ? 3 : 5)}
+              {openPriceVal.toFixed(symbolStr.includes("JPY") || symbolStr.includes("XAU") ? 3 : 5)}
             </Text>
             <Feather name="arrow-right" size={10} color={colors.mutedForeground} />
             <Text style={[styles.priceLabel, { color: colors.mutedForeground }]}>Close</Text>
             <Text style={[styles.priceValue, { color: colors.foreground }]}>
-              {trade.closePrice.toFixed(trade.symbol.includes("JPY") || trade.symbol.includes("XAU") ? 3 : 5)}
+              {closePriceVal.toFixed(symbolStr.includes("JPY") || symbolStr.includes("XAU") ? 3 : 5)}
             </Text>
           </View>
 
@@ -106,19 +111,19 @@ export function TradeCard({ trade }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
     overflow: "hidden",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   accent: {
-    width: 3,
+    width: 2.5,
   },
   content: {
     flex: 1,
-    padding: 14,
-    gap: 10,
+    padding: 12,
+    gap: 8,
   },
   row: {
     flexDirection: "row",
@@ -126,7 +131,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   left: {
-    gap: 4,
+    gap: 3,
   },
   right: {
     alignItems: "flex-end",
@@ -135,33 +140,33 @@ const styles = StyleSheet.create({
   symbolRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   symbol: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_700Bold",
   },
   typeBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
   },
   typeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Inter_700Bold",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   date: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
   },
   profit: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
     fontVariant: ["tabular-nums"],
   },
   pips: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
     fontVariant: ["tabular-nums"],
   },
@@ -169,14 +174,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingTop: 4,
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
   priceLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_400Regular",
   },
   priceValue: {
@@ -188,9 +194,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 4,
   },
   reasonText: {
     fontSize: 9,
@@ -201,7 +207,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 8,
-    marginTop: -4,
+    marginTop: -2,
   },
   metricText: {
     fontSize: 10,

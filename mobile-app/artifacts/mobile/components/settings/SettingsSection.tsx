@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     overflow: "hidden",
   },

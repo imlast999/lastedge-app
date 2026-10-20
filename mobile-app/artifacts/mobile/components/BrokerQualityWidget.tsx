@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import { getApiUrl } from "@/services/connectionTest";
+import { resolveApiConfig } from "@/lib/apiConfig";
 
 interface ExecutionAnalytics {
   brokerQualityScore: number;
@@ -22,12 +22,20 @@ export function BrokerQualityWidget() {
     let isMounted = true;
     async function fetchAnalytics() {
       try {
-        const baseUrl = await getApiUrl();
+        const { url: baseUrl } = resolveApiConfig();
         const res = await fetch(`${baseUrl}/api/analytics/execution?days=30`);
         if (res.ok) {
           const json = await res.json();
           if (isMounted && json.ok) {
-            setData(json);
+            const raw = json.analytics?.analytics ?? json.analytics ?? json;
+            setData({
+              brokerQualityScore: Number(raw.broker_quality_score ?? raw.brokerQualityScore ?? 100.0),
+              fillRatePct: Number(raw.fill_rate_pct ?? raw.fillRatePct ?? 100.0),
+              avgLatencyMs: Number(raw.avg_latency_ms ?? raw.avgLatencyMs ?? 0),
+              avgSlippagePips: Number(raw.avg_slippage_pips ?? raw.avgSlippagePips ?? 0),
+              totalSlippageCostEur: Number(raw.total_slippage_cost_eur ?? raw.totalSlippageCostEur ?? 0),
+              totalOrders: Number(raw.total_orders ?? raw.totalOrders ?? 0),
+            });
           }
         }
       } catch (err) {
@@ -43,16 +51,16 @@ export function BrokerQualityWidget() {
   }, []);
 
   const score = data?.brokerQualityScore ?? 100.0;
-  const scoreColor = score >= 80 ? "#3fb950" : score >= 50 ? "#d29922" : "#f85149";
+  const scoreColor = score >= 80 ? colors.profit : score >= 50 ? colors.pending : colors.loss;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Feather name="shield" size={18} color={colors.primary} />
-          <Text style={[styles.title, { color: colors.text }]}>Broker Quality & Latency</Text>
+          <Feather name="shield" size={15} color={colors.primary} />
+          <Text style={[styles.title, { color: colors.foreground }]}>Broker Quality & Latency</Text>
         </View>
-        <View style={[styles.scoreBadge, { backgroundColor: `${scoreColor}22`, borderColor: scoreColor }]}>
+        <View style={[styles.scoreBadge, { backgroundColor: `${scoreColor}18`, borderColor: scoreColor }]}>
           <Text style={[styles.scoreText, { color: scoreColor }]}>{score.toFixed(1)} / 100</Text>
         </View>
       </View>
@@ -62,29 +70,39 @@ export function BrokerQualityWidget() {
       ) : (
         <View style={styles.metricsGrid}>
           <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Fill Rate</Text>
-            <Text style={[styles.metricValue, { color: "#3fb950" }]}>
+            <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>Fill Rate</Text>
+            <Text style={[styles.metricValue, { color: colors.profit }]}>
               {(data?.fillRatePct ?? 100).toFixed(1)}%
             </Text>
           </View>
 
           <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Avg Latency</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>
+            <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>Avg Latency</Text>
+            <Text style={[styles.metricValue, { color: colors.foreground }]}>
               {data?.avgLatencyMs ?? 0} ms
             </Text>
           </View>
 
           <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Slippage</Text>
-            <Text style={[styles.metricValue, { color: (data?.avgSlippagePips ?? 0) <= 0 ? "#3fb950" : "#d29922" }]}>
+            <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>Slippage</Text>
+            <Text
+              style={[
+                styles.metricValue,
+                { color: (data?.avgSlippagePips ?? 0) <= 0 ? colors.profit : colors.pending },
+              ]}
+            >
               {(data?.avgSlippagePips ?? 0).toFixed(2)} pips
             </Text>
           </View>
 
           <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Slip Cost</Text>
-            <Text style={[styles.metricValue, { color: (data?.totalSlippageCostEur ?? 0) <= 0 ? "#3fb950" : "#f85149" }]}>
+            <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>Slip Cost</Text>
+            <Text
+              style={[
+                styles.metricValue,
+                { color: (data?.totalSlippageCostEur ?? 0) <= 0 ? colors.profit : colors.loss },
+              ]}
+            >
               {(data?.totalSlippageCostEur ?? 0).toFixed(2)} €
             </Text>
           </View>
@@ -96,16 +114,15 @@ export function BrokerQualityWidget() {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
-    padding: 16,
-    marginVertical: 8,
+    padding: 14,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   titleRow: {
     flexDirection: "row",
@@ -113,18 +130,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
   },
   scoreBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
     borderWidth: 1,
   },
   scoreText: {
-    fontSize: 13,
-    fontWeight: "800",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    fontVariant: ["tabular-nums"],
   },
   metricsGrid: {
     flexDirection: "row",
@@ -136,12 +154,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metricLabel: {
-    fontSize: 11,
-    fontWeight: "500",
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
     marginBottom: 4,
   },
   metricValue: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    fontVariant: ["tabular-nums"],
   },
 });

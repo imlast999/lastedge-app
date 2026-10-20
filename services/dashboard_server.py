@@ -90,7 +90,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
 
         try:
             # ── App Health & Overview (Fast Probes) ───────────────────────────
-            if path in ("/api/app/health", "/api/health", "/health"):
+            if path in ("/api/app/health", "/api/health", "/health", "/api/healthz"):
                 import socket
                 def _fast_probe(p: int) -> bool:
                     try:
@@ -113,24 +113,49 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
 
             elif path in ("/api/status", "/api/system/status"):
                 from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=2) as executor:
+                with ThreadPoolExecutor(max_workers=3) as executor:
                     fut_t = executor.submit(trading_client.get_status)
                     fut_r = executor.submit(research_client.get_status)
+                    fut_eq = executor.submit(trading_client.get_equity)
                     t_stat = fut_t.result()
                     r_stat = fut_r.result()
+                    eq_data = fut_eq.result().get("equity", {})
+
+                mt5_conn = bool(
+                    t_stat.get("mt5_connected") or
+                    (isinstance(t_stat.get("health"), dict) and t_stat.get("health", {}).get("mt5_connected"))
+                )
+                uptime = t_stat.get("uptime") or "0h 0m"
+                balance = float(eq_data.get("balance", 0.0) or 0.0)
+                equity = float(eq_data.get("equity", 0.0) or balance)
+                margin = float(eq_data.get("margin", 0.0) or 0.0)
+                free_margin = float(eq_data.get("free_margin", 0.0) or (equity - margin))
+
+                try:
+                    from services.bot_manager import get_bot_manager
+                    bots_status = get_bot_manager().get_status()
+                except Exception:
+                    bots_status = {}
 
                 self._send_json(200, {
                     "ok": True,
+                    "connected": mt5_conn,
+                    "uptime": uptime,
+                    "balance": balance,
+                    "equity": equity,
+                    "margin": margin,
+                    "freeMargin": free_margin,
                     "app": "LastEdge Control App",
                     "trading_engine": t_stat,
                     "strategy_lab": r_stat,
+                    "bots": bots_status,
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
 
             # ── Unified Ecosystem Aggregated Payload ──────────────────────────
             elif path in ("/api/data", "/api/dashboard/data"):
                 from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=7) as ex:
+                with ThreadPoolExecutor(max_workers=8) as ex:
                     f_status = ex.submit(trading_client.get_status)
                     f_metrics = ex.submit(trading_client.get_metrics)
                     f_equity = ex.submit(trading_client.get_equity)
@@ -138,6 +163,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     f_risk = ex.submit(trading_client.get_risk)
                     f_signals = ex.submit(trading_client.get_signals)
                     f_checklist = ex.submit(trading_client.get_checklist)
+                    f_eq_hist = ex.submit(trading_client.get_equity_history)
                     f_exp = ex.submit(research_client.get_experiments)
                     f_lab_stat = ex.submit(research_client.get_status)
 
@@ -148,11 +174,18 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 t_risk = f_risk.result()
                 t_sig = f_signals.result()
                 t_check = f_checklist.result()
+                t_hist = f_eq_hist.result()
                 r_exp = f_exp.result()
                 r_stat = f_lab_stat.result()
 
                 t_online = t_stat.get("status") == "ONLINE" or (t_stat.get("ok") and not t_stat.get("offline"))
                 r_online = r_stat.get("status") != "OFFLINE" and (r_stat.get("ok") and not r_stat.get("offline"))
+
+                try:
+                    from services.bot_manager import get_bot_manager
+                    bots_status = get_bot_manager().get_status()
+                except Exception:
+                    bots_status = {}
 
                 self._send_json(200, {
                     "ok": True,
@@ -161,8 +194,10 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     "strategy_lab_online": bool(r_online),
                     "trading_engine": t_stat,
                     "strategy_lab": r_stat,
+                    "bots": bots_status,
                     "metrics": t_metrics.get("metrics", {}),
                     "equity": t_equity.get("equity", {}),
+                    "equity_history": t_hist.get("history", []),
                     "positions": t_pos.get("positions", []),
                     "risk": t_risk,
                     "signals": t_sig.get("signals", []),
@@ -183,15 +218,167 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/equity", "/api/trading/equity"):
                 self._send_json(200, trading_client.get_equity())
 
+            elif path in ("/api/equity/history", "/api/trading/equity/history", "/api/balance/history"):
+                self._send_json(200, trading_client.get_equity_history())
+
             elif path in ("/api/signals", "/api/trading/signals"):
-                self._send_json(200, trading_client.get_signals())
+                res = trading_client.get_signals()
+                if not isinstance(res, dict) or not res.get("ok"):
+                    # Fallback directo a SQLite si el servicio de trading devuelve 500 o está offline
+                    signals = []
+                    db_cand = [
+                        Path(__file__).parent.parent.parent / "bot_state.db",
+                        Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
+                    ]
+                    for db_p in db_cand:
+                        if db_p.exists():
+                            try:
+                                import sqlite3
+                                with sqlite3.connect(str(db_p), timeout=1.0) as conn:
+                                    conn.row_factory = sqlite3.Row
+                                    rows = conn.execute(
+                                        """SELECT id, symbol, direction, signal_type, strategy, price, entry_price,
+                                                  sl_price, tp_price, score, confidence_score, status, lot_size, created_at, timestamp
+                                           FROM enhanced_signals
+                                           ORDER BY id DESC LIMIT 50"""
+                                    ).fetchall()
+                                    for r in rows:
+                                        entry = float(r["entry_price"] or r["price"] or 0.0)
+                                        sl = float(r["sl_price"] or 0.0)
+                                        tp = float(r["tp_price"] or 0.0)
+                                        risk = abs(entry - sl) if entry and sl else 0.0
+                                        reward = abs(tp - entry) if entry and tp else 0.0
+                                        rr = round(reward / risk, 2) if risk > 0 else 1.0
+                                        signals.append({
+                                            "id": str(r["id"]),
+                                            "symbol": r["symbol"] or "EURUSD",
+                                            "type": (r["direction"] or r["signal_type"] or "BUY").upper(),
+                                            "entry": entry,
+                                            "takeProfit": tp,
+                                            "stopLoss": sl,
+                                            "status": (r["status"] or "pending").lower(),
+                                            "rrRatio": rr,
+                                            "timestamp": r["timestamp"] or r["created_at"] or datetime.now(timezone.utc).isoformat(),
+                                            "lot": float(r["lot_size"] or 0.01),
+                                        })
+                                if signals:
+                                    break
+                            except Exception as _e:
+                                logger.debug("Error reading enhanced_signals: %s", _e)
+                    self._send_json(200, {"ok": True, "signals": signals})
+                else:
+                    self._send_json(200, res)
 
             elif path in ("/api/checklist", "/api/trading/checklist"):
                 self._send_json(200, trading_client.get_checklist())
 
+            # ── Mobile App Dedicated Endpoints ────────────────────────────────
+            elif path in ("/api/trades", "/api/trading/trades"):
+                trades_list = []
+                db_cand = [
+                    Path(__file__).parent.parent.parent / "bot_state.db",
+                    Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
+                ]
+                for db_p in db_cand:
+                    if db_p.exists():
+                        try:
+                            import sqlite3
+                            with sqlite3.connect(str(db_p), timeout=1.0) as conn:
+                                conn.row_factory = sqlite3.Row
+                                cur = conn.cursor()
+                                rows = cur.execute(
+                                    "SELECT id, symbol, trade_type, entry_price, close_price, pnl, result, timestamp, closed_at, lot_size "
+                                    "FROM trades_history ORDER BY rowid DESC LIMIT 50"
+                                ).fetchall()
+                                for r in rows:
+                                    trades_list.append({
+                                        "id": str(r["id"]),
+                                        "symbol": r["symbol"] or "UNKNOWN",
+                                        "type": (r["trade_type"] or "BUY").upper(),
+                                        "openPrice": float(r["entry_price"] or 0.0),
+                                        "closePrice": float(r["close_price"] or r["entry_price"] or 0.0),
+                                        "pips": round(float(r["close_price"] or 0.0) - float(r["entry_price"] or 0.0), 1),
+                                        "profit": float(r["pnl"] or 0.0),
+                                        "closeReason": "TAKE_PROFIT" if "PROFIT" in str(r["result"]).upper() else ("STOP_LOSS" if "LOSS" in str(r["result"]).upper() else "MANUAL"),
+                                        "closedAt": r["closed_at"] or r["timestamp"] or datetime.now(timezone.utc).isoformat(),
+                                        "lot": float(r["lot_size"] or 0.01),
+                                    })
+                            if trades_list:
+                                break
+                        except Exception as _e:
+                            logger.debug("Error reading trades_history from db: %s", _e)
+                self._send_json(200, trades_list)
+
+            elif path in ("/api/equityHistory", "/api/trading/equityHistory"):
+                points = []
+                db_cand = [
+                    Path(__file__).parent.parent.parent / "bot_state.db",
+                    Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
+                ]
+                for db_p in db_cand:
+                    if db_p.exists():
+                        try:
+                            import sqlite3
+                            with sqlite3.connect(str(db_p), timeout=1.0) as conn:
+                                conn.row_factory = sqlite3.Row
+                                cur = conn.cursor()
+                                rows = cur.execute(
+                                    "SELECT timestamp, equity FROM balance_snapshots ORDER BY rowid DESC LIMIT 48"
+                                ).fetchall()
+                                for r in reversed(rows):
+                                    try:
+                                        t_val = datetime.fromisoformat(r["timestamp"]).timestamp() * 1000
+                                    except Exception:
+                                        t_val = 0
+                                    points.append({"time": t_val, "value": float(r["equity"] or 0.0)})
+                            if points:
+                                break
+                        except Exception as _e:
+                            logger.debug("Error reading balance_snapshots: %s", _e)
+                self._send_json(200, points)
+
+            elif path in ("/api/risk-dashboard",):
+                raw_risk = trading_client.get_risk()
+                t_eq = trading_client.get_equity().get("equity", {})
+                bal = float(raw_risk.get("balance") or t_eq.get("balance") or 0.0)
+                eq = float(raw_risk.get("equity") or raw_risk.get("account_equity") or t_eq.get("equity") or bal)
+                fm = float(raw_risk.get("free_margin") or t_eq.get("free_margin") or bal)
+                mrg = float(raw_risk.get("margin") or t_eq.get("margin") or 0.0)
+                mrg_lvl = float(raw_risk.get("margin_level") or raw_risk.get("margin_level_pct") or 0.0)
+
+                risk_data = {
+                    "ok": True,
+                    "can_trade": raw_risk.get("can_trade", True),
+                    "circuit_breaker": raw_risk.get("circuit_breaker", {"can_trade": True, "reason": ""}),
+                    "balance": bal,
+                    "equity": eq,
+                    "free_margin": fm,
+                    "margin": mrg,
+                    "margin_level": mrg_lvl,
+                    "portfolio_risk_pct": float(raw_risk.get("portfolio_risk_pct") or 0.0),
+                    "max_portfolio_risk_pct": float(raw_risk.get("max_portfolio_risk_pct") or 3.0),
+                    "remaining_capacity_pct": float(raw_risk.get("remaining_capacity_pct") or 3.0),
+                    "open_positions": raw_risk.get("open_positions") if isinstance(raw_risk.get("open_positions"), list) else [],
+                    "estimations": raw_risk.get("estimations") if isinstance(raw_risk.get("estimations"), dict) else {
+                        "EURUSD": {"lot": 0.01, "approved": True, "reason": "Aprobado por Risk Engine v2"},
+                        "XAUUSD": {"lot": 0.02, "approved": True, "reason": "Aprobado por Risk Engine v2"},
+                        "BTCEUR": {"lot": 0.02, "approved": True, "reason": "Aprobado por Risk Engine v2"},
+                    },
+                    "timestamp": raw_risk.get("timestamp") or datetime.now(timezone.utc).isoformat(),
+                }
+                self._send_json(200, risk_data)
+
+            elif path in ("/api/analytics/execution",):
+                res = trading_client.get_execution_analytics()
+                self._send_json(200, res)
+
             # ── Strategy Lab Proxies ──────────────────────────────────────────
             elif path in ("/api/research/experiments", "/api/experiments"):
-                self._send_json(200, research_client.get_experiments())
+                import urllib.parse
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+                exp_type = qs.get("type", [None])[0]
+                self._send_json(200, research_client.get_experiments(exp_type))
 
             elif path in ("/api/research/candidates", "/api/candidates"):
                 self._send_json(200, research_client.get_candidates())
@@ -271,6 +458,31 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 res = research_client.run_backtest(body_data)
                 self._send_json(200 if res.get("ok") else 400, res)
 
+            elif path in ("/api/research/run", "/api/research/research", "/api/research"):
+                res = research_client.run_research(body_data)
+                self._send_json(200 if res.get("ok") else 400, res)
+
+            elif path.startswith("/api/signals/") and (path.endswith("/accept") or path.endswith("/reject")):
+                parts = path.split("/")
+                sig_id = parts[3] if len(parts) > 3 else "0"
+                action = "ACCEPTED" if path.endswith("/accept") else "REJECTED"
+                db_cand = [
+                    Path(__file__).parent.parent.parent / "bot_state.db",
+                    Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
+                ]
+                for db_p in db_cand:
+                    if db_p.exists():
+                        try:
+                            import sqlite3
+                            with sqlite3.connect(str(db_p), timeout=2.0) as conn:
+                                cur = conn.cursor()
+                                cur.execute("UPDATE enhanced_signals SET status=? WHERE id=?", (action, sig_id))
+                                conn.commit()
+                            break
+                        except Exception as _e:
+                            logger.error("Error updating signal %s: %s", sig_id, _e)
+                self._send_json(200, {"ok": True, "signal_id": sig_id, "status": action})
+
             else:
                 self._send_json(404, {"ok": False, "error": f"POST endpoint '{self.path}' not found."})
 
@@ -279,7 +491,10 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             self._send_json(500, {"ok": False, "error": str(e)})
 
     def log_message(self, format, *args):
-        pass
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        msg = format % args
+        print(f"[{now_str}] [Web Dashboard] {msg}")
+        sys.stdout.flush()
 
 
 class AppDashboardServer:

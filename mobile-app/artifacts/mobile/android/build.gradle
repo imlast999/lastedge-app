@@ -16,6 +16,8 @@ ext {
     compileSdkVersion = 36
     minSdkVersion = 24
     targetSdkVersion = 36
+    ndkVersion = "27.1.12297006"
+    buildToolsVersion = "36.0.0"
     REACT_NATIVE_NODE_MODULES_DIR = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
     REACT_NATIVE_WORKLETS_NODE_MODULES_DIR = new File(["node", "--print", "require.resolve('react-native-worklets/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
     reactNativeAndroidRoot = file("${REACT_NATIVE_NODE_MODULES_DIR}/android")
@@ -25,7 +27,7 @@ allprojects {
   repositories {
     google()
     mavenCentral()
-    maven { url 'https://www.jitpack.io' }
+    maven { url = 'https://www.jitpack.io' }
   }
 }
 
@@ -35,18 +37,6 @@ subprojects {
     targetSdkVersion = 36
     minSdkVersion = 24
     buildToolsVersion = "36.0.0"
-  }
-  afterEvaluate { project ->
-    if (project.hasProperty("android")) {
-      project.android {
-        compileSdkVersion 36
-        buildToolsVersion "36.0.0"
-        defaultConfig {
-          minSdkVersion 24
-          targetSdkVersion 36
-        }
-      }
-    }
   }
 }
 

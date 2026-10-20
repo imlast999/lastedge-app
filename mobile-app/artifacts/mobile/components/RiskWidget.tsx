@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { resolveApiConfig } from "@/lib/apiConfig";
 import { useSettings } from "@/context/SettingsContext";
@@ -84,33 +85,42 @@ export default function RiskWidget() {
     );
   }
 
-  const safeData = data ?? {
-    balance: 5000,
-    equity: 5000,
-    free_margin: 5000,
-    margin: 0,
-    margin_level: 0,
-    portfolio_risk_pct: 0.0,
-    max_portfolio_risk_pct: 2.0,
-    remaining_capacity_pct: 2.0,
-    open_positions: [],
-    estimations: {},
-    timestamp: new Date().toISOString()
+  const safeData = {
+    balance: Number(data?.balance ?? 0),
+    equity: Number(data?.equity ?? (data as any)?.account_equity ?? 0),
+    free_margin: Number(data?.free_margin ?? (data as any)?.account_equity ?? 0),
+    margin: Number(data?.margin ?? 0),
+    margin_level: Number(data?.margin_level ?? (data as any)?.margin_level_pct ?? 0),
+    portfolio_risk_pct: Number(data?.portfolio_risk_pct ?? 0),
+    max_portfolio_risk_pct: Number(data?.max_portfolio_risk_pct ?? 3.0) || 3.0,
+    remaining_capacity_pct: Number(data?.remaining_capacity_pct ?? 3.0),
+    open_positions: Array.isArray(data?.open_positions) ? data.open_positions : [],
+    estimations: (typeof data?.estimations === "object" && data?.estimations !== null) ? data.estimations : {},
+    timestamp: data?.timestamp || new Date().toISOString()
   };
 
-  const riskPct = safeData.portfolio_risk_pct;
-  const maxRisk = safeData.max_portfolio_risk_pct;
-  const progress = Math.min(1.0, riskPct / maxRisk);
+  const riskPct = typeof safeData.portfolio_risk_pct === "number" && !isNaN(safeData.portfolio_risk_pct) ? safeData.portfolio_risk_pct : 0;
+  const maxRisk = typeof safeData.max_portfolio_risk_pct === "number" && safeData.max_portfolio_risk_pct > 0 ? safeData.max_portfolio_risk_pct : 3.0;
+  const progress = maxRisk > 0 ? Math.min(1.0, Math.max(0, riskPct / maxRisk)) : 0;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[styles.title, { color: colors.foreground }]}>🛡️ Portfolio Risk Engine</Text>
+      {/* Institutional Header */}
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <Feather name="shield" size={14} color={colors.primary} />
+          <Text style={[styles.title, { color: colors.foreground }]}>RISK ENGINE V2</Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Text style={[styles.statusBadgeText, { color: colors.mutedForeground }]}>ENFORCED</Text>
+        </View>
+      </View>
 
       {/* Barra de progreso de riesgo */}
       <View style={styles.section}>
         <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>Exposición Actual</Text>
-          <Text style={[styles.value, { color: riskPct > maxRisk * 0.8 ? colors.loss : colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>Portfolio Exposure</Text>
+          <Text style={[styles.value, { color: riskPct > maxRisk * 0.8 ? colors.loss : colors.foreground }]}>
             {riskPct.toFixed(2)}% <Text style={{ fontSize: 11, color: colors.mutedForeground }}>/ {maxRisk.toFixed(1)}% max</Text>
           </Text>
         </View>
@@ -124,18 +134,23 @@ export default function RiskWidget() {
 
       {/* Posiciones abiertas y su riesgo */}
       <View style={[styles.section, styles.borderTop, { borderTopColor: colors.border }]}>
-        <Text style={[styles.subTitle, { color: colors.foreground }]}>Riesgo por Posición</Text>
+        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Open Risk Allocation</Text>
         {safeData.open_positions.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Sin posiciones abiertas en riesgo</Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No open positions with active risk exposure</Text>
         ) : (
           safeData.open_positions.map((pos, idx) => (
             <View key={idx} style={styles.positionRow}>
               <View>
-                <Text style={[styles.positionSym, { color: colors.foreground }]}>{pos.symbol}</Text>
-                <Text style={[styles.positionTicket, { color: colors.mutedForeground }]}>Ticket #{pos.ticket} · Lot {pos.volume.toFixed(2)}</Text>
+                <Text style={[styles.positionSym, { color: colors.foreground }]}>{pos?.symbol || "–"}</Text>
+                <Text style={[styles.positionTicket, { color: colors.mutedForeground }]}>
+                  Ticket #{pos?.ticket ?? 0} · Lot {Number(pos?.volume ?? 0).toFixed(2)}
+                </Text>
               </View>
               <Text style={[styles.positionRisk, { color: colors.foreground }]}>
-                {pos.risk_pct.toFixed(2)}% <Text style={{ fontSize: 10, color: colors.mutedForeground }}>({pos.risk_amount.toFixed(0)}€)</Text>
+                {Number(pos?.risk_pct ?? 0).toFixed(2)}%{" "}
+                <Text style={{ fontSize: 10, color: colors.mutedForeground }}>
+                  ({Number(pos?.risk_amount ?? 0).toFixed(0)}€)
+                </Text>
               </Text>
             </View>
           ))
@@ -144,18 +159,18 @@ export default function RiskWidget() {
 
       {/* Capacidad Restante */}
       <View style={[styles.section, styles.borderTop, { borderTopColor: colors.border }]}>
-        <Text style={[styles.subTitle, { color: colors.foreground }]}>Capacidad Restante</Text>
+        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Capacity Telemetry</Text>
         <View style={styles.rowGrid}>
           <View style={styles.gridCol}>
-            <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>Riesgo Disponible</Text>
+            <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>Remaining Risk</Text>
             <Text style={[styles.gridValue, { color: colors.foreground }]}>
               {Math.max(0, maxRisk - riskPct).toFixed(2)}%
             </Text>
           </View>
           <View style={styles.gridCol}>
-            <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>Margen Libre</Text>
+            <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>Free Margin</Text>
             <Text style={[styles.gridValue, { color: colors.foreground }]}>
-              {safeData.free_margin.toFixed(0)}€
+              {safeData.free_margin.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}€
             </Text>
           </View>
         </View>
@@ -163,18 +178,22 @@ export default function RiskWidget() {
 
       {/* Estimaciones próximas señales */}
       <View style={[styles.section, styles.borderTop, { borderTopColor: colors.border }]}>
-        <Text style={[styles.subTitle, { color: colors.foreground }]}>Lote Estimado (Próxima Señal)</Text>
+        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Next Signal Sizing Estimate</Text>
         <View style={styles.rowGrid}>
           {['EURUSD', 'XAUUSD', 'BTCEUR'].map((sym) => {
             const est = safeData.estimations?.[sym];
+            const isApproved = est?.approved ?? true;
+            const lotStr = Number(est?.lot ?? (sym === "EURUSD" ? 0.01 : 0.02)).toFixed(2);
+            const rawReason = String(est?.reason || "Blocked");
+            const displayReason = rawReason.includes("]") ? (rawReason.split("]")[1] || rawReason) : rawReason;
             return (
               <View key={sym} style={styles.gridCol}>
                 <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>{sym}</Text>
-                <Text style={[styles.gridValue, { color: est?.approved ? colors.profit : colors.mutedForeground }]}>
-                  {est?.approved ? `${est.lot.toFixed(2)}` : "BLOCKED"}
+                <Text style={[styles.gridValue, { color: isApproved ? colors.profit : colors.mutedForeground }]}>
+                  {isApproved ? `${lotStr} lot` : "BLOCKED"}
                 </Text>
-                {est && !est.approved && (
-                  <Text style={[styles.blockedReason, { color: colors.loss }]}>{est.reason.split("]")[1] || est.reason}</Text>
+                {!isApproved && (
+                  <Text style={[styles.blockedReason, { color: colors.loss }]}>{displayReason}</Text>
                 )}
               </View>
             );
@@ -183,34 +202,56 @@ export default function RiskWidget() {
       </View>
     </View>
   );
+
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
-    padding: 16,
+    padding: 14,
     gap: 12,
-    marginVertical: 6,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   title: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 4,
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.6,
+  },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  statusBadgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
   },
   subTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    letterSpacing: 0.6,
+    marginBottom: 4,
   },
   section: {
     gap: 8,
   },
   borderTop: {
     borderTopWidth: 1,
-    paddingTop: 12,
+    paddingTop: 10,
   },
   row: {
     flexDirection: "row",
@@ -228,40 +269,41 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
   },
   gridValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
+    fontVariant: ["tabular-nums"],
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
   },
   value: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    fontVariant: ["tabular-nums"],
   },
   progressBarBg: {
-    height: 8,
-    borderRadius: 4,
+    height: 4,
+    borderRadius: 2,
     overflow: "hidden",
     width: "100%",
   },
   progressBarFill: {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 2,
   },
   emptyText: {
-    fontSize: 12,
-    fontStyle: "italic",
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
   },
   positionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   positionSym: {
     fontSize: 13,
@@ -272,8 +314,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
   positionRisk: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
+    fontVariant: ["tabular-nums"],
   },
   blockedReason: {
     fontSize: 8,

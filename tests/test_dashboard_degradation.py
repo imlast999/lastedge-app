@@ -5,12 +5,26 @@ import pytest
 from services.dashboard_server import AppDashboardServer
 
 
-def test_dashboard_server_starts_and_handles_offline_backends():
+def test_dashboard_server_starts_and_handles_offline_backends(monkeypatch):
     """
     Verifies that LastEdge App Dashboard server starts successfully on its port,
     serves health & overview telemetry, and degrades gracefully when Trading Engine
     and Strategy Lab are completely offline.
     """
+    import socket
+    real_create_conn = socket.create_connection
+    def mock_create_conn(address, *args, **kwargs):
+        host, port = address
+        if port in (8081, 8082):
+            raise OSError("Simulated offline backend")
+        return real_create_conn(address, *args, **kwargs)
+    monkeypatch.setattr(socket, "create_connection", mock_create_conn)
+
+    from services.clients.trading_client import TradingClient
+    from services.clients.research_client import ResearchClient
+    monkeypatch.setattr("services.dashboard_server.get_trading_client", lambda: TradingClient("http://localhost:59998", timeout=0.1))
+    monkeypatch.setattr("services.dashboard_server.get_research_client", lambda: ResearchClient("http://localhost:59999", timeout=0.1))
+
     port = 8893
     server = AppDashboardServer(port=port)
     server.start()

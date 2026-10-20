@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <title>LastEdge — Quantitative Trading Ecosystem Dashboard</title>
@@ -11,151 +14,315 @@
 
 <body>
 
-    <!-- Main Dashboard Layout -->
-    <div id="admin-dashboard" class="dashboard-layout">
+    <!-- Main Dashboard Layout (Sidebar + Main Workspace) -->
+    <div id="admin-dashboard" class="app-layout">
         
-        <!-- Header Navbar -->
-        <header class="dash-header">
-            <div class="dash-brand">
-                <img src="/LastEdge_Icon.png" alt="LastEdge" style="width: 32px; height: 32px; border-radius: 8px; object-fit: contain;">
-                <div style="display: flex; flex-direction: column;">
-                    <span class="brand-title" style="line-height: 1.2;">LASTEDGE</span>
-                    <span style="font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em;">QUANT PLATFORM</span>
+        <!-- Collapsible Institutional Sidebar (dashboard_new.tsx style) -->
+        <aside id="app-sidebar" class="app-sidebar">
+            
+            <!-- Workspace / MT5 Account Switcher -->
+            <div class="workspace-switcher">
+                <button class="ws-button" id="ws-toggle-btn" onclick="toggleWorkspaceMenu()">
+                    <div class="ws-profile">
+                        <div class="ws-avatar">L</div>
+                        <div class="ws-meta">
+                            <span class="ws-name" id="ws-account-name">MT5 Live Account</span>
+                            <span class="ws-plan" id="ws-account-tier">Raw Spread · Institutional</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down ws-chevron" id="ws-chevron-icon"></i>
+                </button>
+
+                <!-- Workspace Switcher Popover -->
+                <div id="ws-dropdown" class="ws-dropdown wip-hidden">
+                    <div class="ws-item active" onclick="selectWorkspace('MT5 Live Account', 'Raw Spread · Institutional')">
+                        <span>MT5 Live Account</span>
+                        <i class="fa-solid fa-check" style="font-size: 11px;"></i>
+                    </div>
+                    <div class="ws-item" onclick="selectWorkspace('Strategy Lab Engine', 'Simulation & Research')">
+                        <span>Strategy Lab Engine</span>
+                    </div>
+                    <div class="ws-divider"></div>
+                    <div class="ws-action-item" onclick="openCommandPalette()">
+                        <i class="fa-solid fa-terminal" style="font-size: 11px;"></i>
+                        <span>Command Palette (⌘K)</span>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Navigation Scroll Groups -->
+            <div class="sidebar-nav-scroll">
                 
-                <!-- Live System Badges -->
-                <div style="display: flex; gap: 6px; margin-left: 12px; flex-wrap: wrap;">
-                    <div class="status-pill" id="badge-engine">
-                        <span class="status-dot"></span>
-                        <span id="badge-engine-text">ENGINE: ONLINE</span>
-                    </div>
-                    <div class="status-pill" id="badge-mt5">
-                        <span class="status-dot"></span>
-                        <span id="badge-mt5-text">MT5: CONNECTED</span>
-                    </div>
-                    <div class="status-pill" id="badge-lab">
-                        <span class="status-dot"></span>
-                        <span id="badge-lab-text">STRATEGY LAB: ONLINE</span>
-                    </div>
-                    <div class="status-pill" id="badge-cb">
-                        <span class="status-dot"></span>
-                        <span id="badge-cb-text">CIRCUIT BREAKER: NORMAL</span>
+                <!-- Group 1: Core -->
+                <div class="nav-group">
+                    <div class="nav-group-title">Core Trading</div>
+                    <button class="nav-item active" id="nav-btn-overview" onclick="switchDashTab('overview')">
+                        <div class="nav-item-left">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Overview</span>
+                        </div>
+                    </button>
+                    <button class="nav-item" id="nav-btn-positions" onclick="switchDashTab('positions')">
+                        <div class="nav-item-left">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>MT5 Positions</span>
+                        </div>
+                        <div class="nav-item-right">
+                            <span class="nav-badge" id="tab-count-positions">0</span>
+                        </div>
+                    </button>
+                    <button class="nav-item" id="nav-btn-signals" onclick="switchDashTab('signals')">
+                        <div class="nav-item-left">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>Signals & Journal</span>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Group 2: Research -->
+                <div class="nav-group">
+                    <div class="nav-group-title">Quantitative Research</div>
+                    <button class="nav-item" id="nav-btn-research" onclick="switchDashTab('research')">
+                        <div class="nav-item-left">
+                            <i class="fa-solid fa-flask"></i>
+                            <span>Strategy Lab</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right" style="font-size: 10px; color: var(--text-subtle);"></i>
+                    </button>
+                    <div class="nav-sub-container">
+                        <button class="nav-subitem" onclick="switchDashTab('research')">
+                            <span>1. Backtests & Audit</span>
+                        </button>
+                        <button class="nav-subitem" onclick="switchDashTab('research')">
+                            <span>2. Walk Forward</span>
+                        </button>
+                        <button class="nav-subitem" onclick="switchDashTab('research')">
+                            <span>3. Monte Carlo Ruin</span>
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Header Navigation Tabs -->
-            <nav class="dash-nav">
-                <button class="nav-item active" id="nav-btn-overview" onclick="switchDashTab('overview')">
-                    <i class="fa-solid fa-gauge-high"></i> Overview
-                </button>
-                <button class="nav-item" id="nav-btn-positions" onclick="switchDashTab('positions')">
-                    <i class="fa-solid fa-chart-line"></i> MT5 Positions (<span id="tab-count-positions">0</span>)
-                </button>
-                <button class="nav-item" id="nav-btn-signals" onclick="switchDashTab('signals')">
-                    <i class="fa-solid fa-bolt"></i> Signals & Journal
-                </button>
-                <button class="nav-item" id="nav-btn-research" onclick="switchDashTab('research')">
-                    <i class="fa-solid fa-flask"></i> Strategy Lab
-                </button>
-                <button class="nav-item" id="nav-btn-checklist" onclick="switchDashTab('checklist')">
-                    <i class="fa-solid fa-shield-halved"></i> Pre-Flight (17 Checks)
-                </button>
-            </nav>
-
-            <!-- Quick Controls -->
-            <div class="dash-user-controls" style="gap: 10px;">
-                <button class="btn-action" style="padding: 6px 12px;" onclick="refreshDashboardData()" title="Sync data now">
-                    <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Sync
-                </button>
-                <button class="btn-action" style="padding: 6px 12px;" onclick="toggleThemeMode()" title="Toggle light/dark theme">
-                    <i class="fa-solid fa-moon" id="theme-toggle-icon"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- Main Content Container -->
-        <main class="dash-content">
-
-            <!-- Real-Time System Failure / Outage Alert Banner -->
-            <div id="system-alert-banner" class="wip-hidden" style="padding: 14px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 18px; flex-shrink: 0;"></i>
-                    <div id="system-alert-message" style="font-size: 13px; font-weight: 600; line-height: 1.4;"></div>
+                <!-- Group 3: Safeguards -->
+                <div class="nav-group">
+                    <div class="nav-group-title">Safeguards & Audit</div>
+                    <button class="nav-item" id="nav-btn-checklist" onclick="switchDashTab('checklist')">
+                        <div class="nav-item-left">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Pre-Flight Checklist</span>
+                        </div>
+                        <span class="nav-badge">17</span>
+                    </button>
                 </div>
-                <button class="btn-action" style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); flex-shrink: 0;" onclick="refreshDashboardData()">
-                    <i class="fa-solid fa-rotate"></i> Retry
+
+            </div>
+
+            <!-- Bottom Sidebar Controls -->
+            <div class="sidebar-bottom">
+                <button class="nav-item" onclick="refreshDashboardData()">
+                    <div class="nav-item-left">
+                        <i class="fa-solid fa-arrows-rotate" id="sidebar-refresh-icon"></i>
+                        <span>Sync Telemetry</span>
+                    </div>
+                    <kbd>⌘R</kbd>
+                </button>
+                <button class="nav-item" onclick="toggleThemeMode()">
+                    <div class="nav-item-left">
+                        <i class="fa-solid fa-moon" id="sidebar-theme-icon"></i>
+                        <span>Appearance</span>
+                    </div>
+                    <span class="nav-badge" id="theme-mode-label">Dark</span>
                 </button>
             </div>
 
-            <!-- ============================================================ -->
-            <!-- TAB 1: OVERVIEW -->
-            <!-- ============================================================ -->
-            <div id="tab-sec-overview">
-                <!-- 4 Top KPI Cards -->
-                <div class="stats-grid">
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="app-main">
+
+            <!-- Top Header Navbar -->
+            <header class="app-header">
+                
+                <!-- Left: Sidebar Toggle & Breadcrumbs -->
+                <div class="header-left">
+                    <button class="panel-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar (⌘B)">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <div class="breadcrumbs">
+                        <span class="bc-account" id="bc-account">MT5 Live</span>
+                        <span class="bc-separator">/</span>
+                        <span class="bc-active" id="bc-section">Overview</span>
+                    </div>
+                </div>
+
+                <!-- Center: Command Palette Trigger -->
+                <button class="command-trigger-btn" onclick="openCommandPalette()" title="Open Command Palette (⌘K)">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Search or command...</span>
+                    <kbd>⌘K</kbd>
+                </button>
+
+                <!-- Right: Live System Badges & Quick Tools -->
+                <div class="header-right">
+                    <div class="status-cluster">
+                        <div class="status-pill" id="badge-engine">
+                            <span class="status-dot"></span>
+                            <span id="badge-engine-text">ENGINE: ONLINE</span>
+                        </div>
+                        <div class="status-pill" id="badge-mt5">
+                            <span class="status-dot"></span>
+                            <span id="badge-mt5-text">MT5: CONNECTED</span>
+                        </div>
+                        <div class="status-pill" id="badge-lab">
+                            <span class="status-dot"></span>
+                            <span id="badge-lab-text">STRATEGY LAB: ONLINE</span>
+                        </div>
+                        <div class="status-pill" id="badge-cb">
+                            <span class="status-dot"></span>
+                            <span id="badge-cb-text">CIRCUIT BREAKER: NORMAL</span>
+                        </div>
+                    </div>
+
+                    <button class="header-action-btn" onclick="refreshDashboardData()" title="Sync data now">
+                        <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+                    </button>
+                    <button class="header-action-btn" onclick="toggleThemeMode()" title="Toggle dark/light theme">
+                        <i class="fa-solid fa-moon" id="theme-toggle-icon"></i>
+                    </button>
+                </div>
+
+            </header>
+
+            <!-- Main Scrollable Dashboard Content -->
+            <main class="dash-content">
+
+                <!-- Real-Time System Failure / Outage Alert Banner -->
+                <div id="system-alert-banner" class="system-alert-banner wip-hidden">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 16px; flex-shrink: 0;"></i>
+                        <div id="system-alert-message" style="font-size: 13px; font-weight: 600; line-height: 1.4;"></div>
+                    </div>
+                    <button class="btn-action" style="padding: 5px 10px; font-size: 11px; background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); flex-shrink: 0;" onclick="refreshDashboardData()">
+                        <i class="fa-solid fa-rotate"></i> Retry
+                    </button>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- TAB 1: OVERVIEW -->
+                <!-- ============================================================ -->
+                <div id="tab-sec-overview" style="display: flex; flex-direction: column; gap: 20px;">
                     
-                    <!-- Balance & Equity Card -->
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">MT5 Balance & Equity</span>
-                            <div class="stat-icon-wrapper">
-                                <i class="fa-solid fa-wallet"></i>
+                    <!-- 4 Top KPI Cards -->
+                    <div class="stats-grid">
+                        
+                        <!-- Balance & Equity Card -->
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">MT5 Balance & Equity</span>
+                                <div class="stat-icon-wrapper">
+                                    <i class="fa-solid fa-wallet"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value font-mono" id="val-equity">$0.00</div>
+                            <div class="stat-footer">
+                                <span id="val-floating-badge" class="trend-badge trend-up">$0.00 Float</span>
+                                <span id="val-balance-label" class="font-mono">Balance: $0.00 USD</span>
                             </div>
                         </div>
-                        <div class="stat-value" id="val-equity">$0.00</div>
-                        <div class="stat-footer">
-                            <span id="val-floating-badge" class="trend-badge trend-up">$0.00 Float</span>
-                            <span id="val-balance-label">Balance: $0.00 USD</span>
-                        </div>
-                    </div>
 
-                    <!-- Broker & Terminal Card -->
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">Broker & Terminal</span>
-                            <div class="stat-icon-wrapper">
-                                <i class="fa-solid fa-building-columns"></i>
+                        <!-- Broker & Terminal Card -->
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Broker & Terminal</span>
+                                <div class="stat-icon-wrapper">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="val-broker" style="font-size: 18px;">MetaTrader 5</div>
+                            <div class="stat-footer">
+                                <span class="trend-badge trend-up" id="val-account-mode">DEMO</span>
+                                <span id="val-account-info" class="font-mono">Account: — | Ping: — ms</span>
                             </div>
                         </div>
-                        <div class="stat-value" id="val-broker" style="font-size: 20px;">MetaTrader 5</div>
-                        <div class="stat-footer">
-                            <span class="trend-badge trend-up" id="val-account-mode">DEMO</span>
-                            <span id="val-account-info">Account: — | Ping: — ms</span>
-                        </div>
-                    </div>
 
-                    <!-- Risk Engine v2 & Circuit Breaker -->
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">Risk Engine v2</span>
-                            <div class="stat-icon-wrapper">
-                                <i class="fa-solid fa-shield-halved"></i>
+                        <!-- Risk Engine v2 & Circuit Breaker -->
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Risk Engine v2</span>
+                                <div class="stat-icon-wrapper">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="val-cb-status" style="font-size: 18px; color: var(--color-buy);">OPERATIONAL</div>
+                            <div class="stat-footer">
+                                <span class="trend-badge trend-up" id="val-risk-rate">0.5% / Trade</span>
+                                <span id="val-exposure-info" class="font-mono">Exposure: 0.00 Lots | Max DD: 3.0%</span>
                             </div>
                         </div>
-                        <div class="stat-value" id="val-cb-status" style="font-size: 20px; color: var(--accent-green);">OPERATIONAL</div>
-                        <div class="stat-footer">
-                            <span class="trend-badge trend-up" id="val-risk-rate">0.5% / Trade</span>
-                            <span id="val-exposure-info">Exposure: 0.00 Lots | Max DD: 3.0%</span>
-                        </div>
-                    </div>
 
-                    <!-- AutoSignals Status -->
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">AutoSignals & Scanner</span>
-                            <div class="stat-icon-wrapper">
-                                <i class="fa-solid fa-satellite-dish"></i>
+                        <!-- AutoSignals Status -->
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">AutoSignals & Scanner</span>
+                                <div class="stat-icon-wrapper">
+                                    <i class="fa-solid fa-satellite-dish"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="val-autosignals" style="font-size: 18px;">ACTIVE</div>
+                            <div class="stat-footer">
+                                <span class="trend-badge trend-up">Scan: 60s</span>
+                                <span id="val-symbols-list" class="font-mono">EURUSD, XAUUSD, BTCEUR</span>
                             </div>
                         </div>
-                        <div class="stat-value" id="val-autosignals" style="font-size: 20px;">ACTIVE</div>
-                        <div class="stat-footer">
-                            <span class="trend-badge trend-up">Scan: 60s</span>
-                            <span id="val-symbols-list">EURUSD, XAUUSD, BTCEUR</span>
-                        </div>
+
                     </div>
 
-                </div>
+                    <!-- Institutional MT5 Balance & Equity Performance Chart (line-charts.tsx standard) -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-header-left">
+                                <div class="chart-title-row">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                    <span>MT5 Balance & Equity Performance</span>
+                                </div>
+                                <div class="chart-kpi-row">
+                                    <div class="chart-kpi-item">
+                                        <span class="kpi-title">Current Equity</span>
+                                        <span class="kpi-figure font-mono" id="chart-kpi-equity">$0.00</span>
+                                    </div>
+                                    <div class="chart-kpi-item">
+                                        <span class="kpi-title">Account Balance</span>
+                                        <span class="kpi-figure font-mono" id="chart-kpi-balance">$0.00</span>
+                                    </div>
+                                    <div class="chart-kpi-item">
+                                        <span class="kpi-title">Floating PnL</span>
+                                        <span class="kpi-figure font-mono" id="chart-kpi-float">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-header-right">
+                                <div class="segmented-control">
+                                    <button class="seg-btn" id="seg-btn-1d" onclick="setChartRange('1D')">1D</button>
+                                    <button class="seg-btn" id="seg-btn-1w" onclick="setChartRange('1W')">1W</button>
+                                    <button class="seg-btn active" id="seg-btn-1m" onclick="setChartRange('1M')">1M</button>
+                                    <button class="seg-btn" id="seg-btn-all" onclick="setChartRange('ALL')">ALL</button>
+                                </div>
+                                <div class="chart-legends">
+                                    <div class="legend-item">
+                                        <span class="legend-indicator indicator-balance"></span>
+                                        <span>Balance</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-indicator indicator-equity"></span>
+                                        <span>Equity</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-container" id="chart-container">
+                            <canvas id="balance-equity-canvas"></canvas>
+                            <div id="chart-tooltip" class="chart-floating-tooltip wip-hidden"></div>
+                        </div>
+                    </div>
 
                 <!-- Live MT5 Positions Quick Table -->
                 <div class="dash-card" style="margin-top: 24px;">
@@ -285,7 +452,7 @@
 
                 <!-- Filters -->
                 <div class="filter-bar">
-                    <input type="text" id="signal-search" class="filter-input" placeholder="Search by symbol or strategy..." onkeyup="filterSignals()">
+                    <input type="text" id="signal-search" class="filter-input" onkeyup="filterSignals()">
                     <select id="filter-type" class="filter-select" onchange="filterSignals()">
                         <option value="ALL">All Directions</option>
                         <option value="BUY">BUY</option>
@@ -323,218 +490,562 @@
             <!-- TAB 4: STRATEGY LAB (QUANT RESEARCH & BACKTEST RUNNER) -->
             <!-- ============================================================ -->
             <div id="tab-sec-research" class="dash-card wip-hidden">
-                <div class="card-header">
+                <div class="card-header" style="margin-bottom: 16px;">
                     <div class="card-title">
                         <i class="fa-solid fa-flask"></i> LastEdge Strategy Lab — Quantitative Evaluator
                     </div>
-                    <span style="font-size: 12px; color: var(--text-muted);">Institutional Replay & Statistical Validation</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">Institutional Replay, Walk Forward Analysis & Monte Carlo</span>
                 </div>
 
-                <!-- Backtest Configuration & Runner Panel -->
-                <div class="dash-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); margin-bottom: 20px; padding: 18px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fa-solid fa-microchip" style="color: var(--accent-green); font-size: 18px;"></i>
-                            <span style="font-weight: 700; font-size: 14px;">Backtest & Reliability Auditor</span>
+                <!-- Strategy Lab Dual Sub-Navigation -->
+                <div style="display: flex; gap: 10px; margin-bottom: 22px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button class="nav-item active" id="lab-subtab-btn-backtest" onclick="switchLabSubTab('backtest')" style="padding: 9px 18px; border-radius: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <i class="fa-solid fa-chart-simple"></i> 1. Backtests Cuantitativos & Auditoría
+                    </button>
+                    <button class="nav-item" id="lab-subtab-btn-research" onclick="switchLabSubTab('research')" style="padding: 9px 18px; border-radius: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <i class="fa-solid fa-vial-circle-check"></i> 2. Research Científico (WFA & Monte Carlo)
+                    </button>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- SUB-VIEW 1: BACKTESTS CUANTITATIVOS -->
+                <!-- ============================================================ -->
+                <div id="lab-subview-backtest">
+                    <!-- Backtest Configuration & Runner Panel -->
+                    <div class="dash-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); margin-bottom: 20px; padding: 18px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class="fa-solid fa-microchip" style="color: var(--accent-green); font-size: 18px;"></i>
+                                <span style="font-weight: 700; font-size: 14px;">Configuración de Backtest Operativo</span>
+                            </div>
+                            <span style="font-size: 11px; color: var(--text-muted);">Simulación vela a vela, ejecución realista de spread y verificación de Circuit Breaker</span>
                         </div>
-                        <span style="font-size: 11px; color: var(--text-muted);">Executes bar-by-bar simulation & multi-gate statistical evaluation</span>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: flex-end;">
+                            <!-- Symbol -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Symbol</label>
+                                <select id="bt-symbol" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onBacktestSymbolChange()">
+                                    <option value="EURUSD" selected>EURUSD (Euro / US Dollar)</option>
+                                    <option value="XAUUSD">XAUUSD (Gold Spot)</option>
+                                    <option value="BTCEUR">BTCEUR (Bitcoin / Euro)</option>
+                                </select>
+                            </div>
+
+                            <!-- Strategy -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Strategy Model</label>
+                                <select id="bt-strategy" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onBacktestStrategyChange()">
+                                    <option value="eurusd_partial" selected>EURUSD Partial Close (v1.1)</option>
+                                </select>
+                            </div>
+
+                            <!-- Timeframe -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Timeframe</label>
+                                <select id="bt-timeframe" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                    <option value="H1" selected>H1 (1 Hour)</option>
+                                </select>
+                            </div>
+
+                            <!-- Historical Depth -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Bar Depth</label>
+                                <select id="bt-bars" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                    <option value="2000">2,000 Bars (Quick Check)</option>
+                                    <option value="5000" selected>5,000 Bars (Standard)</option>
+                                    <option value="10000">10,000 Bars (Deep Sample)</option>
+                                    <option value="20000">20,000 Bars (Full Cycle)</option>
+                                </select>
+                            </div>
+
+                            <!-- Run Button -->
+                            <div>
+                                <button id="btn-run-backtest" class="btn-action btn-green" style="width: 100%; height: 38px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="runBacktestFromUI()">
+                                    <i class="fa-solid fa-play" id="btn-run-icon"></i>
+                                    <span id="btn-run-text">Run Backtest & Audit</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: flex-end;">
-                        <!-- Symbol -->
-                        <div>
-                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Symbol</label>
-                            <select id="bt-symbol" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onBacktestSymbolChange()">
-                                <option value="EURUSD" selected>EURUSD (Euro / US Dollar)</option>
-                                <option value="XAUUSD">XAUUSD (Gold Spot)</option>
-                                <option value="BTCEUR">BTCEUR (Bitcoin / Euro)</option>
-                            </select>
+                    <!-- Live Progressive Backtest Progress Card (Visible during simulation) -->
+                    <div id="backtest-progress-card" class="wip-hidden" style="margin-bottom: 24px; padding: 20px 24px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(15, 23, 42, 0.85); box-shadow: 0 10px 30px rgba(0,0,0,0.4); backdrop-filter: blur(12px);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-green);">
+                                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 18px;"></i>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 14px; font-weight: 700; margin: 0; color: var(--text-main); letter-spacing: 0.02em;">Simulación Cuantitativa en Curso</h4>
+                                    <span id="bt-progress-phase-title" style="font-size: 12px; color: var(--text-muted);">Iniciando motor de replay...</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span id="bt-progress-percent" style="font-size: 20px; font-weight: 800; color: var(--accent-green); font-family: monospace;">0%</span>
+                                <div id="bt-progress-elapsed" style="font-size: 11px; color: var(--text-muted); font-family: monospace;">0.0s</div>
+                            </div>
                         </div>
 
-                        <!-- Strategy -->
-                        <div>
-                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Strategy Model</label>
-                            <select id="bt-strategy" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onBacktestStrategyChange()">
-                                <option value="eurusd_partial" selected>EURUSD Partial Close (v1.1)</option>
-                            </select>
+                        <!-- Progress Track -->
+                        <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                            <div id="bt-progress-fill" style="width: 0%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #10B981 0%, #06B6D4 100%); box-shadow: 0 0 16px rgba(16, 185, 129, 0.6); transition: width 0.25s ease-out;"></div>
                         </div>
 
-                        <!-- Timeframe -->
-                        <div>
-                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Timeframe</label>
-                            <select id="bt-timeframe" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
-                                <option value="H1" selected>H1 (1 Hour)</option>
-                            </select>
+                        <!-- Stage Indicators -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; gap: 8px;">
+                            <span id="bt-stage-1" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-database"></i> 1. Velas OHLC</span>
+                            <span id="bt-stage-2" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-chart-line"></i> 2. Indicadores</span>
+                            <span id="bt-stage-3" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-bolt"></i> 3. Replay TP/SL</span>
+                            <span id="bt-stage-4" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-dice"></i> 4. Monte Carlo</span>
+                            <span id="bt-stage-5" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-award"></i> 5. Veredicto</span>
+                        </div>
+                    </div>
+
+                    <!-- Live Backtest Scientific Verdict Card (Hidden until run) -->
+                    <div id="backtest-verdict-card" class="wip-hidden" style="margin-bottom: 24px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-card); box-shadow: var(--shadow-card);">
+                        <!-- Dynamic Header / Banner -->
+                        <div id="bt-verdict-banner" style="padding: 20px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 16px; align-items: flex-start;">
+                                <div id="bt-verdict-icon-box" style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; background: rgba(16, 185, 129, 0.2); color: var(--accent-green);">
+                                    <i id="bt-verdict-icon" class="fa-solid fa-circle-check"></i>
+                                </div>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                                        <h3 id="bt-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ESTRATEGIA ALTAMENTE FIABLE</h3>
+                                        <span id="bt-verdict-badge" class="trend-badge trend-up" style="font-size: 11px; padding: 3px 8px;">RELIABLE</span>
+                                    </div>
+                                    <p id="bt-verdict-summary" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5; max-width: 820px;"></p>
+                                </div>
+                            </div>
+                            <div style="text-align: right; font-size: 11px; color: var(--text-muted);">
+                                <span id="bt-sim-duration">Simulation: 0 ms</span><br>
+                                <span id="bt-sim-meta" style="font-weight: 600; color: var(--text-main);">EURUSD H1 · 5,000 bars</span>
+                            </div>
                         </div>
 
-                        <!-- Historical Depth -->
-                        <div>
-                            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Bar Depth</label>
-                            <select id="bt-bars" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
-                                <option value="2000">2,000 Bars (Quick Check)</option>
-                                <option value="5000" selected>5,000 Bars (Standard)</option>
-                                <option value="10000">10,000 Bars (Deep Sample)</option>
-                                <option value="20000">20,000 Bars (Full Cycle)</option>
-                            </select>
+                        <!-- 12 Granular Metrics Chips Grid -->
+                        <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.15);">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                                <!-- Trades Totales & Win/Loss Breakdown -->
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green);">
+                                    <span class="stat-label" style="font-size: 10px;">Trades (W / L)</span>
+                                    <div class="stat-value" id="bt-metric-trades" style="font-size: 17px; margin: 4px 0;">0 trades</div>
+                                    <span id="bt-metric-trades-wl" style="font-size: 10px; font-weight: 700; color: var(--accent-green);">0W / 0L</span>
+                                </div>
+                                <!-- Profit Factor -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Profit Factor</span>
+                                    <div class="stat-value" id="bt-metric-pf" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Umbral: ≥ 1.25</span>
+                                </div>
+                                <!-- Win Rate -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Win Rate</span>
+                                    <div class="stat-value" id="bt-metric-wr" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                    <span id="bt-metric-wr-sub" style="font-size: 10px; color: var(--text-muted);">0.0% pérdidas</span>
+                                </div>
+                                <!-- Net Profit (Pips & USD) -->
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green);">
+                                    <span class="stat-label" style="font-size: 10px;">Net Profit (Pips / $)</span>
+                                    <div class="stat-value" id="bt-metric-pips" style="font-size: 17px; margin: 4px 0;">+0.0 pips</div>
+                                    <span id="bt-metric-usd" style="font-size: 10px; font-weight: 700; color: var(--accent-green);">$0.00 USD</span>
+                                </div>
+                                <!-- Max Drawdown (% and USD) -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Max Drawdown</span>
+                                    <div class="stat-value" id="bt-metric-dd" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                    <span id="bt-metric-dd-usd" style="font-size: 10px; color: var(--text-muted);">$0.00 USD</span>
+                                </div>
+                                <!-- Circuit Breaker Telemetry -->
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid #06B6D4;">
+                                    <span class="stat-label" style="font-size: 10px;"><i class="fa-solid fa-shield"></i> Circuit Breaker</span>
+                                    <div class="stat-value" id="bt-metric-cb" style="font-size: 15px; margin: 4px 0; color: #06B6D4;">0 Disparos</div>
+                                    <span id="bt-metric-cb-sub" style="font-size: 10px; color: var(--text-muted);">0 velas pausadas</span>
+                                </div>
+                                <!-- Long vs Short Signals -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Dirección (BUY/SELL)</span>
+                                    <div class="stat-value" id="bt-metric-direction" style="font-size: 15px; margin: 4px 0;">0 BUY / 0 SELL</div>
+                                    <span id="bt-metric-setups" style="font-size: 10px; color: var(--text-muted);">0 setups evaluados</span>
+                                </div>
+                                <!-- Consecutive Losses -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Racha Máx Pérdidas</span>
+                                    <div class="stat-value" id="bt-metric-consec-losses" style="font-size: 18px; margin: 4px 0;">0</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Límite CB: 4</span>
+                                </div>
+                                <!-- Sharpe / Sortino -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Sharpe / Sortino</span>
+                                    <div class="stat-value" id="bt-metric-sharpe" style="font-size: 17px; margin: 4px 0;">0.00 / 0.00</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Anualizado</span>
+                                </div>
+                                <!-- Expectancy -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Expectancy / Trade</span>
+                                    <div class="stat-value" id="bt-metric-expectancy" style="font-size: 18px; margin: 4px 0;">0.0 pips</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Payoff matemático</span>
+                                </div>
+                                <!-- Monte Carlo Ruin -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Monte Carlo Ruin</span>
+                                    <div class="stat-value" id="bt-metric-ruin" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Umbral 20% DD</span>
+                                </div>
+                                <!-- Risk/Reward -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Avg Risk:Reward</span>
+                                    <div class="stat-value" id="bt-metric-rr" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Avg Win / Avg Loss</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Run Button -->
-                        <div>
-                            <button id="btn-run-backtest" class="btn-action btn-green" style="width: 100%; height: 38px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="runBacktestFromUI()">
-                                <i class="fa-solid fa-play" id="btn-run-icon"></i>
-                                <span id="btn-run-text">Run Backtest & Audit</span>
+                        <!-- Scientific Guidance & Actionable Recommendations -->
+                        <div style="padding: 20px 24px;">
+                            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+                                <i class="fa-solid fa-list-check" style="margin-right: 6px; color: var(--accent-green);"></i> Recomendaciones Cuantitativas & Siguientes Pasos
+                            </div>
+                            <ul id="bt-recommendations-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.5;">
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Dedicated Backtests History Table Header -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 24px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-green); font-size: 16px;"></i>
+                            <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Historial de Backtests Cuantitativos Ejecutados</h4>
+                            <span id="backtests-count-badge" class="trend-badge" style="font-size: 11px;">0 registros</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="backtests-search" class="search-input" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; width: 220px;" oninput="filterBacktestsTable()">
+                            <button class="btn-action" style="padding: 6px 12px; font-size: 12px;" onclick="refreshDashboardData()">
+                                <i class="fa-solid fa-arrows-rotate"></i>
                             </button>
                         </div>
                     </div>
+
+                    <div class="table-responsive" style="margin-top: 8px;">
+                        <table class="trading-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Backtest</th>
+                                    <th>Símbolo</th>
+                                    <th>Estrategia</th>
+                                    <th>Timeframe</th>
+                                    <th>Velas</th>
+                                    <th>Trades (W / L)</th>
+                                    <th>Win Rate</th>
+                                    <th>Profit Factor</th>
+                                    <th>Net Pips & USD</th>
+                                    <th>Max DD</th>
+                                    <th>Disparos CB</th>
+                                    <th>Veredicto</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backtests-table-body">
+                                <tr>
+                                    <td colspan="13" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                                        Cargando historial de backtests...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- Live Backtest Scientific Verdict Card (Hidden until run) -->
-                <div id="backtest-verdict-card" class="wip-hidden" style="margin-bottom: 24px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-card); box-shadow: var(--shadow-card);">
-                    <!-- Dynamic Header / Banner -->
-                    <div id="bt-verdict-banner" style="padding: 20px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-                        <div style="display: flex; gap: 16px; align-items: flex-start;">
-                            <div id="bt-verdict-icon-box" style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; background: rgba(16, 185, 129, 0.2); color: var(--accent-green);">
-                                <i id="bt-verdict-icon" class="fa-solid fa-circle-check"></i>
+                <!-- ============================================================ -->
+                <!-- SUB-VIEW 2: RESEARCH DE ESTRATEGIAS (WFA & MONTE CARLO) -->
+                <!-- ============================================================ -->
+                <div id="lab-subview-research" class="wip-hidden">
+                    <!-- Research Launcher Configuration Card -->
+                    <div class="dash-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); margin-bottom: 20px; padding: 18px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class="fa-solid fa-flask-vial" style="color: #A855F7; font-size: 18px;"></i>
+                                <span style="font-weight: 700; font-size: 14px;">Lanzador de Research Científico & Robustez (WFA + Monte Carlo)</span>
                             </div>
+                            <span style="font-size: 11px; color: var(--text-muted);">Prueba multiventana de sobreajuste y simulación estocástica de permutaciones</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: flex-end;">
+                            <!-- Symbol -->
                             <div>
-                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
-                                    <h3 id="bt-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ESTRATEGIA ALTAMENTE FIABLE</h3>
-                                    <span id="bt-verdict-badge" class="trend-badge trend-up" style="font-size: 11px; padding: 3px 8px;">RELIABLE</span>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Symbol</label>
+                                <select id="rs-symbol" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onResearchSymbolChange()">
+                                    <option value="EURUSD" selected>EURUSD (Euro / US Dollar)</option>
+                                    <option value="XAUUSD">XAUUSD (Gold Spot)</option>
+                                    <option value="BTCEUR">BTCEUR (Bitcoin / Euro)</option>
+                                </select>
+                            </div>
+
+                            <!-- Strategy -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Strategy Model</label>
+                                <select id="rs-strategy" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);" onchange="onResearchStrategyChange()">
+                                    <option value="eurusd_partial" selected>EURUSD Partial Close (v1.1)</option>
+                                </select>
+                            </div>
+
+                            <!-- Timeframe -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Timeframe</label>
+                                <select id="rs-timeframe" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                    <option value="H1" selected>H1 (1 Hour)</option>
+                                </select>
+                            </div>
+
+                            <!-- Bar Depth -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Profundidad de Muestra</label>
+                                <select id="rs-bars" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                    <option value="5000">5,000 Bars (WFA Rápido)</option>
+                                    <option value="10000" selected>10,000 Bars (WFA Estándar)</option>
+                                    <option value="20000">20,000 Bars (Ciclo Institucional)</option>
+                                </select>
+                            </div>
+
+                            <!-- MC Iterations -->
+                            <div>
+                                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">Simulaciones Monte Carlo</label>
+                                <select id="rs-sims" class="filter-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle);">
+                                    <option value="1000">1,000 Permutaciones</option>
+                                    <option value="2000" selected>2,000 Permutaciones</option>
+                                    <option value="5000">5,000 Permutaciones (Máx Rigor)</option>
+                                </select>
+                            </div>
+
+                            <!-- Run Button -->
+                            <div>
+                                <button id="btn-run-research" class="btn-action" style="width: 100%; height: 38px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; background: #8B5CF6; color: white;" onclick="runResearchFromUI()">
+                                    <i class="fa-solid fa-flask" id="btn-research-icon"></i>
+                                    <span id="btn-research-text">Ejecutar Research Científico</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progressive Research Progress Card -->
+                    <div id="research-progress-card" class="wip-hidden" style="margin-bottom: 24px; padding: 20px 24px; border-radius: 16px; border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(15, 23, 42, 0.85); box-shadow: 0 10px 30px rgba(0,0,0,0.4); backdrop-filter: blur(12px);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center; color: #C084FC;">
+                                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 18px;"></i>
                                 </div>
-                                <p id="bt-verdict-summary" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5; max-width: 820px;"></p>
+                                <div>
+                                    <h4 style="font-size: 14px; font-weight: 700; margin: 0; color: var(--text-main); letter-spacing: 0.02em;">Evaluación Científica de Research en Curso</h4>
+                                    <span id="rs-progress-phase-title" style="font-size: 12px; color: var(--text-muted);">Iniciando protocolo Walk Forward Analysis...</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span id="rs-progress-percent" style="font-size: 20px; font-weight: 800; color: #C084FC; font-family: monospace;">0%</span>
+                                <div id="rs-progress-elapsed" style="font-size: 11px; color: var(--text-muted); font-family: monospace;">0.0s</div>
                             </div>
                         </div>
-                        <div style="text-align: right; font-size: 11px; color: var(--text-muted);">
-                            <span id="bt-sim-duration">Simulation: 0 ms</span><br>
-                            <span id="bt-sim-meta" style="font-weight: 600; color: var(--text-main);">EURUSD H1 · 5,000 bars</span>
+
+                        <!-- Progress Track -->
+                        <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                            <div id="rs-progress-fill" style="width: 0%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #A855F7 0%, #3B82F6 100%); box-shadow: 0 0 16px rgba(168, 85, 247, 0.6); transition: width 0.25s ease-out;"></div>
+                        </div>
+
+                        <!-- Stage Indicators -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; gap: 8px;">
+                            <span id="rs-stage-1" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-database"></i> 1. Ingestión OHLC</span>
+                            <span id="rs-stage-2" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-arrows-split-up-and-left"></i> 2. Ventanas WFA</span>
+                            <span id="rs-stage-3" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-dice"></i> 3. Monte Carlo (Riesgo Ruina)</span>
+                            <span id="rs-stage-4" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-shield-halved"></i> 4. Robustez & Estabilidad</span>
+                            <span id="rs-stage-5" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-check-double"></i> 5. Dictamen & Registro</span>
                         </div>
                     </div>
 
-                    <!-- 8 Key Metrics Chips Grid -->
-                    <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.15);">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
-                            <!-- Profit Factor -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Profit Factor</span>
-                                <div class="stat-value" id="bt-metric-pf" style="font-size: 18px; margin: 4px 0;">0.00</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">Threshold: ≥ 1.30</span>
+                    <!-- Live Research Scientific Verdict Card (Hidden until run) -->
+                    <div id="research-verdict-card" class="wip-hidden" style="margin-bottom: 24px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-card); box-shadow: var(--shadow-card);">
+                        <div id="rs-verdict-banner" style="padding: 20px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 16px; align-items: flex-start;">
+                                <div id="rs-verdict-icon-box" style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; background: rgba(168, 85, 247, 0.2); color: #A855F7;">
+                                    <i id="rs-verdict-icon" class="fa-solid fa-certificate"></i>
+                                </div>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                                        <h3 id="rs-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ESTRATEGIA ROBUSTA FUERA DE MUESTRA</h3>
+                                        <span id="rs-verdict-badge" class="trend-badge trend-up" style="font-size: 11px; padding: 3px 8px;">PROMOTED</span>
+                                    </div>
+                                    <p id="rs-verdict-summary" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5; max-width: 820px;"></p>
+                                </div>
                             </div>
-                            <!-- Sharpe -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Annualized Sharpe</span>
-                                <div class="stat-value" id="bt-metric-sharpe" style="font-size: 18px; margin: 4px 0;">0.00</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">Threshold: ≥ 1.40</span>
+                            <div style="text-align: right; font-size: 11px; color: var(--text-muted);">
+                                <span id="rs-sim-duration">Simulation: 0 ms</span><br>
+                                <span id="rs-sim-meta" style="font-weight: 600; color: var(--text-main);">EURUSD H1 · WFA & MC</span>
                             </div>
-                            <!-- Max DD % -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Max Drawdown</span>
-                                <div class="stat-value" id="bt-metric-dd" style="font-size: 18px; margin: 4px 0;">0.0%</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">Threshold: ≤ 15.0%</span>
+                        </div>
+
+                        <!-- 8 Research Metric Chips Grid -->
+                        <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.15);">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                                <!-- Stability Score -->
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid #A855F7;">
+                                    <span class="stat-label" style="font-size: 10px;">Composite Stability</span>
+                                    <div class="stat-value" id="rs-metric-stability" style="font-size: 20px; margin: 4px 0; color: #A855F7;">0.0 / 100</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Índice ponderado</span>
+                                </div>
+                                <!-- WFA Rating -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">WFA Rating</span>
+                                    <div class="stat-value" id="rs-metric-rating" style="font-size: 17px; margin: 4px 0;">STABLE</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Clasificación overfitting</span>
+                                </div>
+                                <!-- Consistency Score -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Consistency Score</span>
+                                    <div class="stat-value" id="rs-metric-consistency" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Escala 0.00 - 1.00</span>
+                                </div>
+                                <!-- Test PF -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Avg Test PF</span>
+                                    <div class="stat-value" id="rs-metric-test-pf" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                    <span id="rs-metric-train-pf" style="font-size: 10px; color: var(--text-muted);">Train PF: 0.00</span>
+                                </div>
+                                <!-- PF Degradation -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Degradación WFA</span>
+                                    <div class="stat-value" id="rs-metric-degradation" style="font-size: 18px; margin: 4px 0;">0.00</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Train vs Test</span>
+                                </div>
+                                <!-- Monte Carlo Ruin -->
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid #EF4444;">
+                                    <span class="stat-label" style="font-size: 10px;">MC Ruin (20% DD)</span>
+                                    <div class="stat-value" id="rs-metric-ruin" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Tolerancia ≤ 5.0%</span>
+                                </div>
+                                <!-- MC Prob Rentable -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">Prob. Rentabilidad</span>
+                                    <div class="stat-value" id="rs-metric-profitable" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Simulaciones bootstrap</span>
+                                </div>
+                                <!-- MC P95 Drawdown -->
+                                <div class="stat-card" style="padding: 12px; margin: 0;">
+                                    <span class="stat-label" style="font-size: 10px;">P95 Max Drawdown</span>
+                                    <div class="stat-value" id="rs-metric-p95-dd" style="font-size: 18px; margin: 4px 0;">0.0%</div>
+                                    <span id="rs-metric-p95-money" style="font-size: 10px; color: var(--text-muted);">$0.00 USD</span>
+                                </div>
                             </div>
-                            <!-- Win Rate -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Win Rate</span>
-                                <div class="stat-value" id="bt-metric-wr" style="font-size: 18px; margin: 4px 0;">0.0%</div>
-                                <span style="font-size: 10px; color: var(--text-muted);"><span id="bt-metric-trades-count">0</span> trades</span>
+                        </div>
+
+                        <!-- WFA Windows List -->
+                        <div style="padding: 20px 24px;">
+                            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+                                <i class="fa-solid fa-table-columns" style="margin-right: 6px; color: #A855F7;"></i> Desglose de Ventanas Walk-Forward (Train vs Test)
                             </div>
-                            <!-- Expectancy -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Expectancy</span>
-                                <div class="stat-value" id="bt-metric-expectancy" style="font-size: 18px; margin: 4px 0;">0.0 pips</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">Per trade payoff</span>
-                            </div>
-                            <!-- Total Net Pips -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Net Profit Pips</span>
-                                <div class="stat-value" id="bt-metric-pips" style="font-size: 18px; margin: 4px 0;">+0.0</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">Spread deducted</span>
-                            </div>
-                            <!-- Ruin Probability -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Monte Carlo Ruin</span>
-                                <div class="stat-value" id="bt-metric-ruin" style="font-size: 18px; margin: 4px 0;">0.0%</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">20% DD Risk</span>
-                            </div>
-                            <!-- Risk/Reward -->
-                            <div class="stat-card" style="padding: 12px; margin: 0;">
-                                <span class="stat-label" style="font-size: 10px;">Avg Risk:Reward</span>
-                                <div class="stat-value" id="bt-metric-rr" style="font-size: 18px; margin: 4px 0;">0.00</div>
-                                <span style="font-size: 10px; color: var(--text-muted);">Avg Win / Avg Loss</span>
+                            <div class="table-responsive">
+                                <table class="trading-table" style="font-size: 12px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Ventana</th>
+                                            <th>Train PF</th>
+                                            <th>Test PF (OOS)</th>
+                                            <th>Degradación PF</th>
+                                            <th>Train WinRate</th>
+                                            <th>Test WinRate</th>
+                                            <th>Consistencia</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rs-wfa-windows-body">
+                                        <tr>
+                                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 16px;">
+                                                Sin ventanas evaluadas aún.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Scientific Guidance & Actionable Recommendations -->
-                    <div style="padding: 20px 24px;">
-                        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
-                            <i class="fa-solid fa-list-check" style="margin-right: 6px; color: var(--accent-green);"></i> Actionable Recommendations & Next Steps
+                    <!-- 4 Top Research KPIs -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Total Research</span>
+                                <div class="stat-icon-wrapper"><i class="fa-solid fa-database"></i></div>
+                            </div>
+                            <div class="stat-value" id="val-research-total">0</div>
+                            <div class="stat-footer">Experimentos registrados</div>
                         </div>
-                        <ul id="bt-recommendations-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.5;">
-                        </ul>
-                    </div>
-                </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">Total Research</span>
-                            <div class="stat-icon-wrapper"><i class="fa-solid fa-database"></i></div>
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Promoted Strategies</span>
+                                <div class="stat-icon-wrapper"><i class="fa-solid fa-circle-check"></i></div>
+                            </div>
+                            <div class="stat-value" id="val-research-promoted" style="color: var(--accent-green);">0</div>
+                            <div class="stat-footer">Aprobadas para producción</div>
                         </div>
-                        <div class="stat-value" id="val-research-total">0</div>
-                        <div class="stat-footer">Registered experiments</div>
-                    </div>
 
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">Promoted Strategies</span>
-                            <div class="stat-icon-wrapper"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Candidate Strategies</span>
+                                <div class="stat-icon-wrapper"><i class="fa-solid fa-vial"></i></div>
+                            </div>
+                            <div class="stat-value" id="val-research-candidates" style="color: var(--color-warning);">0</div>
+                            <div class="stat-footer">En observación / optimización</div>
                         </div>
-                        <div class="stat-value" id="val-research-promoted" style="color: var(--accent-green);">0</div>
-                        <div class="stat-footer">Production ready</div>
-                    </div>
 
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">Candidate Strategies</span>
-                            <div class="stat-icon-wrapper"><i class="fa-solid fa-vial"></i></div>
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Rejected Strategies</span>
+                                <div class="stat-icon-wrapper"><i class="fa-solid fa-ban"></i></div>
+                            </div>
+                            <div class="stat-value" id="val-research-rejected" style="color: var(--color-sell);">0</div>
+                            <div class="stat-footer">Descartadas por overfitting</div>
                         </div>
-                        <div class="stat-value" id="val-research-candidates" style="color: var(--color-warning);">0</div>
-                        <div class="stat-footer">In Walk Forward / Monte Carlo</div>
                     </div>
 
-                    <div class="stat-card">
-                        <div class="stat-top">
-                            <span class="stat-label">Rejected Strategies</span>
-                            <div class="stat-icon-wrapper"><i class="fa-solid fa-ban"></i></div>
+                    <!-- Dedicated Research Experiments Table Header -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 24px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fa-solid fa-vial-virus" style="color: #A855F7; font-size: 16px;"></i>
+                            <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Historial de Experimentos de Research Científico & Validaciones</h4>
+                            <span id="research-count-badge" class="trend-badge" style="font-size: 11px;">0 experimentos</span>
                         </div>
-                        <div class="stat-value" id="val-research-rejected" style="color: var(--color-sell);">0</div>
-                        <div class="stat-footer">Failed statistical rigor</div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="research-search" class="search-input" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; width: 220px;" oninput="filterResearchTable()">
+                            <button class="btn-action" style="padding: 6px 12px; font-size: 12px;" onclick="refreshDashboardData()">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="table-responsive" style="margin-top: 16px;">
-                    <table class="trading-table">
-                        <thead>
-                            <tr>
-                                <th>Exp ID</th>
-                                <th>Hypothesis / Strategy</th>
-                                <th>Symbol</th>
-                                <th>Timeframe</th>
-                                <th>Sharpe</th>
-                                <th>Sortino</th>
-                                <th>Max DD</th>
-                                <th>Win Rate</th>
-                                <th>Decision Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="research-table-body">
-                            <tr>
-                                <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                                    Querying Strategy Lab research...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="table-responsive" style="margin-top: 8px;">
+                        <table class="trading-table">
+                            <thead>
+                                <tr>
+                                    <th>Exp ID</th>
+                                    <th>Título / Hipótesis</th>
+                                    <th>Símbolo</th>
+                                    <th>Estrategia</th>
+                                    <th>Stability Score</th>
+                                    <th>WFA Rating</th>
+                                    <th>Consistencia</th>
+                                    <th>Test PF</th>
+                                    <th>MC Ruina</th>
+                                    <th>Decisión Status</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="research-table-body">
+                                <tr>
+                                    <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                                        Consultando base de datos de research (research.db)...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -560,7 +1071,68 @@
             </div>
 
         </main>
+        </div><!-- .app-main -->
+    </div><!-- #admin-dashboard .app-layout -->
 
+    <!-- Command Palette Dialog (⌘K - from dashboard_new.tsx) -->
+    <div id="command-palette-modal" class="command-modal-backdrop wip-hidden" onclick="handleCommandBackdropClick(event)">
+        <div class="command-dialog" onclick="event.stopPropagation()">
+            <div class="command-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="command-palette-input" class="command-input" autocomplete="off" oninput="filterCommandPalette(this.value)">
+                <kbd onclick="closeCommandPalette()" style="cursor: pointer;">ESC</kbd>
+            </div>
+            <div class="command-results-list" id="command-results-list">
+                <div class="command-item focused" onclick="executeCommand('overview')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span>Go to Overview Dashboard</span>
+                    </div>
+                    <kbd>↵</kbd>
+                </div>
+                <div class="command-item" onclick="executeCommand('positions')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>View MT5 Open Positions</span>
+                    </div>
+                </div>
+                <div class="command-item" onclick="executeCommand('signals')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Open Signals & Trading Journal</span>
+                    </div>
+                </div>
+                <div class="command-item" onclick="executeCommand('research')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-flask"></i>
+                        <span>Launch Strategy Lab & Backtest Runner</span>
+                    </div>
+                </div>
+                <div class="command-item" onclick="executeCommand('checklist')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Run Pre-Flight Audit Checklist (17 checks)</span>
+                    </div>
+                </div>
+                <div class="command-item" onclick="executeCommand('sync')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>Sync All Telemetry Now</span>
+                    </div>
+                    <kbd>⌘R</kbd>
+                </div>
+                <div class="command-item" onclick="executeCommand('theme')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-circle-half-stroke"></i>
+                        <span>Toggle Theme (Dark / Light)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="command-footer">
+                <span>Navigation: <kbd>↑</kbd> <kbd>↓</kbd> to select</span>
+                <span>Press <kbd>ESC</kbd> to close</span>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

@@ -174,8 +174,6 @@ export default function SettingsScreen() {
           <TextInput
             value={urlDraft}
             onChangeText={setUrlDraft}
-            placeholder={getBuildApiUrl() || "http://192.168.1.X:5000"}
-            placeholderTextColor={colors.mutedForeground}
             autoCapitalize="none"
             autoCorrect={false}
             style={[
@@ -189,8 +187,6 @@ export default function SettingsScreen() {
           <TextInput
             value={tokenDraft}
             onChangeText={setTokenDraft}
-            placeholder={maskSecret(getBuildApiSecret())}
-            placeholderTextColor={colors.mutedForeground}
             secureTextEntry
             autoCapitalize="none"
             style={[
@@ -559,7 +555,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   actionText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   intervalBlock: {
@@ -589,7 +585,7 @@ const styles = StyleSheet.create({
   connLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
   connInput: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -601,7 +597,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     marginTop: 4,
   },

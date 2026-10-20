@@ -23,11 +23,16 @@ plugins {
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
-    ex.autolinkLibrariesFromCommand()
-  } else {
-    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
-  }
+  def inputAutolinkFile = file("build/generated/autolinking/autolinking_input.json")
+  inputAutolinkFile.parentFile.mkdirs()
+  
+  def rnConfigOutput = providers.exec {
+    workingDir(rootDir.parentFile)
+    commandLine("node", "--no-warnings", "--eval", "require('expo/bin/autolinking')", "expo-modules-autolinking", "react-native-config", "--platform", "android", "--json")
+  }.standardOutput.asText.get()
+  
+  inputAutolinkFile.text = rnConfigOutput
+  ex.autolinkLibrariesFromConfigFile(inputAutolinkFile)
 }
 expoAutolinking.useExpoModules()
 

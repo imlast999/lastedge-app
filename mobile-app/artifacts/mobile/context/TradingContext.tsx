@@ -136,18 +136,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const fetchAllData = useCallback(async () => {
     const { url: apiUrl, token: apiSecret } = resolveApiConfig(apiOverrides);
     if (!apiUrl) {
-      if (__DEV__) {
-        const { MOCK_STATUS, MOCK_SIGNALS, MOCK_TRADES, generateMockEquityHistory } =
-          await import("@/__mocks__/tradingData");
-        setStatus(MOCK_STATUS);
-        setSignals(MOCK_SIGNALS);
-        setTrades(MOCK_TRADES);
-        setEquityHistory(generateMockEquityHistory(MOCK_STATUS.equity));
-        setApiError("EXPO_PUBLIC_API_URL no configurada — mostrando datos de ejemplo");
-        setUsingMockData(true);
-      } else {
-        setApiError("EXPO_PUBLIC_API_URL no configurada");
-      }
+      setApiError("EXPO_PUBLIC_API_URL no configurada — especifica la URL en Ajustes");
       setLoading(false);
       return;
     }
@@ -172,9 +161,14 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 2. Signals
-      const signalsData = await safeFetch<Signal[]>("/api/signals");
-      if (signalsData) {
-        signalsData.forEach((sig) => {
+      const rawSignals = await safeFetch<any>("/api/signals");
+      const signalsList: Signal[] = Array.isArray(rawSignals)
+        ? rawSignals
+        : Array.isArray(rawSignals?.signals)
+        ? rawSignals.signals
+        : [];
+      if (signalsList.length > 0 || Array.isArray(rawSignals)) {
+        signalsList.forEach((sig) => {
           if (!prevSignals.current.find((s) => s.id === sig.id) && shouldNotify("NEW_SIGNAL")) {
             sendLocalNotification(
               "NEW_SIGNAL",
@@ -183,14 +177,19 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             );
           }
         });
-        setSignals(signalsData);
-        prevSignals.current = signalsData;
+        setSignals(signalsList);
+        prevSignals.current = signalsList;
       }
 
       // 3. Trades
-      const tradesData = await safeFetch<Trade[]>("/api/trades");
-      if (tradesData) {
-        tradesData.forEach((trade) => {
+      const rawTrades = await safeFetch<any>("/api/trades");
+      const tradesList: Trade[] = Array.isArray(rawTrades)
+        ? rawTrades
+        : Array.isArray(rawTrades?.trades)
+        ? rawTrades.trades
+        : [];
+      if (tradesList.length > 0 || Array.isArray(rawTrades)) {
+        tradesList.forEach((trade) => {
           if (!prevTrades.current.find((t) => t.id === trade.id) && shouldNotify("TRADE_CLOSE")) {
             const sign = trade.profit >= 0 ? "+" : "";
             sendLocalNotification(
@@ -200,15 +199,20 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             );
           }
         });
-        setTrades(tradesData);
-        prevTrades.current = tradesData;
+        setTrades(tradesList);
+        prevTrades.current = tradesList;
       }
 
       // 4. Equity history (optional — server may return 500 if table is empty)
-      const equityData = await safeFetch<EquityPoint[]>("/api/equityHistory").catch(
+      const rawEquity = await safeFetch<any>("/api/equityHistory").catch(
         () => null
       );
-      if (equityData) setEquityHistory(equityData);
+      const equityPoints: EquityPoint[] = Array.isArray(rawEquity)
+        ? rawEquity
+        : Array.isArray(rawEquity?.history)
+        ? rawEquity.history
+        : [];
+      if (equityPoints.length > 0 || Array.isArray(rawEquity)) setEquityHistory(equityPoints);
 
       setApiError(null);
       setUsingMockData(false);
@@ -217,17 +221,6 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
       const msg = error instanceof Error ? error.message : String(error);
       console.warn("Error polling trading bot API:", msg);
       setApiError(`Sin conexión con el servidor (${msg})`);
-
-      // Fall back to mock data only in dev and only on the first fetch
-      if (__DEV__ && status === null) {
-        const { MOCK_STATUS, MOCK_SIGNALS, MOCK_TRADES, generateMockEquityHistory } =
-          await import("@/__mocks__/tradingData");
-        setStatus(MOCK_STATUS);
-        setSignals(MOCK_SIGNALS);
-        setTrades(MOCK_TRADES);
-        setEquityHistory(generateMockEquityHistory(MOCK_STATUS.equity));
-        setUsingMockData(true);
-      }
     } finally {
       setLoading(false);
     }

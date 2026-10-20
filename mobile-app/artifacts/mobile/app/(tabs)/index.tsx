@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
-  Platform,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,14 +28,19 @@ export default function DashboardScreen() {
   const { status, equityHistory, dailyPnL, winrate, openPositions, pendingSignals, loading, refresh } =
     useTrading();
 
-  // status puede ser null durante el primer fetch
-  const safeStatus = status ?? {
-    connected: false, uptime: "–", balance: 0, equity: 0, margin: 0, freeMargin: 0,
+  const safeStatus = {
+    connected: Boolean(status?.connected),
+    uptime: status?.uptime || "–",
+    balance: Number(status?.balance ?? 0),
+    equity: Number(status?.equity ?? status?.balance ?? 0),
+    margin: Number(status?.margin ?? 0),
+    freeMargin: Number(status?.freeMargin ?? status?.balance ?? 0),
+    executionQuality: status?.executionQuality,
   };
 
-  const isProfit = dailyPnL >= 0;
-
-  const bottomPad = insets.bottom + 120;
+  const isProfit = (Number(dailyPnL) || 0) >= 0;
+  const floatingPnL = safeStatus.equity - safeStatus.balance;
+  const bottomPad = insets.bottom + 90;
 
   const handleOpenSettings = () => {
     router.push("/settings-modal" as any);
@@ -47,7 +51,7 @@ export default function DashboardScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: 16, paddingBottom: bottomPad + 16 },
+        { paddingTop: insets.top + 8, paddingBottom: bottomPad },
       ]}
       refreshControl={
         <RefreshControl
@@ -60,29 +64,41 @@ export default function DashboardScreen() {
       showsVerticalScrollIndicator={false}
     >
       <ApiErrorBanner />
-      {/* Safe Area: Header respects top inset */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <View style={styles.headerCopy}>
-          <Text style={[styles.title, { color: colors.foreground }]}>LastEdge</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Monitorización del sistema y laboratorio de estrategias
-          </Text>
+
+      {/* Terminal Workspace Header (dashboard_new.tsx style) */}
+      <View style={styles.workspaceHeader}>
+        <View style={styles.workspaceProfile}>
+          <View style={[styles.avatarBox, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.avatarText, { color: colors.primaryForeground }]}>L</Text>
+          </View>
+          <View style={styles.workspaceMeta}>
+            <Text style={[styles.workspaceTitle, { color: colors.foreground }]}>
+              MT5 Live Account
+            </Text>
+            <Text style={[styles.workspaceSub, { color: colors.mutedForeground }]}>
+              {safeStatus.connected ? "Production · Online" : "Production · Offline"}
+            </Text>
+          </View>
         </View>
+
         <View style={styles.headerActions}>
           <ConnectionBadge connected={safeStatus.connected} uptime={safeStatus.uptime} />
           <TouchableOpacity
             onPress={handleOpenSettings}
-            style={[styles.settingsButton, { backgroundColor: colors.secondary }]}
+            style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
-            <Feather name="settings" size={20} color={colors.foreground} />
+            <Feather name="settings" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Institutional MT5 Balance & Equity Card (line-charts.tsx style) */}
       <View style={[styles.equityCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.equityHeader}>
-          <View>
-            <Text style={[styles.equityLabel, { color: colors.mutedForeground }]}>{t("equity")}</Text>
+          <View style={styles.equityLeft}>
+            <Text style={[styles.equityLabel, { color: colors.mutedForeground }]}>
+              MT5 {t("equity")}
+            </Text>
             <Text style={[styles.equityValue, { color: colors.foreground }]}>
               {safeStatus.equity.toLocaleString("en", {
                 minimumFractionDigits: 2,
@@ -91,29 +107,49 @@ export default function DashboardScreen() {
               <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}> €</Text>
             </Text>
           </View>
+
           <View style={styles.equityRight}>
-            <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>{t("balance")}</Text>
-            <Text style={[styles.balanceValue, { color: colors.foreground }]}>
-              {safeStatus.balance.toLocaleString("en", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}€
+            <View
+              style={[
+                styles.floatingBadge,
+                {
+                  backgroundColor: floatingPnL >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.floatingText,
+                  { color: floatingPnL >= 0 ? colors.profit : colors.loss },
+                ]}
+              >
+                {floatingPnL >= 0 ? "+" : ""}
+                {floatingPnL.toFixed(2)}€ Float
+              </Text>
+            </View>
+            <Text style={[styles.balanceValue, { color: colors.mutedForeground }]}>
+              Bal: {safeStatus.balance.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
             </Text>
           </View>
         </View>
 
+        {/* Equity Chart with Cartesian Grid & Precision Labels */}
         <View style={styles.chartContainer}>
-          <EquityChart data={equityHistory} height={110} showLabels={false} />
+          <EquityChart data={equityHistory} height={120} showLabels={true} />
         </View>
 
         <View style={[styles.chartFooter, { borderTopColor: colors.border }]}>
           <Text style={[styles.footerLabel, { color: colors.mutedForeground }]}>
             {t("last24h")} · {t("updateEvery5s")}
           </Text>
-          <View style={[styles.liveDot, { backgroundColor: colors.profit }]} />
+          <View style={styles.footerLegend}>
+            <View style={[styles.legendDot, { backgroundColor: colors.profit }]} />
+            <Text style={[styles.legendText, { color: colors.mutedForeground }]}>Live Feed</Text>
+          </View>
         </View>
       </View>
 
+      {/* KPI Stats Grid */}
       <View style={styles.statsGrid}>
         <StatsCard
           label={t("profitDay")}
@@ -153,15 +189,30 @@ export default function DashboardScreen() {
       <RiskWidget />
       <BrokerQualityWidget />
 
+      {/* Execution Quality Card */}
       {safeStatus.executionQuality && (
         <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.accountTitle, { color: colors.foreground }]}>Execution Quality</Text>
-          <AccountRow label="Success Rate" value={`${safeStatus.executionQuality.successRate}%`} colors={colors} highlight={safeStatus.executionQuality.successRate >= 95} />
-          <AccountRow label="Avg Latency" value={`${safeStatus.executionQuality.avgLatency} ms`} colors={colors} />
-          <AccountRow label="Avg Slippage" value={`${safeStatus.executionQuality.avgSlippage} pips`} colors={colors} />
+          <AccountRow
+            label="Success Rate"
+            value={`${safeStatus.executionQuality.successRate}%`}
+            colors={colors}
+            highlight={safeStatus.executionQuality.successRate >= 95}
+          />
+          <AccountRow
+            label="Avg Latency"
+            value={`${safeStatus.executionQuality.avgLatency} ms`}
+            colors={colors}
+          />
+          <AccountRow
+            label="Avg Slippage"
+            value={`${safeStatus.executionQuality.avgSlippage} pips`}
+            colors={colors}
+          />
         </View>
       )}
 
+      {/* MT5 Account Margin Telemetry */}
       <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.accountTitle, { color: colors.foreground }]}>{t("mt5Account")}</Text>
         <AccountRow label={t("marginUsed")} value={`${safeStatus.margin.toFixed(2)}€`} colors={colors} />
@@ -185,7 +236,7 @@ function AccountRow({
 }: {
   label: string;
   value: string;
-  colors: ReturnType<typeof useColors>;
+  colors: any;
   highlight?: boolean;
 }) {
   return (
@@ -205,31 +256,58 @@ function AccountRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 16, gap: 14 },
-  header: {
+  content: { paddingHorizontal: 16, gap: 12 },
+  workspaceHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 4,
-    gap: 12,
   },
-  headerCopy: { flex: 1 },
+  workspaceProfile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  avatarBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+  },
+  workspaceMeta: {
+    flexDirection: "column",
+  },
+  workspaceTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    lineHeight: 16,
+  },
+  workspaceSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 14,
+  },
   headerActions: {
     flexDirection: "row",
-    gap: 8,
-    alignItems: "flex-start",
+    gap: 6,
+    alignItems: "center",
   },
   settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold" },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
   equityCard: {
-    borderRadius: 18,
+    borderRadius: 10,
     borderWidth: 1,
     overflow: "hidden",
   },
@@ -237,41 +315,105 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: 18,
-    paddingBottom: 12,
+    padding: 16,
+    paddingBottom: 8,
+  },
+  equityLeft: {
+    gap: 2,
   },
   equityLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
-    marginBottom: 4,
   },
   equityValue: {
-    fontSize: 36,
+    fontSize: 28,
     fontFamily: "Inter_700Bold",
     fontVariant: ["tabular-nums"],
-    lineHeight: 40,
+    lineHeight: 32,
+    letterSpacing: -0.5,
   },
-  currencySymbol: { fontSize: 20, fontFamily: "Inter_400Regular" },
-  equityRight: { alignItems: "flex-end", gap: 4 },
-  balanceLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  balanceValue: { fontSize: 14, fontFamily: "Inter_600SemiBold", fontVariant: ["tabular-nums"] },
-  chartContainer: { paddingHorizontal: 18, paddingBottom: 4 },
+  currencySymbol: {
+    fontSize: 18,
+    fontFamily: "Inter_400Regular",
+  },
+  equityRight: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  floatingBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  floatingText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    fontVariant: ["tabular-nums"],
+  },
+  balanceValue: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    fontVariant: ["tabular-nums"],
+  },
+  chartContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
   chartFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderTopWidth: 1,
   },
-  footerLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
-  statsGrid: { flexDirection: "row", gap: 12 },
-  accountCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
-  accountTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
-  accountRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  accountLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  accountValue: { fontSize: 13, fontFamily: "Inter_600SemiBold", fontVariant: ["tabular-nums"] },
+  footerLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+  },
+  footerLegend: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  legendDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  legendText: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  accountCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  accountTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
+  },
+  accountRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  accountLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  accountValue: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    fontVariant: ["tabular-nums"],
+  },
 });

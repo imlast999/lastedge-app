@@ -123,6 +123,42 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(discord_received), 1)
         self.assertIn("Alerta de Riesgo", discord_received[0])
 
+    async def test_persistent_reply_keyboard(self):
+        """Verifica que el teclado persistente se incluye en la respuesta enviada a Telegram."""
+        mock_session, mock_post = self._create_mock_session()
+        await self.adapter._cmd_help(mock_session, 12345)
+
+        self.assertTrue(mock_session.post.called)
+        json_sent = mock_session.post.call_args[1]["json"]
+        self.assertIn("reply_markup", json_sent)
+        markup = json_sent["reply_markup"]
+        self.assertTrue(markup.get("resize_keyboard"))
+        self.assertTrue(markup.get("is_persistent"))
+        self.assertIn("keyboard", markup)
+
+        # Verificar que contiene los botones principales
+        flat_buttons = [btn["text"] for row in markup["keyboard"] for btn in row]
+        self.assertIn("⚡ /status", flat_buttons)
+        self.assertIn("📊 /positions", flat_buttons)
+        self.assertIn("💰 /equity", flat_buttons)
+        self.assertIn("🛡️ /risk", flat_buttons)
+
+    async def test_emoji_button_routing(self):
+        """Verifica que al pulsar un botón que envía '⚡ /status', se procesa el comando /status."""
+        mock_session, mock_post = self._create_mock_session()
+        update = {
+            "message": {
+                "chat": {"id": 12345},
+                "from": {"id": "12345"},
+                "text": "⚡ /status"
+            }
+        }
+        await self.adapter._process_update(mock_session, update)
+
+        self.assertTrue(mock_session.post.called)
+        json_sent = mock_session.post.call_args[1]["json"]
+        self.assertIn("LastEdge — Estado del Bot", json_sent["text"])
+
 
 if __name__ == '__main__':
     unittest.main()

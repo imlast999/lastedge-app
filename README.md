@@ -45,8 +45,11 @@ If either backend engine is offline, LastEdge App continues serving user request
 
 ```text
 LastEdge App/
+├── build_apk.bat                   # Windows CLI launcher for Android APK compilation
+├── build_apk.py                    # Interactive Python build, diagnostic & ADB deployer
 ├── dashboard/                      # Web Dashboard frontend (HTML, CSS, JS)
 ├── mobile-app/                     # React Native / Expo mobile application
+├── dist/                           # Compiled installable Android APKs
 ├── services/
 │   ├── dashboard_server.py         # Standalone Web Dashboard HTTP server (:8080)
 │   ├── telegram_adapter.py         # Decoupled Telegram Bot adapter
@@ -91,6 +94,13 @@ API_TIMEOUT_SECONDS=2.0
 python -m services.dashboard_server 8080
 ```
 Open your browser at `http://localhost:8080` to access the live dashboard.
+
+### Step 4: Build Installable Android APK
+To compile the mobile app and create an installable `.apk` for Android:
+```cmd
+build_apk.bat
+```
+*(Or run `build_apk.bat --doctor` to verify your Java JDK, Android SDK, and ADB toolchain).*
 
 ---
 

@@ -183,6 +183,17 @@ class TradingClient:
         """Requests closing an open MT5 position."""
         return self._post("/api/trading/positions/close", {"ticket": ticket})
 
+    def toggle_autosignals(self, mode: str = "status") -> Dict[str, Any]:
+        """Toggles or queries AutoSignals state."""
+        return self._post("/api/trading/autosignals", {"mode": mode})
+
+    def get_equity_history(self, days: int = 30) -> Dict[str, Any]:
+        """Gets real historical balance and equity curve data from Trading Engine."""
+        res = self._get(f"/api/trading/equity/history?days={days}")
+        if res.get("offline"):
+            return {"ok": False, "history": [], "offline": True}
+        return res
+
 
 _trading_client: Optional[TradingClient] = None
 

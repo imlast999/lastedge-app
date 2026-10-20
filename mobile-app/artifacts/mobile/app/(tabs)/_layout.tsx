@@ -22,12 +22,17 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.background,
+          backgroundColor: isIOS ? "transparent" : colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
-          height: 60,
-          ...(isWeb ? { height: 84 } : {}),
+          height: 56,
+          ...(isWeb ? { height: 68 } : {}),
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontFamily: "Inter_500Medium",
+          marginTop: -2,
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -38,7 +43,7 @@ export default function TabLayout() {
             />
           ) : isWeb ? (
             <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
             />
           ) : null,
       }}

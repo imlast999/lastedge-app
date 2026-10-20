@@ -101,11 +101,22 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <View style={styles.dataGrid}>
-        <DataRow label="Entry" value={signal.entry.toFixed(signal.symbol.includes("JPY") || signal.symbol.includes("XAU") ? 3 : 5)} />
-        <DataRow label="TP" value={signal.takeProfit.toFixed(signal.symbol.includes("JPY") || signal.symbol.includes("XAU") ? 3 : 5)} color={colors.profit} />
-        <DataRow label="SL" value={signal.stopLoss.toFixed(signal.symbol.includes("JPY") || signal.symbol.includes("XAU") ? 3 : 5)} color={colors.loss} />
-        <DataRow label="R:R" value={`1:${signal.rrRatio.toFixed(2)}`} />
-        <DataRow label="Lot" value={signal.lot.toFixed(2)} />
+        <DataRow
+          label="Entry"
+          value={Number(signal?.entry ?? 0).toFixed((signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5)}
+        />
+        <DataRow
+          label="TP"
+          value={Number(signal?.takeProfit ?? 0).toFixed((signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5)}
+          color={colors.profit}
+        />
+        <DataRow
+          label="SL"
+          value={Number(signal?.stopLoss ?? 0).toFixed((signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5)}
+          color={colors.loss}
+        />
+        <DataRow label="R:R" value={`1:${Number(signal?.rrRatio ?? 1).toFixed(2)}`} />
+        <DataRow label="Lot" value={Number(signal?.lot ?? 0.01).toFixed(2)} />
       </View>
 
       {isPending && (
@@ -174,16 +185,16 @@ function DataRow({ label, value, color }: { label: string; value: string; color?
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 8,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   pendingBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   pulseDot: {
     width: 6,
@@ -191,17 +202,17 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   pendingText: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Inter_700Bold",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   headerLeft: {
     flexDirection: "row",
@@ -214,37 +225,37 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   symbol: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   typeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_700Bold",
     letterSpacing: 0.5,
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   timeAgo: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
   },
   divider: {
     height: 1,
-    marginHorizontal: 14,
+    marginHorizontal: 12,
   },
   dataGrid: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
   },
   dataRow: {
     flexDirection: "row",
@@ -252,43 +263,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dataLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   dataValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     fontVariant: ["tabular-nums"],
   },
   actions: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
     paddingTop: 4,
   },
   actionBtn: {
     flex: 1,
-    height: 50,
-    borderRadius: 12,
+    height: 40,
+    borderRadius: 6,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
   },
   rejectBtn: {
-    borderWidth: 1.5,
+    borderWidth: 1,
   },
   acceptBtn: {},
   rejectText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Inter_700Bold",
     letterSpacing: 0.5,
   },
   acceptText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Inter_700Bold",
     letterSpacing: 0.5,
   },
@@ -296,12 +307,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   statusBarText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
 });

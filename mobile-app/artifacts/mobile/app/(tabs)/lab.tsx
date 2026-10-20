@@ -405,27 +405,29 @@ export default function LabScreen() {
     >
       <ApiErrorBanner />
 
-      {/* Header con botón de Crear e Ajustes */}
-      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      {/* Header con botón de Crear e Ajustes (Institutional Breadcrumbs) */}
+      <View style={[styles.headerContainer, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerContent}>
+          <View style={styles.breadcrumbRow}>
+            <Text style={[styles.breadcrumb, { color: colors.primary }]}>QUANT RESEARCH</Text>
+            <Text style={[styles.breadcrumbSep, { color: colors.mutedForeground }]}>/</Text>
+            <Text style={[styles.breadcrumb, { color: colors.mutedForeground }]}>LABORATORY</Text>
+          </View>
           <Text style={[styles.title, { color: colors.foreground }]}>Strategy Lab</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Quantitative backtests, statistical audits & research
-          </Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
             onPress={handleOpenNewModal}
             style={[styles.actionBtn, { backgroundColor: colors.primary }]}
           >
-            <Feather name="plus" size={18} color={colors.primaryForeground} />
-            <Text style={[styles.actionBtnText, { color: colors.primaryForeground }]}>Nueva</Text>
+            <Feather name="plus" size={14} color={colors.primaryForeground} />
+            <Text style={[styles.actionBtnText, { color: colors.primaryForeground }]}>New Test</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push("/settings-modal" as any)}
-            style={[styles.iconBtn, { backgroundColor: colors.secondary }]}
+            style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
-            <Feather name="settings" size={18} color={colors.foreground} />
+            <Feather name="settings" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
@@ -724,8 +726,6 @@ export default function LabScreen() {
         <Feather name="search" size={18} color={colors.mutedForeground} />
         <TextInput
           style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder="Buscar por hipótesis, notas, etiquetas o ID..."
-          placeholderTextColor={colors.mutedForeground}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -999,8 +999,6 @@ export default function LabScreen() {
               style={[styles.textArea, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border }]}
               multiline
               numberOfLines={4}
-              placeholder="Escribe la justificación científica..."
-              placeholderTextColor={colors.mutedForeground}
               value={editNotes}
               onChangeText={setEditNotes}
             />
@@ -1033,7 +1031,7 @@ export default function LabScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              {isReopenMode ? "🔄 Reabrir Investigación" : "⚡ Nueva Investigación"}
+              {isReopenMode ? "Reabrir Investigación" : "Nueva Investigación"}
             </Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
               {isReopenMode ? "Cargarás la configuración exacta y relanzarás la prueba." : "Configura los parámetros para iniciar una simulación cuantitativa."}
@@ -1062,8 +1060,6 @@ export default function LabScreen() {
               style={[styles.singleInput, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border }]}
               value={formTitle}
               onChangeText={setFormTitle}
-              placeholder="Título descriptivo..."
-              placeholderTextColor={colors.mutedForeground}
             />
 
             <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 10 }]}>Hipótesis:</Text>
@@ -1072,8 +1068,6 @@ export default function LabScreen() {
               multiline
               value={formHypothesis}
               onChangeText={setFormHypothesis}
-              placeholder="Objetivo de la prueba..."
-              placeholderTextColor={colors.mutedForeground}
             />
 
             <View style={styles.modalActionsRow}>
@@ -1127,57 +1121,70 @@ function MetricCard({ label, value, colors }: { label: string; value: string; co
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 16, gap: 12 },
-  headerContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-  headerContent: { flex: 1 },
-  title: { fontSize: 24, fontFamily: "Inter_700Bold" },
-  subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  headerContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  headerContent: { flex: 1, gap: 2 },
+  breadcrumbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  breadcrumb: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.6,
+  },
+  breadcrumbSep: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+  },
+  title: { fontSize: 20, fontFamily: "Inter_700Bold" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   actionBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  iconBtn: { width: 36, height: 36, borderRadius: 8, justifyContent: "center", alignItems: "center" },
-  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, height: 42, gap: 8 },
+  iconBtn: { width: 36, height: 36, borderRadius: 8, borderWidth: 1, justifyContent: "center", alignItems: "center" },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, height: 38, gap: 8 },
   searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
   filterSection: { gap: 4 },
   filterHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  filterLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
-  resetText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  filterLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
+  resetText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   chipsContainer: { gap: 6, paddingRight: 16 },
-  chip: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5 },
+  chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
   section: { gap: 8 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sectionTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
-  expItem: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 6 },
+  sectionTitle: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
+  expItem: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 6 },
   expItemHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
   expItemTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", flex: 1 },
   expHypothesis: { fontSize: 12, fontFamily: "Inter_400Regular" },
   expItemMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 2 },
   expMetaText: { fontSize: 11, fontFamily: "Inter_500Medium" },
   gitBadge: { fontSize: 10, fontFamily: "Inter_600SemiBold", backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 10, fontFamily: "Inter_700Bold" },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  badge: { paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 },
+  badgeText: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  card: { borderRadius: 8, borderWidth: 1, padding: 12, gap: 10 },
   statRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 2 },
-  statLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  statValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  statLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  statValue: { fontSize: 12, fontFamily: "Inter_600SemiBold", fontVariant: ["tabular-nums"] },
   detailBlock: { gap: 4 },
-  blockLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  blockLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
   blockBody: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17 },
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 },
-  metricCard: { flex: 1, minWidth: "45%", borderWidth: 1, borderRadius: 8, padding: 8, alignItems: "center" },
-  metricLabel: { fontSize: 10, fontFamily: "Inter_400Regular" },
-  metricValue: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 2 },
+  metricCard: { flex: 1, minWidth: "45%", borderWidth: 1, borderRadius: 6, padding: 8, alignItems: "center" },
+  metricLabel: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  metricValue: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 2, fontVariant: ["tabular-nums"] },
   toggleJsonBtn: { flexDirection: "row", alignItems: "center", gap: 6, padding: 10, borderRadius: 8, marginTop: 8 },
   toggleJsonText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   jsonBox: { borderWidth: 1, borderRadius: 8, padding: 10, marginTop: 6, maxHeight: 150 },
   jsonText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", padding: 16 },
-  modalCard: { borderRadius: 16, borderWidth: 1, padding: 18, gap: 10, maxHeight: "90%" },
+  modalCard: { borderRadius: 8, borderWidth: 1, padding: 18, gap: 10, maxHeight: "90%" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  modalTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
   modalSub: { fontSize: 11, fontFamily: "Inter_400Regular" },
   inputLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   statusOptions: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
-  statusOption: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  statusOption: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   singleInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 12, marginTop: 4 },
   textArea: { borderWidth: 1, borderRadius: 8, padding: 10, textAlignVertical: "top", fontSize: 12, marginTop: 4 },
   modalActionsRow: { flexDirection: "row", gap: 10, marginTop: 12 },
@@ -1185,19 +1192,19 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   emptyText: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  cardSectionTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  cardSectionTitle: { fontSize: 13, fontFamily: "Inter_700Bold" },
   controlLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", marginBottom: 4 },
   inlineChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  runBacktestBtn: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 12, borderRadius: 10, marginTop: 6 },
+  runBacktestBtn: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 12, borderRadius: 8, marginTop: 6 },
   runBacktestBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  verdictCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 10 },
+  verdictCard: { borderRadius: 8, borderWidth: 1, padding: 12, gap: 10 },
   verdictHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  verdictBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  verdictBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
-  verdictTitle: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 2 },
+  verdictBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
+  verdictBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  verdictTitle: { fontSize: 14, fontFamily: "Inter_700Bold", marginTop: 2 },
   verdictSummary: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
   recsContainer: { gap: 6, marginTop: 4, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 8 },
-  recsTitle: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  recsTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
   recItem: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   recText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 16 },
 });

@@ -24,10 +24,10 @@ export function ConnectionBadge({ connected, uptime }: Props) {
   }, [connected, pulse]);
 
   const dotColor = connected ? colors.connected : colors.disconnected;
-  const label = connected ? "MT5 CONECTADO" : "MT5 DESCONECTADO";
+  const label = connected ? "MT5 ONLINE" : "MT5 OFFLINE";
 
   return (
-    <View style={[styles.badge, { backgroundColor: `${dotColor}15`, borderColor: `${dotColor}30` }]}>
+    <View style={[styles.badge, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Animated.View
         style={[styles.dot, { backgroundColor: dotColor, opacity: connected ? pulse : 1 }]}
       />
@@ -44,23 +44,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
     borderWidth: 1,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_700Bold",
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   uptime: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_400Regular",
   },
 });
