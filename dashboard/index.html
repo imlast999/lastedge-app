@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <title>LastEdge — Quantitative Trading Ecosystem Dashboard</title>
@@ -276,52 +276,105 @@
 
                     </div>
 
-                    <!-- Institutional MT5 Balance & Equity Performance Chart (line-charts.tsx standard) -->
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <div class="chart-header-left">
-                                <div class="chart-title-row">
-                                    <i class="fa-solid fa-chart-line"></i>
-                                    <span>MT5 Balance & Equity Performance</span>
+                    <!-- Overview Split Screen: 50% Real Performance Chart + 50% Live Strategy Radar -->
+                    <div class="overview-split-grid">
+                        
+                        <!-- Institutional MT5 Balance & Equity Performance Chart -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div class="chart-header-left">
+                                    <div class="chart-title-row">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                        <span>MT5 Balance & Equity Performance</span>
+                                    </div>
+                                    <div class="chart-kpi-row">
+                                        <div class="chart-kpi-item">
+                                            <span class="kpi-title">Current Equity</span>
+                                            <span class="kpi-figure font-mono" id="chart-kpi-equity">$0.00</span>
+                                        </div>
+                                        <div class="chart-kpi-item">
+                                            <span class="kpi-title">Account Balance</span>
+                                            <span class="kpi-figure font-mono" id="chart-kpi-balance">$0.00</span>
+                                        </div>
+                                        <div class="chart-kpi-item">
+                                            <span class="kpi-title">Floating PnL</span>
+                                            <span class="kpi-figure font-mono" id="chart-kpi-float">$0.00</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="chart-kpi-row">
-                                    <div class="chart-kpi-item">
-                                        <span class="kpi-title">Current Equity</span>
-                                        <span class="kpi-figure font-mono" id="chart-kpi-equity">$0.00</span>
+                                <div class="chart-header-right">
+                                    <div class="segmented-control">
+                                        <button class="seg-btn" id="seg-btn-1d" onclick="setChartRange('1D')">1D</button>
+                                        <button class="seg-btn" id="seg-btn-1w" onclick="setChartRange('1W')">1W</button>
+                                        <button class="seg-btn active" id="seg-btn-1m" onclick="setChartRange('1M')">1M</button>
+                                        <button class="seg-btn" id="seg-btn-all" onclick="setChartRange('ALL')">ALL</button>
                                     </div>
-                                    <div class="chart-kpi-item">
-                                        <span class="kpi-title">Account Balance</span>
-                                        <span class="kpi-figure font-mono" id="chart-kpi-balance">$0.00</span>
-                                    </div>
-                                    <div class="chart-kpi-item">
-                                        <span class="kpi-title">Floating PnL</span>
-                                        <span class="kpi-figure font-mono" id="chart-kpi-float">$0.00</span>
+                                    <div class="chart-legends">
+                                        <div class="legend-item">
+                                            <span class="legend-indicator indicator-balance"></span>
+                                            <span>Balance</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-indicator indicator-equity"></span>
+                                            <span>Equity</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="chart-header-right">
-                                <div class="segmented-control">
-                                    <button class="seg-btn" id="seg-btn-1d" onclick="setChartRange('1D')">1D</button>
-                                    <button class="seg-btn" id="seg-btn-1w" onclick="setChartRange('1W')">1W</button>
-                                    <button class="seg-btn active" id="seg-btn-1m" onclick="setChartRange('1M')">1M</button>
-                                    <button class="seg-btn" id="seg-btn-all" onclick="setChartRange('ALL')">ALL</button>
-                                </div>
-                                <div class="chart-legends">
-                                    <div class="legend-item">
-                                        <span class="legend-indicator indicator-balance"></span>
-                                        <span>Balance</span>
+                            <div class="chart-canvas-container" id="chart-container">
+                                <canvas id="balance-equity-canvas"></canvas>
+                                <div id="chart-tooltip" class="chart-floating-tooltip wip-hidden"></div>
+                            </div>
+                        </div>
+
+                        <!-- Live Strategy Evaluation Radar (Condition Pipeline & Readiness) -->
+                        <div class="radar-card" id="strategy-radar-card">
+                            <div class="radar-header">
+                                <div class="radar-title-group">
+                                    <div class="radar-pulse-dot"></div>
+                                    <div class="radar-title">
+                                        <span>Strategy Radar</span>
                                     </div>
-                                    <div class="legend-item">
-                                        <span class="legend-indicator indicator-equity"></span>
-                                        <span>Equity</span>
+                                </div>
+                                <div class="strategy-tabs">
+                                    <button class="strategy-tab-btn active" id="radar-tab-xauusd" onclick="selectRadarSymbol('XAUUSD')">XAUUSD</button>
+                                    <button class="strategy-tab-btn" id="radar-tab-eurusd" onclick="selectRadarSymbol('EURUSD')">EURUSD</button>
+                                </div>
+                            </div>
+
+                            <div class="radar-readiness-banner">
+                                <div class="readiness-info">
+                                    <span class="readiness-label">Signal Evaluation Status</span>
+                                    <div class="readiness-status" id="radar-overall-status">
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
+                                        <span>WAITING FOR BREAKOUT</span>
+                                    </div>
+                                </div>
+                                <div class="readiness-gauge-container">
+                                    <span class="readiness-pct font-mono" id="radar-readiness-pct">60%</span>
+                                    <div class="readiness-bar-track">
+                                        <div class="readiness-bar-fill" id="radar-readiness-fill" style="width: 60%;"></div>
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Live Pipeline Conditions List -->
+                            <div class="radar-pipeline" id="radar-conditions-pipeline">
+                                <!-- Populated dynamically by script.js -->
+                            </div>
+
+                            <!-- Radar Heartbeat & Audit Footer -->
+                            <div class="radar-footer">
+                                <div class="radar-heartbeat">
+                                    <i class="fa-solid fa-bolt" style="color: var(--primary); font-size: 10px;"></i>
+                                    <span id="radar-heartbeat-text">Evaluated: 1.2s ago · Tick Heartbeat OK</span>
+                                </div>
+                                <div class="font-mono" id="radar-spread-badge" style="color: var(--text-muted); font-size: 11px;">
+                                    Spread: 1.2 pips
+                                </div>
+                            </div>
                         </div>
-                        <div class="chart-canvas-container" id="chart-container">
-                            <canvas id="balance-equity-canvas"></canvas>
-                            <div id="chart-tooltip" class="chart-floating-tooltip wip-hidden"></div>
-                        </div>
+
                     </div>
 
                 <!-- Live MT5 Positions Quick Table -->

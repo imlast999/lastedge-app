@@ -155,7 +155,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             # ── Unified Ecosystem Aggregated Payload ──────────────────────────
             elif path in ("/api/data", "/api/dashboard/data"):
                 from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=8) as ex:
+                with ThreadPoolExecutor(max_workers=10) as ex:
                     f_status = ex.submit(trading_client.get_status)
                     f_metrics = ex.submit(trading_client.get_metrics)
                     f_equity = ex.submit(trading_client.get_equity)
@@ -164,6 +164,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     f_signals = ex.submit(trading_client.get_signals)
                     f_checklist = ex.submit(trading_client.get_checklist)
                     f_eq_hist = ex.submit(trading_client.get_equity_history)
+                    f_radar = ex.submit(trading_client.get_strategy_radar, "XAUUSD")
                     f_exp = ex.submit(research_client.get_experiments)
                     f_lab_stat = ex.submit(research_client.get_status)
 
@@ -175,6 +176,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 t_sig = f_signals.result()
                 t_check = f_checklist.result()
                 t_hist = f_eq_hist.result()
+                t_radar = f_radar.result()
                 r_exp = f_exp.result()
                 r_stat = f_lab_stat.result()
 
@@ -198,6 +200,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     "metrics": t_metrics.get("metrics", {}),
                     "equity": t_equity.get("equity", {}),
                     "equity_history": t_hist.get("history", []),
+                    "radar": t_radar,
                     "positions": t_pos.get("positions", []),
                     "risk": t_risk,
                     "signals": t_sig.get("signals", []),
@@ -220,6 +223,14 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
 
             elif path in ("/api/equity/history", "/api/trading/equity/history", "/api/balance/history"):
                 self._send_json(200, trading_client.get_equity_history())
+
+            elif path in ("/api/radar", "/api/trading/radar"):
+                symbol = "XAUUSD"
+                if "?" in self.path:
+                    from urllib.parse import parse_qs, urlparse
+                    query = parse_qs(urlparse(self.path).query)
+                    symbol = query.get("symbol", ["XAUUSD"])[0]
+                self._send_json(200, trading_client.get_strategy_radar(symbol=symbol))
 
             elif path in ("/api/signals", "/api/trading/signals"):
                 res = trading_client.get_signals()

@@ -312,6 +312,8 @@ def run_gradle_build(variant: str = "release", clean: bool = False) -> bool:
     print(f"  {BOLD}Variant   :{RESET} {variant.upper()}")
     print(f"  {BOLD}APK File  :{RESET} {dest_versioned.name}")
     print(f"  {BOLD}File Size :{RESET} {file_size_mb} MB")
+    print(f"  {BOLD}Signing   :{RESET} Persistent Release Keystore ({GREEN}In-Place Update Ready{RESET})")
+    print(f"  {BOLD}Update    :{RESET} Reinstalls seamlessly over existing app without uninstalling")
     print(f"  {BOLD}SHA-256   :{RESET} {sha256}")
     print(f"  {BOLD}Location  :{RESET} {dest_standard}")
     print(f"{CYAN}{'=' * 75}{RESET}\n")
@@ -381,7 +383,7 @@ def install_apk_to_device(launch_after: bool = False) -> bool:
     print(f"  {BOLD}APK File      :{RESET} {latest_apk.name} ({round(latest_apk.stat().st_size / (1024*1024), 2)} MB)\n")
 
     env = get_build_environment()
-    cmd = ["adb", "-s", target_device["serial"], "install", "-r", str(latest_apk)]
+    cmd = ["adb", "-s", target_device["serial"], "install", "-r", "-d", str(latest_apk)]
 
     t0 = time.time()
     res = subprocess.run(cmd, env=env)

@@ -260,6 +260,9 @@ function processDashboardData(data) {
             floatBadge.className = `trend-badge ${floatPnl >= 0 ? 'trend-up' : 'trend-down'}`;
         }
         updateChartTelemetry(curBalance, curEquity, floatPnl, currency, true, data.equity_history);
+        if (data.radar) {
+            renderStrategyRadar(data.radar);
+        }
     }
 
     // 6. Update Broker & Account Card (No Placeholders!)
@@ -2269,6 +2272,42 @@ function renderBalanceEquityChart() {
     }
     ctx.stroke();
 
+    // 4.1 Draw Real Trade Execution Markers on the Equity Line
+    chartState.renderedMarkers = [];
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') !== 'light';
+    data.forEach((d, idx) => {
+        if (d.symbol || d.pnl !== undefined) {
+            const mx = getX(idx);
+            const my = getY(d.equity !== undefined ? d.equity : d.balance);
+            const isProfit = (d.pnl || 0) >= 0;
+            const markerColor = isProfit ? '#10B981' : '#EF4444';
+
+            // Subtle glow ring
+            ctx.fillStyle = isProfit ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+            ctx.beginPath();
+            ctx.arc(mx, my, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = isDarkTheme ? '#090A0E' : '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Center Pin
+            ctx.fillStyle = markerColor;
+            ctx.beginPath();
+            ctx.arc(mx, my, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            chartState.renderedMarkers.push({
+                x: mx,
+                y: my,
+                data: d,
+                index: idx
+            });
+        }
+    });
+
     // 5. Hover Crosshair & Indicators (line-charts.tsx standard)
     if (chartState.hoverIndex >= 0 && chartState.hoverIndex < data.length) {
         const idx = chartState.hoverIndex;
@@ -2339,6 +2378,24 @@ function onChartMouseMove(e) {
 
         const sym = getCurrencySymbol(chartState.currency);
 
+        let tradeMarkerHtml = '';
+        if (chartState.renderedMarkers && chartState.renderedMarkers.length > 0) {
+            const hitMarker = chartState.renderedMarkers.find(m => Math.abs(m.x - mouseX) < 14);
+            if (hitMarker && hitMarker.data) {
+                const md = hitMarker.data;
+                const pnlFormatted = `${(md.pnl || 0) >= 0 ? '+' : ''}${(md.pnl || 0).toFixed(2)}`;
+                tradeMarkerHtml = `
+                    <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.12); font-size: 11px;">
+                        <span style="color: ${(md.pnl || 0) >= 0 ? 'var(--color-buy)' : 'var(--color-sell)'}; font-weight: 700; letter-spacing: 0.05em;">● EXECUTED TRADE DEAL</span>
+                        <div style="display: flex; justify-content: space-between; margin-top: 3px;">
+                            <span>${md.symbol || 'Position'}</span>
+                            <span class="font-mono" style="font-weight: 700; color: ${(md.pnl || 0) >= 0 ? 'var(--color-buy)' : 'var(--color-sell)'};">${sym}${pnlFormatted}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         // Tooltip contents with tabular-nums font-mono (line-charts.tsx standard)
         tooltip.innerHTML = `
             <div class="tooltip-date">${dateStr}</div>
@@ -2356,6 +2413,7 @@ function onChartMouseMove(e) {
                     ${floatDiff >= 0 ? '+' : ''}${sym}${floatDiff.toFixed(2)}
                 </span>
             </div>
+            ${tradeMarkerHtml}
         `;
 
         // Tooltip positioning
@@ -2379,4 +2437,101 @@ function onChartMouseLeave() {
     }
     renderBalanceEquityChart();
 }
+
+let currentRadarSymbol = 'XAUUSD';
+
+function selectRadarSymbol(symbol) {
+    currentRadarSymbol = symbol;
+    const tabXau = document.getElementById('radar-tab-xauusd');
+    const tabEur = document.getElementById('radar-tab-eurusd');
+    if (tabXau) tabXau.className = `strategy-tab-btn ${symbol === 'XAUUSD' ? 'active' : ''}`;
+    if (tabEur) tabEur.className = `strategy-tab-btn ${symbol === 'EURUSD' ? 'active' : ''}`;
+
+    fetch(`/api/radar?symbol=${symbol}`)
+        .then(res => res.json())
+        .then(data => {
+            renderStrategyRadar(data);
+        })
+        .catch(err => console.debug('Radar symbol switch error:', err));
+}
+
+function renderStrategyRadar(radarData) {
+    if (!radarData) return;
+
+    const statusElem = document.getElementById('radar-overall-status');
+    const pctElem = document.getElementById('radar-readiness-pct');
+    const fillElem = document.getElementById('radar-readiness-fill');
+    const pipelineElem = document.getElementById('radar-conditions-pipeline');
+    const heartbeatElem = document.getElementById('radar-heartbeat-text');
+    const spreadElem = document.getElementById('radar-spread-badge');
+
+    const pct = radarData.readiness_pct || 0;
+    const isReady = pct >= 80;
+
+    if (statusElem) {
+        statusElem.innerHTML = `
+            <i class="fa-solid ${isReady ? 'fa-circle-check' : 'fa-clock-rotate-left'}"></i>
+            <span>${radarData.overall_status || 'MONITORING'}</span>
+        `;
+        statusElem.style.color = isReady ? 'var(--color-buy)' : 'var(--color-warning)';
+    }
+
+    if (pctElem) {
+        pctElem.textContent = `${pct}%`;
+    }
+
+    if (fillElem) {
+        fillElem.style.width = `${pct}%`;
+        fillElem.style.background = isReady
+            ? 'var(--color-buy)'
+            : 'linear-gradient(90deg, var(--color-info), var(--primary))';
+    }
+
+    if (spreadElem && radarData.spread_pips !== undefined) {
+        spreadElem.textContent = `Spread: ${radarData.spread_pips} pips`;
+    }
+
+    if (heartbeatElem) {
+        const timeStr = radarData.last_evaluation
+            ? new Date(radarData.last_evaluation).toLocaleTimeString()
+            : 'Live';
+        heartbeatElem.textContent = `Last Evaluated: ${timeStr} · 0 Rejections`;
+    }
+
+    if (pipelineElem && Array.isArray(radarData.conditions)) {
+        pipelineElem.innerHTML = radarData.conditions.map(c => {
+            const isMet = Boolean(c.met);
+            const badgeClass = isMet ? 'badge-met' : 'badge-waiting';
+            const itemClass = isMet ? 'met' : 'waiting';
+            const icon = isMet ? 'fa-check' : 'fa-hourglass-half';
+
+            let meterPct = isMet ? 100 : 45;
+            if (c.id === 'rsi_momentum' && c.current && c.target) {
+                meterPct = Math.min(100, Math.round((c.current / c.target) * 100));
+            } else if (c.id === 'breakout_trigger' && radarData.distance_pct !== undefined) {
+                meterPct = Math.max(10, Math.min(95, 100 - Math.round(radarData.distance_pct * 10)));
+            }
+
+            return `
+                <div class="condition-item ${itemClass}">
+                    <div class="condition-header">
+                        <div class="condition-name">
+                            <i class="fa-solid ${icon}" style="color: ${isMet ? 'var(--color-buy)' : 'var(--color-warning)'}; font-size: 11px;"></i>
+                            <span>${c.name}</span>
+                        </div>
+                        <span class="condition-badge ${badgeClass}">${c.badge || (isMet ? 'PASSED' : 'PENDING')}</span>
+                    </div>
+                    <div class="condition-details">
+                        <span>${c.status_text || ''}</span>
+                        <span>${c.category || ''}</span>
+                    </div>
+                    <div class="condition-distance-meter">
+                        <div class="condition-distance-fill ${isMet ? '' : 'waiting'}" style="width: ${meterPct}%;"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
 

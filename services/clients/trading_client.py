@@ -194,6 +194,20 @@ class TradingClient:
             return {"ok": False, "history": [], "offline": True}
         return res
 
+    def get_strategy_radar(self, symbol: str = "XAUUSD") -> Dict[str, Any]:
+        """Gets live strategy evaluation condition radar telemetry."""
+        res = self._get(f"/api/trading/radar?symbol={symbol}")
+        if res.get("offline"):
+            return {
+                "ok": False,
+                "symbol": symbol,
+                "readiness_pct": 0,
+                "overall_status": "OFFLINE",
+                "conditions": [],
+                "offline": True
+            }
+        return res
+
 
 _trading_client: Optional[TradingClient] = None
 
