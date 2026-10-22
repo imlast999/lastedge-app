@@ -15,6 +15,12 @@
 
 ---
 
+> [!NOTE]
+> **Part of the [LastEdge](https://github.com/imlast999/LastEdge) Ecosystem**  
+> This repository is the control and presentation layer of the **LastEdge** quantitative trading platform. While it can run independently (using built-in graceful degradation and cached states), **we strongly recommend running the complete LastEdge suite** via the main orchestrator repository ([`imlast999/LastEdge`](https://github.com/imlast999/LastEdge)) using its automated clone script (`setup.bat` / `clone_repos.bat`) to unlock real-time live trading feeds, interactive research controls, and instant bot alerts.
+
+---
+
 ## 1. Overview
 
 **LastEdge App** is the control plane and user-facing monitoring suite for the LastEdge quantitative platform. It provides real-time visibility and control into live trading positions, account metrics, risk telemetry, research experiments, and messaging alerts.
@@ -34,6 +40,7 @@ LastEdge App sits at the presentation layer of the LastEdge ecosystem, connectin
 
 | Repository | Role | Integration Point |
 | :--- | :--- | :--- |
+| 🌐 [**LastEdge (Main Suite)**](https://github.com/imlast999/LastEdge) | Ecosystem Orchestrator & CLI | **Unified Workspace**: Automated setup script (`setup.bat` / `clone_repos.bat`) to synchronize and run the complete three-repository trading suite. |
 | ⚡ [**LastEdge Trading Engine**](https://github.com/imlast999/lastedge-trading-engine) | MT5 Execution & Risk Engine v2 | **Live Execution Telemetry**: App connects via [`services/clients/trading_client.py`](services/clients/trading_client.py) to `http://localhost:8081` to display active positions, daily drawdown, trailing stops, and account equity. |
 | 🔬 [**LastEdge Strategy Lab**](https://github.com/imlast999/lastedge-strategy-lab) | Quantitative Research & Validation | **Research Telemetry & Control**: App connects via [`services/clients/research_client.py`](services/clients/research_client.py) to `http://localhost:8082` to display backtest metrics, candidate statuses, and trigger research pipeline jobs. |
 
