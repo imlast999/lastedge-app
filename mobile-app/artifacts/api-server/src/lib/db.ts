@@ -16,6 +16,7 @@ function findRepoRoot(startDir: string): string {
   for (let i = 0; i < 15; i++) {
     if (
       fs.existsSync(path.join(dir, "start_all.bat")) ||
+      fs.existsSync(path.join(dir, "main.py")) ||
       fs.existsSync(path.join(dir, "bot.py")) ||
       fs.existsSync(path.join(dir, "requirements.txt"))
     ) {
