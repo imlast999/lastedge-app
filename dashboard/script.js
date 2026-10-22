@@ -15,11 +15,34 @@ let pollingTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
     initThemeSetting();
     initAppShell();
+    initBentoOverview();
     initBalanceEquityChart();
     fetchLiveDashboardData();
     fetchStrategyCatalog();
     pollingTimer = setInterval(fetchLiveDashboardData, 3000);
 });
+
+/**
+ * Initialize Finance Bento Grid Overview
+ */
+function initBentoOverview() {
+    const mount = document.getElementById('bento-overview-mount');
+    if (mount && window.LastEdgeBento) {
+        window.LastEdgeBento.init(mount);
+    }
+}
+
+/**
+ * Adapter function transforming unified /api/data payload into Bento telemetry format
+ * @param {object} payload - Server response from /api/data
+ * @returns {object|null} Formatted Bento telemetry data
+ */
+function buildBentoDataFromTelemetry(payload) {
+    if (window.LastEdgeBento && window.LastEdgeBento.instance) {
+        return window.LastEdgeBento.instance.buildBentoDataFromTelemetry(payload);
+    }
+    return null;
+}
 
 /**
  * Switch Dashboard Navigation Tabs
@@ -55,7 +78,12 @@ function switchDashTab(tabName) {
     }
 
     if (tabName === 'overview') {
-        setTimeout(handleChartResize, 60);
+        setTimeout(() => {
+            if (window.LastEdgeBento && window.LastEdgeBento.instance) {
+                window.LastEdgeBento.instance.renderAll();
+            }
+            handleChartResize();
+        }, 60);
     }
 }
 
@@ -149,6 +177,15 @@ function showDashboardOfflineState(errorMsg) {
     // Positions & Research tables indicate dashboard offline
     renderPositionsTables([], false, false);
     renderStrategyLab({}, false);
+
+    // Bento Grid reflects offline state
+    if (window.LastEdgeBento && typeof window.LastEdgeBento.update === 'function') {
+        window.LastEdgeBento.update({
+            trading_engine_online: false,
+            strategy_lab_online: false,
+            equity: { balance: 0, equity: 0 }
+        });
+    }
 }
 
 /**
@@ -156,6 +193,11 @@ function showDashboardOfflineState(errorMsg) {
  */
 function processDashboardData(data) {
     if (!data) return;
+
+    // 0. Update Modern Finance Bento Grid with fresh telemetry
+    if (window.LastEdgeBento && typeof window.LastEdgeBento.update === 'function') {
+        window.LastEdgeBento.update(data);
+    }
 
     const isEngineOnline = data.trading_engine_online === true;
     const isLabOnline = data.strategy_lab_online === true;
