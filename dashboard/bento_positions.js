@@ -540,7 +540,8 @@
 
                         <div class="pending-actions-row">
                             <button class="btn-reject-signal" onclick="LastEdgeBentoPositions.instance.rejectSignal('${sigId}', this)">
-                                <i class="fa-solid fa-xmark"></i> Descartar
+                                <i class="fa-solid fa-xmark"></i>
+                                <span>Descartar</span>
                             </button>
                             <button class="btn-approve-1click" onclick="LastEdgeBentoPositions.instance.approveSignal('${sigId}', this)" ${isApproving ? 'disabled' : ''}>
                                 ${isApproving ? '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando en MT5...' : '<i class="fa-solid fa-bolt"></i> Aprobar y Ejecutar'}

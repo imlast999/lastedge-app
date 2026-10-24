@@ -55,8 +55,8 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.adapter.authorized_chat_id = "12345"
 
     def _create_mock_session(self):
-        mock_session = AsyncMock()
-        mock_response = AsyncMock()
+        mock_session = MagicMock()
+        mock_response = MagicMock()
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value="{}")
         
@@ -65,7 +65,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         mock_post.__aenter__ = AsyncMock(return_value=mock_response)
         mock_post.__aexit__ = AsyncMock(return_value=None)
         
-        mock_session.post.return_value = mock_post
+        mock_session.post = MagicMock(return_value=mock_post)
         return mock_session, mock_post
 
     async def test_cmd_status(self):
