@@ -235,6 +235,8 @@ class BotManager:
         confidence = signal_data.get("confidence", signal_data.get("confidence_level", "MEDIUM"))
         strategy = signal_data.get("strategy", signal_data.get("strategy_used", "AutoSignals"))
 
+        signal_id = signal_data.get("id") or signal_data.get("signal_id", "0")
+
         # 1. Telegram
         if self.telegram_token and self.telegram_chat_id:
             try:
@@ -247,10 +249,22 @@ class BotManager:
                     f"SL: {sl} | TP: {tp} | R:R: 1:{rr:.2f}\n"
                     f"Confianza: {confidence} | Estrategia: {strategy}\n"
                     "━━━━━━━━━━━━━━━━━━\n"
-                    "👉 Pulsa \"Aprobar\" en tu Web Dashboard para ejecutarla en MT5."
+                    "👉 Confirma o descarta con los botones inferiores o en tu Web Dashboard."
                 )
+                reply_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "✅ Aprobar y Ejecutar", "callback_data": f"appr_{signal_id}"},
+                            {"text": "❌ Descartar", "callback_data": f"rejc_{signal_id}"}
+                        ]
+                    ]
+                }
                 url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
-                payload = {"chat_id": self.telegram_chat_id, "text": tg_text}
+                payload = {
+                    "chat_id": self.telegram_chat_id,
+                    "text": tg_text,
+                    "reply_markup": reply_markup
+                }
                 async with aiohttp.ClientSession() as session:
                     await session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5))
             except Exception as e:

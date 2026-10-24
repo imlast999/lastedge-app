@@ -39,6 +39,12 @@
             this.container = container;
             this.renderStructure();
             this.fetchInitialData();
+
+            // Dynamic ticker to update relative times, countdown chips, and auto-expire signals
+            if (this._ticker) clearInterval(this._ticker);
+            this._ticker = setInterval(() => {
+                this.renderPendingSignals();
+            }, 10000);
         }
 
         renderStructure() {
@@ -414,10 +420,43 @@
             const countChip = document.getElementById('chip-pending-count');
             if (!container) return;
 
-            // Filtrar señales en estado PROPOSED o PENDING
+            const now = new Date();
+
+            const getSignalDate = (s) => {
+                const raw = s.created_at || s.timestamp || s.time || s.date;
+                if (!raw) return now;
+                if (typeof raw === 'number') {
+                    return raw > 1e11 ? new Date(raw) : new Date(raw * 1000);
+                }
+                let str = String(raw).trim();
+                if (/^\d+$/.test(str)) {
+                    const num = Number(str);
+                    return num > 1e11 ? new Date(num) : new Date(num * 1000);
+                }
+                str = str.replace(' ', 'T');
+                if (!str.includes('Z') && !str.includes('+') && !str.includes('-')) {
+                    str += 'Z';
+                }
+                const d = new Date(str);
+                return isNaN(d.getTime()) ? now : d;
+            };
+
+            // Filtrar señales: excluir >10 min, EXPIRED o REJECTED_MANUAL
             const pendingSignals = this.signals.filter(s => {
-                const st = (s.status || '').toLowerCase();
-                return st === 'proposed' || st === 'pending' || st === 'manual';
+                const st = (s.status || '').toUpperCase();
+                if (st === 'EXPIRED' || st === 'REJECTED_MANUAL' || st === 'REJECTED' || st === 'EXECUTED' || st === 'CLOSED') {
+                    return false;
+                }
+                if (st !== 'PROPOSED' && st !== 'PENDING' && st !== 'MANUAL' && st !== '') {
+                    return false;
+                }
+                const sigDate = getSignalDate(s);
+                const ageSeconds = (now.getTime() - sigDate.getTime()) / 1000;
+                // Auto-expiración tras 10 minutos (600s)
+                if (ageSeconds > 600) {
+                    return false;
+                }
+                return true;
             });
 
             const count = pendingSignals.length;
@@ -449,6 +488,19 @@
                 const strategy = sig.strategy || 'AutoSignals';
                 const assetStyle = ASSET_COLORS[sym] || ASSET_COLORS.DEFAULT;
 
+                // Cálculo de tiempos relativos y cuenta atrás (TTL 10 min)
+                const sigDate = getSignalDate(sig);
+                const exactTime = sigDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const ageSeconds = Math.max(0, Math.floor((now.getTime() - sigDate.getTime()) / 1000));
+                const ageMinutes = Math.floor(ageSeconds / 60);
+                const relativeBadge = ageMinutes < 1 ? `hace ${ageSeconds}s` : `hace ${ageMinutes} min`;
+
+                const remainingSeconds = Math.max(0, 600 - ageSeconds);
+                const remainingMinutes = Math.ceil(remainingSeconds / 60);
+                const isUrgent = remainingSeconds < 180;
+                const countdownText = `⏳ Expira en ${remainingMinutes} min`;
+                const countdownClass = isUrgent ? 'countdown-chip countdown-urgent' : 'countdown-chip';
+
                 const isApproving = this.loadingApproveId === String(sigId);
 
                 html += `
@@ -465,6 +517,16 @@
                             <span class="conf-pill conf-${conf.toLowerCase().replace(/[^a-z]/g, '')}">${conf}</span>
                         </div>
 
+                        <!-- Hora exacta de emisión, antigüedad relativa y chip de expiración dinámica -->
+                        <div class="pending-time-row">
+                            <div class="time-left">
+                                <i class="fa-regular fa-clock"></i>
+                                <span class="exact-time">${exactTime}</span>
+                                <span class="rel-time">(${relativeBadge})</span>
+                            </div>
+                            <span class="${countdownClass}">${countdownText}</span>
+                        </div>
+
                         <div class="pending-sig-strategy">
                             <i class="fa-solid fa-microchip" style="margin-right: 5px; color: rgba(255,255,255,0.4);"></i>
                             ${strategy} &middot; R:R 1:${Number(rr).toFixed(2)}
@@ -477,6 +539,9 @@
                         </div>
 
                         <div class="pending-actions-row">
+                            <button class="btn-reject-signal" onclick="LastEdgeBentoPositions.instance.rejectSignal('${sigId}', this)">
+                                <i class="fa-solid fa-xmark"></i> Descartar
+                            </button>
                             <button class="btn-approve-1click" onclick="LastEdgeBentoPositions.instance.approveSignal('${sigId}', this)" ${isApproving ? 'disabled' : ''}>
                                 ${isApproving ? '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando en MT5...' : '<i class="fa-solid fa-bolt"></i> Aprobar y Ejecutar'}
                             </button>
@@ -634,7 +699,7 @@
         /**
          * ── 1-CLICK APPROVE & EXECUTE SIGNAL ─────────────────────────────────
          */
-        async approveSignal(signalId, btnElement) {
+        async approveSignal(signalId, btnElement, force = false) {
             if (this.loadingApproveId) return;
             this.loadingApproveId = String(signalId);
             if (btnElement) {
@@ -646,10 +711,26 @@
                 const response = await fetch('/api/signals/approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ signal_id: Number(signalId) })
+                    body: JSON.stringify({ signal_id: Number(signalId), force: Boolean(force) })
                 });
 
                 const result = await response.json();
+
+                // Sub-caso: Desviación de precio detectada (PRICE_DRIFT)
+                if (result.error === 'PRICE_DRIFT' || (!result.ok && result.error === 'PRICE_DRIFT')) {
+                    if (btnElement) {
+                        btnElement.disabled = false;
+                        btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Aprobar y Ejecutar';
+                    }
+                    this.showPriceDriftDialog(result, () => {
+                        this.approveSignal(signalId, btnElement, true);
+                    }, () => {
+                        this.loadingApproveId = null;
+                        this.renderPendingSignals();
+                    });
+                    return;
+                }
+
                 if (result.ok) {
                     // Feedback visual inmediato
                     if (btnElement) {
@@ -664,7 +745,7 @@
                     // Refrescar inmediatamente datos de MT5
                     await this.syncFreshPositions();
                 } else {
-                    alert('Error aprobando señal: ' + (result.error || 'Fallo desconocido en MT5'));
+                    alert('Error aprobando señal: ' + (result.error || result.message || 'Fallo desconocido en MT5'));
                     if (btnElement) {
                         btnElement.disabled = false;
                         btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Reintentar Aprobación';
@@ -680,6 +761,139 @@
             } finally {
                 this.loadingApproveId = null;
                 this.renderPendingSignals();
+            }
+        }
+
+        async rejectSignal(sigId, btnElement) {
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Descartando...';
+            }
+
+            try {
+                const response = await fetch('/api/signals/reject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signal_id: Number(sigId) })
+                });
+
+                const result = await response.json();
+                if (result.ok) {
+                    const card = document.getElementById(`pending-card-${sigId}`);
+                    if (card) {
+                        card.style.transition = 'all 0.22s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            this.signals = this.signals.filter(s => String(s.id) !== String(sigId));
+                            this.renderPendingSignals();
+                        }, 220);
+                    } else {
+                        this.signals = this.signals.filter(s => String(s.id) !== String(sigId));
+                        this.renderPendingSignals();
+                    }
+                } else {
+                    alert('Error descartando señal: ' + (result.error || 'Fallo en el servidor'));
+                    if (btnElement) {
+                        btnElement.disabled = false;
+                        btnElement.innerHTML = '<i class="fa-solid fa-xmark"></i> Descartar';
+                    }
+                }
+            } catch (err) {
+                console.error('[BentoPositions] Reject error:', err);
+                alert('Error de conexión al descartar señal: ' + err);
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerHTML = '<i class="fa-solid fa-xmark"></i> Descartar';
+                }
+            }
+        }
+
+        showPriceDriftDialog(driftData, onConfirmForce, onCancel) {
+            let modal = document.getElementById('bento-drift-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'bento-drift-modal';
+                document.body.appendChild(modal);
+            }
+
+            const sym = driftData.symbol || 'ACTIVO';
+            const sigPrice = driftData.signal_price || 0;
+            const curPrice = driftData.current_price || 0;
+            const driftPips = driftData.drift_pips || '';
+
+            modal.innerHTML = `
+                <div class="bento-modal-backdrop">
+                    <div class="bento-modal-card">
+                        <div class="bento-modal-header">
+                            <div class="modal-icon-warning">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <h3 class="bento-modal-title">Alerta de Desviación de Precio</h3>
+                                <p class="bento-modal-subtitle">${sym} &middot; Slippage Guard Activo</p>
+                            </div>
+                        </div>
+
+                        <div class="bento-modal-body">
+                            <p style="font-size: 13px; color: var(--t2); line-height: 1.5; margin-bottom: 14px;">
+                                El precio de mercado se ha movido desde la emisión de la señal:
+                            </p>
+                            <div class="drift-comparison-grid">
+                                <div class="drift-comp-cell">
+                                    <span class="drift-comp-lbl">Precio Señal</span>
+                                    <span class="drift-comp-val">${sigPrice}</span>
+                                </div>
+                                <div class="drift-comp-arrow">
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </div>
+                                <div class="drift-comp-cell highlight-drift">
+                                    <span class="drift-comp-lbl">Precio Actual MT5</span>
+                                    <span class="drift-comp-val">${curPrice}</span>
+                                </div>
+                            </div>
+                            <div class="drift-summary-pill">
+                                <i class="fa-solid fa-gauge-high"></i> Desviación Detectada: <strong>${driftPips}</strong>
+                            </div>
+                            <p style="font-size: 12px; color: var(--t3); margin-top: 12px; line-height: 1.4;">
+                                ¿Deseas ejecutar la orden al precio actual de mercado o cancelar la ejecución?
+                            </p>
+                        </div>
+
+                        <div class="bento-modal-actions">
+                            <button class="btn-modal-cancel" id="btn-drift-cancel">
+                                <i class="fa-solid fa-xmark"></i> Cancelar
+                            </button>
+                            <button class="btn-modal-force" id="btn-drift-confirm">
+                                <i class="fa-solid fa-bolt"></i> Ejecutar a Mercado
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+
+            const cancelBtn = document.getElementById('btn-drift-cancel');
+            const confirmBtn = document.getElementById('btn-drift-confirm');
+
+            const closeModal = () => {
+                modal.style.display = 'none';
+                modal.innerHTML = '';
+            };
+
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    closeModal();
+                    if (typeof onCancel === 'function') onCancel();
+                };
+            }
+
+            if (confirmBtn) {
+                confirmBtn.onclick = () => {
+                    closeModal();
+                    if (typeof onConfirmForce === 'function') onConfirmForce();
+                };
             }
         }
 

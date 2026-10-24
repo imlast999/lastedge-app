@@ -602,6 +602,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
 
             elif path in ("/api/signals/approve", "/api/trading/signals/approve") or (path.startswith("/api/signals/") and path.endswith("/approve")):
                 sig_id = body_data.get("signal_id") or body_data.get("id")
+                force = bool(body_data.get("force", False))
                 if not sig_id and path.startswith("/api/signals/"):
                     parts = path.split("/")
                     if len(parts) > 3 and parts[3] != "approve":
@@ -610,13 +611,43 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(400, {"ok": False, "error": "Missing 'signal_id' parameter."})
                     return
                 # Proxy transparente a Trading Engine (puerto 8081)
-                res = trading_client.approve_signal(int(sig_id))
+                res = trading_client.approve_signal(int(sig_id), force=force)
+                self._send_json(200 if (res.get("ok") or res.get("error") == "PRICE_DRIFT") else 400, res)
+
+            elif path in ("/api/signals/reject", "/api/trading/signals/reject") or (path.startswith("/api/signals/") and path.endswith("/reject")):
+                sig_id = body_data.get("signal_id") or body_data.get("id")
+                if not sig_id and path.startswith("/api/signals/"):
+                    parts = path.split("/")
+                    if len(parts) > 3 and parts[3] != "reject":
+                        sig_id = parts[3]
+                if not sig_id:
+                    self._send_json(400, {"ok": False, "error": "Missing 'signal_id' parameter."})
+                    return
+                # Proxy transparente a Trading Engine (puerto 8081)
+                res = trading_client.reject_signal(int(sig_id))
+                if not res.get("ok"):
+                    # Fallback directo en SQLite local si Trading Engine está apagado
+                    db_cand = [
+                        Path(__file__).parent.parent.parent / "bot_state.db",
+                        Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
+                    ]
+                    for db_p in db_cand:
+                        if db_p.exists():
+                            try:
+                                import sqlite3
+                                with sqlite3.connect(str(db_p), timeout=2.0) as conn:
+                                    conn.execute("UPDATE enhanced_signals SET status='REJECTED_MANUAL', rejected=1 WHERE id=?", (sig_id,))
+                                    conn.commit()
+                                res = {"ok": True, "status": "REJECTED_MANUAL", "signal_id": sig_id}
+                                break
+                            except Exception as _e:
+                                logger.error("Error rejecting signal in sqlite %s: %s", sig_id, _e)
                 self._send_json(200 if res.get("ok") else 400, res)
 
-            elif path.startswith("/api/signals/") and (path.endswith("/accept") or path.endswith("/reject")):
+            elif path.startswith("/api/signals/") and (path.endswith("/accept") or path.endswith("/discard")):
                 parts = path.split("/")
                 sig_id = parts[3] if len(parts) > 3 else "0"
-                action = "ACCEPTED" if path.endswith("/accept") else "REJECTED"
+                action = "ACCEPTED" if path.endswith("/accept") else "REJECTED_MANUAL"
                 db_cand = [
                     Path(__file__).parent.parent.parent / "bot_state.db",
                     Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
@@ -633,6 +664,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                         except Exception as _e:
                             logger.error("Error updating signal %s: %s", sig_id, _e)
                 self._send_json(200, {"ok": True, "signal_id": sig_id, "status": action})
+
 
             else:
                 self._send_json(404, {"ok": False, "error": f"POST endpoint '{self.path}' not found."})

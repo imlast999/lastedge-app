@@ -98,17 +98,167 @@ class TelegramAdapter:
         self.is_running = False
 
     async def _safe_process_update(self, session: aiohttp.ClientSession, update: Dict[str, Any]):
-        """Envuelve el procesamiento del mensaje para que ningún error detenga el polling."""
+        """Envuelve el procesamiento del mensaje o callback para que ningún error detenga el polling."""
         try:
-            await self._process_update(session, update)
+            if "callback_query" in update:
+                await self._process_callback_query(session, update["callback_query"])
+            elif "message" in update:
+                await self._process_update(session, update)
         except Exception as e:
-            logger.error(f"[TelegramAdapter] Error procesando comando: {e}", exc_info=True)
+            logger.error(f"[TelegramAdapter] Error procesando actualización: {e}", exc_info=True)
             try:
                 chat_id = update.get("message", {}).get("chat", {}).get("id")
                 if chat_id:
                     await self._send_response(session, chat_id, f"⚠️ Error al procesar comando: {e}")
             except Exception:
                 pass
+
+    async def _answer_callback_query(
+        self,
+        session: aiohttp.ClientSession,
+        callback_query_id: str,
+        text: Optional[str] = None
+    ):
+        """Notifica a la API de Telegram que el callback fue recibido (quita el spinner del botón)."""
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/answerCallbackQuery"
+            payload: Dict[str, Any] = {"callback_query_id": callback_query_id}
+            if text:
+                payload["text"] = text
+            client_timeout = aiohttp.ClientTimeout(total=5)
+            async with session.post(url, json=payload, timeout=client_timeout):
+                pass
+        except Exception as e:
+            logger.debug(f"[TelegramAdapter] answerCallbackQuery warning: {e}")
+
+    async def _edit_message_text(
+        self,
+        session: aiohttp.ClientSession,
+        chat_id: int,
+        message_id: int,
+        text: str,
+        reply_markup: Optional[Dict[str, Any]] = None
+    ):
+        """Edita un mensaje existente en Telegram sustituyendo su texto y botones inline."""
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/editMessageText"
+            payload: Dict[str, Any] = {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "text": text,
+            }
+            if reply_markup is not None:
+                payload["reply_markup"] = reply_markup
+            else:
+                payload["reply_markup"] = {"inline_keyboard": []}
+
+            client_timeout = aiohttp.ClientTimeout(total=6)
+            async with session.post(url, json=payload, timeout=client_timeout) as resp:
+                if resp.status != 200:
+                    err_msg = await resp.text()
+                    logger.debug(f"[TelegramAdapter] editMessageText warning (status {resp.status}): {err_msg}")
+        except Exception as e:
+            logger.error(f"[TelegramAdapter] Error editando mensaje #{message_id}: {e}")
+
+    async def _process_callback_query(self, session: aiohttp.ClientSession, cq: Dict[str, Any]):
+        """
+        Gestiona las interacciones con botones inline (Aprobar, Rechazar, Forzar con Desviación).
+        """
+        cq_id = cq.get("id")
+        data = cq.get("data", "")
+        msg = cq.get("message", {})
+        chat_id = msg.get("chat", {}).get("id")
+        message_id = msg.get("message_id")
+        from_user_id = str(cq.get("from", {}).get("id", ""))
+
+        if self.authorized_user_id and from_user_id != str(self.authorized_user_id):
+            if cq_id:
+                await self._answer_callback_query(session, cq_id, "⛔ No estás autorizado.")
+            return
+
+        if cq_id:
+            await self._answer_callback_query(session, cq_id)
+
+        if not chat_id or not message_id or not data:
+            return
+
+        # ── Caso A: Descartar Señal ──────────────────────────────────────────
+        if data.startswith("rejc_"):
+            try:
+                sig_id = int(data.split("_")[1])
+            except Exception:
+                sig_id = 0
+
+            self.trading_client.reject_signal(sig_id)
+            new_text = "❌ SEÑAL DESCARTADA MANUALMENTE | Cancelada por el usuario."
+            await self._edit_message_text(session, chat_id, message_id, new_text, reply_markup={"inline_keyboard": []})
+            logger.info(f"🚫 [TelegramAdapter] Señal #{sig_id} descartada vía botón de Telegram.")
+
+        # ── Caso B: Aprobar y Ejecutar Señal ──────────────────────────────────
+        elif data.startswith("appr_"):
+            try:
+                sig_id = int(data.split("_")[1])
+            except Exception:
+                sig_id = 0
+
+            res = self.trading_client.approve_signal(sig_id, force=False)
+
+            # Sub-caso B1: Desviación detectada (PRICE_DRIFT)
+            if res.get("error") == "PRICE_DRIFT":
+                signal_price = res.get("signal_price", "N/A")
+                current_price = res.get("current_price", "N/A")
+                drift_pips = res.get("drift_pips", "N/A")
+
+                drift_text = (
+                    "⚠️ ALERTA DE DESVIACIÓN DE PRECIO\n"
+                    "━━━━━━━━━━━━━━━━━━\n"
+                    "El precio de mercado se ha movido desde la emisión de la señal:\n"
+                    f"• Precio señal: {signal_price}\n"
+                    f"• Precio actual MT5: {current_price} (Desviación: {drift_pips})\n"
+                    "━━━━━━━━━━━━━━━━━━\n"
+                    "¿Deseas ejecutar la orden al precio de mercado actual?"
+                )
+                drift_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "⚡ Sí, Ejecutar a Mercado", "callback_data": f"force_{sig_id}"},
+                            {"text": "🚫 Cancelar", "callback_data": f"rejc_{sig_id}"}
+                        ]
+                    ]
+                }
+                await self._edit_message_text(session, chat_id, message_id, drift_text, reply_markup=drift_markup)
+
+            # Sub-caso B2: Aprobada con éxito sin desviación
+            elif res.get("ok"):
+                ticket = res.get("ticket", "N/A")
+                exec_price = res.get("executed_price", "N/A")
+                success_text = f"✅ ORDEN EJECUTADA EN MT5 | Ticket #{ticket} @ {exec_price}"
+                await self._edit_message_text(session, chat_id, message_id, success_text, reply_markup={"inline_keyboard": []})
+                logger.info(f"✅ [TelegramAdapter] Señal #{sig_id} aprobada y ejecutada en MT5. Ticket: {ticket}")
+
+            # Sub-caso Error
+            else:
+                err_text = f"❌ Error al ejecutar señal #{sig_id}: {res.get('error') or res.get('message', 'Fallo desconocido')}"
+                await self._edit_message_text(session, chat_id, message_id, err_text, reply_markup={"inline_keyboard": []})
+
+        # ── Caso C: Confirmar Fuerza tras Desviación (force_execute) ──────────
+        elif data.startswith("force_"):
+            try:
+                sig_id = int(data.split("_")[1])
+            except Exception:
+                sig_id = 0
+
+            res = self.trading_client.approve_signal(sig_id, force=True)
+            if res.get("ok"):
+                ticket = res.get("ticket", "N/A")
+                exec_price = res.get("executed_price", "N/A")
+                success_text = f"✅ ORDEN EJECUTADA EN MT5 | Ticket #{ticket} @ {exec_price}"
+                await self._edit_message_text(session, chat_id, message_id, success_text, reply_markup={"inline_keyboard": []})
+                logger.info(f"⚡ [TelegramAdapter] Señal #{sig_id} forzada a mercado en MT5. Ticket: {ticket}")
+            else:
+                err_text = f"❌ Error ejecutando a mercado señal #{sig_id}: {res.get('error') or res.get('message', 'Fallo desconocido')}"
+                await self._edit_message_text(session, chat_id, message_id, err_text, reply_markup={"inline_keyboard": []})
+
 
     @staticmethod
     def get_persistent_keyboard() -> Dict[str, Any]:
