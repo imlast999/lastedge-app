@@ -12,6 +12,13 @@ import socket
 from datetime import datetime
 from dotenv import load_dotenv
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 load_dotenv()
 
 from services.dashboard_server import start_dashboard_server

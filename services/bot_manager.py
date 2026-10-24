@@ -33,10 +33,13 @@ class BotManager:
 
     def __init__(self):
         self.discord_token = os.getenv("DISCORD_BOT_TOKEN") or os.getenv("DISCORD_TOKEN")
-        self.discord_channel_id = os.getenv("DISCORD_CHANNEL_ID")
+        self.discord_channel_id = os.getenv("DISCORD_CHANNEL_ID") or "1458605750392852530"
         self.telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
         self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
         self.authorized_user_id = os.getenv("AUTHORIZED_USER_ID", "0")
+
+        self.trading_client = get_trading_client()
+        self._notified_signals: set = set()
 
         self.discord_bot = None
         self.commands_service = None
@@ -73,6 +76,9 @@ class BotManager:
         asyncio.set_event_loop(self.loop)
 
         tasks = []
+
+        # 0. Signals Watcher Background Task
+        tasks.append(self._run_signals_watcher())
 
         # 1. Setup Discord Bot
         if self.discord_token and len(self.discord_token.strip()) > 10:
@@ -130,6 +136,20 @@ class BotManager:
                             trading_client=get_trading_client(),
                             research_client=get_research_client()
                         )
+
+                        @bot_fallback.event
+                        async def on_ready():
+                            self._discord_connected = True
+                            print(f"🤖 [Discord Bot Fallback] Conectado exitosamente como {bot_fallback.user}")
+                            sys.stdout.flush()
+                            try:
+                                guild_id = os.getenv("GUILD_ID")
+                                if guild_id and guild_id.isdigit():
+                                    await bot_fallback.tree.sync(guild=discord.Object(id=int(guild_id)))
+                                await bot_fallback.tree.sync()
+                            except Exception as sync_err:
+                                logger.warning(f"Error sincronizando comandos Discord fallback: {sync_err}")
+
                         await bot_fallback.start(self.discord_token)
                     except (asyncio.CancelledError, KeyboardInterrupt):
                         pass
@@ -177,6 +197,38 @@ class BotManager:
             finally:
                 self.loop.close()
 
+    async def _run_signals_watcher(self):
+        """Monitorea periódicamente las señales pendientes en Trading Engine y despacha alertas interactivas."""
+        logger.info("📡 [Signals Watcher] Monitor de señales pendientes activado (intervalo: 5s).")
+        while self.is_running:
+            try:
+                res = await asyncio.to_thread(self.trading_client.get_signals)
+                signals = res.get("signals", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+                current_pending_ids = set()
+
+                for sig in signals:
+                    status = str(sig.get("status", "")).lower()
+                    sig_id = str(sig.get("id") or sig.get("signal_id", ""))
+                    if status in ["pending", "proposed"]:
+                        if sig_id:
+                            current_pending_ids.add(sig_id)
+                            if sig_id not in self._notified_signals:
+                                self._notified_signals.add(sig_id)
+                                logger.info(f"🔔 [Signals Watcher] Señal pendiente #{sig_id} detectada. Despachando alertas...")
+                                try:
+                                    await self._async_notify_pending_signal(sig)
+                                except Exception as n_err:
+                                    logger.error(f"[Signals Watcher] Error notificando señal #{sig_id}: {n_err}")
+
+                # Limpiar del set las señales que hayan expirado o hayan dejado de estar pendientes
+                if self._notified_signals:
+                    self._notified_signals.intersection_update(current_pending_ids)
+
+            except Exception as e:
+                logger.debug(f"[Signals Watcher] Error en ciclo de sondeo: {e}")
+
+            await asyncio.sleep(5)
+
     def stop(self):
         """Gracefully stops all running bots."""
         if not self.is_running:
@@ -217,11 +269,11 @@ class BotManager:
 
     async def _async_notify_pending_signal(self, signal_data: Dict[str, Any]) -> None:
         symbol = signal_data.get("symbol", "N/A")
-        direction = signal_data.get("direction", signal_data.get("type", "BUY"))
-        price = signal_data.get("price", signal_data.get("entry", 0.0))
-        sl = signal_data.get("sl", signal_data.get("sl_price", 0.0))
-        tp = signal_data.get("tp", signal_data.get("tp_price", 0.0))
-        rr = signal_data.get("rr", signal_data.get("rr_ratio", signal_data.get("rrRatio", 0.0)))
+        direction = signal_data.get("direction") or signal_data.get("type") or "BUY"
+        price = signal_data.get("price") or signal_data.get("entry") or signal_data.get("entry_price") or 0.0
+        sl = signal_data.get("sl") or signal_data.get("sl_price") or signal_data.get("stopLoss") or 0.0
+        tp = signal_data.get("tp") or signal_data.get("tp_price") or signal_data.get("takeProfit") or 0.0
+        rr = signal_data.get("rr") or signal_data.get("rr_ratio") or signal_data.get("rrRatio") or 0.0
         try:
             p_val = float(price or 0.0)
             sl_val = float(sl or 0.0)
@@ -232,8 +284,8 @@ class BotManager:
                 rr = reward / risk if risk > 0 else 0.0
         except Exception:
             rr = 0.0
-        confidence = signal_data.get("confidence", signal_data.get("confidence_level", "MEDIUM"))
-        strategy = signal_data.get("strategy", signal_data.get("strategy_used", "AutoSignals"))
+        confidence = signal_data.get("confidence") or signal_data.get("confidence_level") or "MEDIUM"
+        strategy = signal_data.get("strategy") or signal_data.get("strategy_used") or "AutoSignals"
 
         signal_id = signal_data.get("id") or signal_data.get("signal_id", "0")
 
@@ -271,10 +323,16 @@ class BotManager:
                 logger.error(f"[Bot Manager] Error enviando alerta Telegram: {e}")
 
         # 2. Discord
-        if self.discord_bot and self._discord_connected and self.discord_channel_id:
+        discord_cid = self.discord_channel_id or os.getenv("DISCORD_CHANNEL_ID") or "1458605750392852530"
+        if self.discord_bot and self._discord_connected and discord_cid:
             try:
                 import discord
-                channel = self.discord_bot.get_channel(int(self.discord_channel_id))
+                channel = self.discord_bot.get_channel(int(discord_cid))
+                if not channel:
+                    try:
+                        channel = await self.discord_bot.fetch_channel(int(discord_cid))
+                    except Exception:
+                        channel = None
                 if channel:
                     embed = discord.Embed(
                         title=f"⏸️ SEÑAL PENDIENTE DE CONFIRMACIÓN | {direction} {symbol}",
