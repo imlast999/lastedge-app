@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initThemeSetting();
     initAppShell();
     initBentoOverview();
+    initBentoPositions();
     initBalanceEquityChart();
     fetchLiveDashboardData();
     fetchStrategyCatalog();
@@ -29,6 +30,16 @@ function initBentoOverview() {
     const mount = document.getElementById('bento-overview-mount');
     if (mount && window.LastEdgeBento) {
         window.LastEdgeBento.init(mount);
+    }
+}
+
+/**
+ * Initialize Finance Bento Positions Manager
+ */
+function initBentoPositions() {
+    const mount = document.getElementById('bento-positions-mount');
+    if (mount && window.LastEdgeBentoPositions) {
+        window.LastEdgeBentoPositions.init(mount);
     }
 }
 
@@ -83,6 +94,12 @@ function switchDashTab(tabName) {
                 window.LastEdgeBento.instance.renderAll();
             }
             handleChartResize();
+        }, 60);
+    } else if (tabName === 'positions') {
+        setTimeout(() => {
+            if (window.LastEdgeBentoPositions && window.LastEdgeBentoPositions.instance) {
+                window.LastEdgeBentoPositions.instance.renderAll();
+            }
         }, 60);
     }
 }
@@ -186,6 +203,14 @@ function showDashboardOfflineState(errorMsg) {
             equity: { balance: 0, equity: 0 }
         });
     }
+
+    if (window.LastEdgeBentoPositions && typeof window.LastEdgeBentoPositions.update === 'function') {
+        window.LastEdgeBentoPositions.update({
+            trading_engine_online: false,
+            positions: [],
+            signals: []
+        });
+    }
 }
 
 /**
@@ -197,6 +222,9 @@ function processDashboardData(data) {
     // 0. Update Modern Finance Bento Grid with fresh telemetry
     if (window.LastEdgeBento && typeof window.LastEdgeBento.update === 'function') {
         window.LastEdgeBento.update(data);
+    }
+    if (window.LastEdgeBentoPositions && typeof window.LastEdgeBentoPositions.update === 'function') {
+        window.LastEdgeBentoPositions.update(data);
     }
 
     const isEngineOnline = data.trading_engine_online === true;

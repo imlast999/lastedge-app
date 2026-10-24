@@ -350,7 +350,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                                     conn.row_factory = sqlite3.Row
                                     rows = conn.execute(
                                         """SELECT id, symbol, direction, signal_type, strategy, price, entry_price,
-                                                  sl_price, tp_price, score, confidence_score, status, lot_size, created_at, timestamp
+                                                  sl_price, tp_price, score, confidence_level, confidence_score, status, lot_size, created_at, timestamp
                                            FROM enhanced_signals
                                            ORDER BY id DESC LIMIT 50"""
                                     ).fetchall()
@@ -372,6 +372,8 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                                             "rrRatio": rr,
                                             "timestamp": r["timestamp"] or r["created_at"] or datetime.now(timezone.utc).isoformat(),
                                             "lot": float(r["lot_size"] or 0.01),
+                                            "strategy": r["strategy"] or "AutoSignals",
+                                            "confidence": r["confidence_level"] if "confidence_level" in r.keys() else "MEDIUM",
                                         })
                                 if signals:
                                     break
@@ -398,27 +400,51 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                             with sqlite3.connect(str(db_p), timeout=1.0) as conn:
                                 conn.row_factory = sqlite3.Row
                                 cur = conn.cursor()
-                                rows = cur.execute(
-                                    "SELECT id, symbol, trade_type, entry_price, close_price, pnl, result, timestamp, closed_at, lot_size "
-                                    "FROM trades_history ORDER BY rowid DESC LIMIT 50"
-                                ).fetchall()
-                                for r in rows:
-                                    trades_list.append({
-                                        "id": str(r["id"]),
-                                        "symbol": r["symbol"] or "UNKNOWN",
-                                        "type": (r["trade_type"] or "BUY").upper(),
-                                        "openPrice": float(r["entry_price"] or 0.0),
-                                        "closePrice": float(r["close_price"] or r["entry_price"] or 0.0),
-                                        "pips": round(float(r["close_price"] or 0.0) - float(r["entry_price"] or 0.0), 1),
-                                        "profit": float(r["pnl"] or 0.0),
-                                        "closeReason": "TAKE_PROFIT" if "PROFIT" in str(r["result"]).upper() else ("STOP_LOSS" if "LOSS" in str(r["result"]).upper() else "MANUAL"),
-                                        "closedAt": r["closed_at"] or r["timestamp"] or datetime.now(timezone.utc).isoformat(),
-                                        "lot": float(r["lot_size"] or 0.01),
-                                    })
+                                tables = [row[0] for row in cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+                                if "trade_journal" in tables:
+                                    rows = cur.execute(
+                                        "SELECT id, symbol, signal_type, entry_price, close_price, pnl_eur, pnl_pips, result, close_time, created_at, lot_size, notes "
+                                        "FROM trade_journal WHERE close_price IS NOT NULL AND close_price > 0 "
+                                        "ORDER BY id DESC LIMIT 50"
+                                    ).fetchall()
+                                    for r in rows:
+                                        pnl_val = float(r["pnl_eur"] or 0.0)
+                                        res_str = str(r["result"] or "").upper()
+                                        reason = "TAKE_PROFIT" if ("TP" in res_str or "PROFIT" in res_str) else ("STOP_LOSS" if ("SL" in res_str or "LOSS" in res_str) else ("TRAILING_STOP" if ("TRAIL" in res_str or "BE" in res_str) else "MANUAL"))
+                                        trades_list.append({
+                                            "id": str(r["id"]),
+                                            "symbol": r["symbol"] or "UNKNOWN",
+                                            "type": (r["signal_type"] or "BUY").upper(),
+                                            "openPrice": float(r["entry_price"] or 0.0),
+                                            "closePrice": float(r["close_price"] or r["entry_price"] or 0.0),
+                                            "pips": round(float(r["pnl_pips"] or (float(r["close_price"] or 0.0) - float(r["entry_price"] or 0.0))), 1),
+                                            "profit": pnl_val,
+                                            "closeReason": reason,
+                                            "closedAt": r["close_time"] or r["created_at"] or datetime.now(timezone.utc).isoformat(),
+                                            "lot": float(r["lot_size"] or 0.01),
+                                        })
+                                elif "trades_history" in tables:
+                                    rows = cur.execute(
+                                        "SELECT id, symbol, trade_type, entry_price, close_price, pnl, result, timestamp, closed_at, lot_size "
+                                        "FROM trades_history ORDER BY rowid DESC LIMIT 50"
+                                    ).fetchall()
+                                    for r in rows:
+                                        trades_list.append({
+                                            "id": str(r["id"]),
+                                            "symbol": r["symbol"] or "UNKNOWN",
+                                            "type": (r["trade_type"] or "BUY").upper(),
+                                            "openPrice": float(r["entry_price"] or 0.0),
+                                            "closePrice": float(r["close_price"] or r["entry_price"] or 0.0),
+                                            "pips": round(float(r["close_price"] or 0.0) - float(r["entry_price"] or 0.0), 1),
+                                            "profit": float(r["pnl"] or 0.0),
+                                            "closeReason": "TAKE_PROFIT" if "PROFIT" in str(r["result"]).upper() else ("STOP_LOSS" if "LOSS" in str(r["result"]).upper() else "MANUAL"),
+                                            "closedAt": r["closed_at"] or r["timestamp"] or datetime.now(timezone.utc).isoformat(),
+                                            "lot": float(r["lot_size"] or 0.01),
+                                        })
                             if trades_list:
                                 break
                         except Exception as _e:
-                            logger.debug("Error reading trades_history from db: %s", _e)
+                            logger.debug("Error reading trades from db: %s", _e)
                 self._send_json(200, trades_list)
 
             elif path in ("/api/equityHistory", "/api/trading/equityHistory"):
@@ -572,6 +598,19 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
 
             elif path in ("/api/research/run", "/api/research/research", "/api/research"):
                 res = research_client.run_research(body_data)
+                self._send_json(200 if res.get("ok") else 400, res)
+
+            elif path in ("/api/signals/approve", "/api/trading/signals/approve") or (path.startswith("/api/signals/") and path.endswith("/approve")):
+                sig_id = body_data.get("signal_id") or body_data.get("id")
+                if not sig_id and path.startswith("/api/signals/"):
+                    parts = path.split("/")
+                    if len(parts) > 3 and parts[3] != "approve":
+                        sig_id = parts[3]
+                if not sig_id:
+                    self._send_json(400, {"ok": False, "error": "Missing 'signal_id' parameter."})
+                    return
+                # Proxy transparente a Trading Engine (puerto 8081)
+                res = trading_client.approve_signal(int(sig_id))
                 self._send_json(200 if res.get("ok") else 400, res)
 
             elif path.startswith("/api/signals/") and (path.endswith("/accept") or path.endswith("/reject")):

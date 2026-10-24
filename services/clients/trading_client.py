@@ -183,6 +183,10 @@ class TradingClient:
         """Requests closing an open MT5 position."""
         return self._post("/api/trading/positions/close", {"ticket": ticket})
 
+    def approve_signal(self, signal_id: int) -> Dict[str, Any]:
+        """Approves and executes a proposed signal on Trading Engine."""
+        return self._post("/api/trading/signals/approve", {"signal_id": signal_id})
+
     def toggle_autosignals(self, mode: str = "status") -> Dict[str, Any]:
         """Toggles or queries AutoSignals state."""
         return self._post("/api/trading/autosignals", {"mode": mode})

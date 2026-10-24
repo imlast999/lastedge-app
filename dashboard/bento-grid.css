@@ -798,3 +798,495 @@
         transition: none;
     }
 }
+
+/* ==========================================================================
+   LastEdge — Finance Bento Positions Grid Styles (Estilo 21st.dev)
+   Operaciones Abiertas, Señales Pendientes 1-Click & Trade Journal
+   ========================================================================== */
+
+.pos-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.pos-card-open {
+    grid-column: span 7;
+    min-height: 460px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pos-card-pending {
+    grid-column: span 5;
+    min-height: 460px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pos-card-journal {
+    grid-column: span 12;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 1100px) {
+    .pos-card-open,
+    .pos-card-pending {
+        grid-column: span 12;
+    }
+}
+
+.pos-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.pos-card-body {
+    padding: 18px 20px;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 540px;
+}
+
+/* Item Card (Operaciones Abiertas) */
+.pos-items-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pos-item-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 16px 18px;
+    transition: all 0.22s var(--ease);
+}
+
+.pos-item-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.pos-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pos-symbol-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 11.5px;
+    border: 1px solid;
+    font-family: "Geist Mono", monospace;
+}
+
+.pos-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.pos-type-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: "Geist Mono", monospace;
+}
+
+.tag-buy {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.tag-sell {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.pos-pnl-val {
+    font-family: "Geist Mono", monospace;
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+}
+
+/* Price Details Grid */
+.pos-price-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 12px 0 10px;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.price-cell .cell-label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--t3);
+    margin-bottom: 2px;
+    font-weight: 600;
+}
+
+.price-cell .cell-val {
+    display: block;
+    font-family: "Geist Mono", monospace;
+    font-size: 12.5px;
+    color: var(--t2);
+    font-weight: 500;
+}
+
+/* Visual Trailing Stop Bar */
+.trailing-container {
+    margin: 10px 0 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.trailing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 7px;
+    font-size: 11.5px;
+    font-family: "Geist Mono", monospace;
+}
+
+.trailing-title {
+    color: var(--t2);
+    display: flex;
+    align-items: center;
+}
+
+.trailing-pct {
+    color: var(--t3);
+    font-size: 11px;
+}
+
+.trailing-track {
+    position: relative;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.trailing-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--acc) 0%, #10B981 100%);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.fill-be-secured {
+    background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.trailing-be-marker {
+    position: absolute;
+    left: 40%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.pos-item-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-close-pos {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #EF4444;
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-close-pos:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #EF4444;
+}
+
+/* Pending Signals Feed */
+.pending-signals-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pending-sig-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 165, 0, 0.20);
+    border-radius: 18px;
+    padding: 16px 18px;
+    transition: all 0.22s var(--ease);
+}
+
+.pending-sig-card:hover {
+    background: rgba(255, 165, 0, 0.04);
+    border-color: rgba(255, 165, 0, 0.4);
+    box-shadow: 0 8px 24px rgba(255, 165, 0, 0.12);
+}
+
+.pending-sig-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pending-sig-strategy {
+    font-size: 11.5px;
+    color: var(--t2);
+    margin: 8px 0;
+    font-family: "Geist Mono", monospace;
+}
+
+.pending-prices-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    font-family: "Geist Mono", monospace;
+    font-size: 11.5px;
+    margin-bottom: 10px;
+}
+
+.pending-prices-row .lbl {
+    color: var(--t3);
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.pending-prices-row .val {
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.btn-approve-1click {
+    width: 100%;
+    height: 38px;
+    background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+    color: #090A0F;
+    font-weight: 700;
+    font-size: 12.5px;
+    border: none;
+    border-radius: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 16px rgba(255, 165, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.btn-approve-1click:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(255, 165, 0, 0.45);
+    filter: brightness(1.05);
+}
+
+.btn-approve-1click:active {
+    transform: scale(0.98);
+}
+
+.conf-pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    letter-spacing: 0.04em;
+    font-family: "Geist Mono", monospace;
+}
+
+.conf-high, .conf-veryhigh {
+    background: rgba(16, 185, 129, 0.18);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.conf-medium, .conf-mediumhigh {
+    background: rgba(255, 165, 0, 0.18);
+    color: #FFA500;
+    border: 1px solid rgba(255, 165, 0, 0.4);
+}
+
+.conf-low {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--t2);
+}
+
+/* Bento Trade Journal Styling */
+.journal-kpi-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.journal-kpi-chip {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 6px 14px;
+    display: flex;
+    flex-direction: column;
+    min-width: 90px;
+}
+
+.journal-kpi-chip .kpi-label {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    color: var(--t3);
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+.journal-kpi-chip .kpi-val {
+    font-family: "Geist Mono", monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.journal-table-wrap {
+    overflow-x: auto;
+    padding: 0 20px;
+    flex: 1;
+}
+
+.bento-trading-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    text-align: left;
+}
+
+.bento-trading-table thead th {
+    padding: 12px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--t3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-weight: 600;
+}
+
+.bento-trading-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s ease;
+}
+
+.bento-trading-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.bento-trading-table tbody td {
+    padding: 12px 14px;
+    color: var(--t2);
+}
+
+.reason-pill {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: "Geist Mono", monospace;
+}
+
+.reason-tp {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.reason-sl {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.reason-trail {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38BDF8;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.reason-manual {
+    background: rgba(255, 165, 0, 0.15);
+    color: #FFA500;
+    border: 1px solid rgba(255, 165, 0, 0.35);
+}
+
+.journal-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* Empty States */
+.pos-empty-state {
+    padding: 44px 20px;
+    text-align: center;
+    color: var(--t2);
+}
+
+.pos-empty-icon {
+    font-size: 32px;
+    color: #10B981;
+    margin-bottom: 12px;
+}
+
+.pos-empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+}
+
+.pos-empty-desc {
+    font-size: 12px;
+    color: var(--t3);
+    max-width: 380px;
+    margin: 0 auto;
+    line-height: 1.45;
+}
+

@@ -292,40 +292,10 @@
             </div>
 
             <!-- ============================================================ -->
-            <!-- TAB 2: FULL POSITIONS MANAGER -->
+            <!-- TAB 2: FULL POSITIONS MANAGER (FINANCE BENTO INSTITUTIONAL GRID) -->
             <!-- ============================================================ -->
-            <div id="tab-sec-positions" class="dash-card wip-hidden">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-chart-line"></i> MetaTrader 5 Active Positions Manager
-                    </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="trading-table">
-                        <thead>
-                            <tr>
-                                <th>Ticket</th>
-                                <th>Symbol</th>
-                                <th>Type</th>
-                                <th>Lots</th>
-                                <th>Open Price</th>
-                                <th>Market Price</th>
-                                <th>SL</th>
-                                <th>TP</th>
-                                <th>Floating Profit</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="full-positions-body">
-                            <tr>
-                                <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                                    No open positions at this moment.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div id="tab-sec-positions" class="dash-card wip-hidden" style="background: transparent; border: none; padding: 0; box-shadow: none;">
+                <div id="bento-positions-mount"></div>
             </div>
 
             <!-- ============================================================ -->
@@ -1029,6 +999,7 @@
     </div>
 
     <script src="bento_overview.js?v=1.1.0"></script>
+    <script src="bento_positions.js?v=1.1.0"></script>
     <script src="script.js?v=1.1.0"></script>
 </body>
 

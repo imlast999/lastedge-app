@@ -209,6 +209,75 @@ class BotManager:
             }
         }
 
+    def notify_pending_signal(self, signal_data: Dict[str, Any]) -> None:
+        """Notifica inmediatamente a Telegram y Discord cuando una señal requiera confirmación humana."""
+        if not self.loop or not self.loop.is_running():
+            return
+        asyncio.run_coroutine_threadsafe(self._async_notify_pending_signal(signal_data), self.loop)
+
+    async def _async_notify_pending_signal(self, signal_data: Dict[str, Any]) -> None:
+        symbol = signal_data.get("symbol", "N/A")
+        direction = signal_data.get("direction", signal_data.get("type", "BUY"))
+        price = signal_data.get("price", signal_data.get("entry", 0.0))
+        sl = signal_data.get("sl", signal_data.get("sl_price", 0.0))
+        tp = signal_data.get("tp", signal_data.get("tp_price", 0.0))
+        rr = signal_data.get("rr", signal_data.get("rr_ratio", signal_data.get("rrRatio", 0.0)))
+        try:
+            p_val = float(price or 0.0)
+            sl_val = float(sl or 0.0)
+            tp_val = float(tp or 0.0)
+            if not rr and p_val and sl_val and p_val != sl_val:
+                risk = abs(p_val - sl_val)
+                reward = abs(tp_val - p_val)
+                rr = reward / risk if risk > 0 else 0.0
+        except Exception:
+            rr = 0.0
+        confidence = signal_data.get("confidence", signal_data.get("confidence_level", "MEDIUM"))
+        strategy = signal_data.get("strategy", signal_data.get("strategy_used", "AutoSignals"))
+
+        # 1. Telegram
+        if self.telegram_token and self.telegram_chat_id:
+            try:
+                import aiohttp
+                tg_text = (
+                    "⏸️ SEÑAL PENDIENTE DE CONFIRMACIÓN\n"
+                    "━━━━━━━━━━━━━━━━━━\n"
+                    f"Par: {symbol} | Dirección: {direction}\n"
+                    f"Precio: {price}\n"
+                    f"SL: {sl} | TP: {tp} | R:R: 1:{rr:.2f}\n"
+                    f"Confianza: {confidence} | Estrategia: {strategy}\n"
+                    "━━━━━━━━━━━━━━━━━━\n"
+                    "👉 Pulsa \"Aprobar\" en tu Web Dashboard para ejecutarla en MT5."
+                )
+                url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
+                payload = {"chat_id": self.telegram_chat_id, "text": tg_text}
+                async with aiohttp.ClientSession() as session:
+                    await session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5))
+            except Exception as e:
+                logger.error(f"[Bot Manager] Error enviando alerta Telegram: {e}")
+
+        # 2. Discord
+        if self.discord_bot and self._discord_connected and self.discord_channel_id:
+            try:
+                import discord
+                channel = self.discord_bot.get_channel(int(self.discord_channel_id))
+                if channel:
+                    embed = discord.Embed(
+                        title=f"⏸️ SEÑAL PENDIENTE DE CONFIRMACIÓN | {direction} {symbol}",
+                        description="👉 Pulsa \"Aprobar\" en tu Web Dashboard para ejecutarla en MT5.",
+                        color=0xFFA500
+                    )
+                    embed.add_field(name="📈 Entry", value=f"{price}", inline=True)
+                    embed.add_field(name="🛡️ Stop Loss", value=f"{sl}", inline=True)
+                    embed.add_field(name="🎯 Take Profit", value=f"{tp}", inline=True)
+                    embed.add_field(name="⚖️ R:R Ratio", value=f"1:{rr:.2f}", inline=True)
+                    embed.add_field(name="⭐ Confidence", value=str(confidence), inline=True)
+                    embed.add_field(name="⚙️ Strategy", value=str(strategy), inline=True)
+                    embed.set_footer(text="Aprobación requerida vía Dashboard")
+                    await channel.send(embed=embed)
+            except Exception as e:
+                logger.error(f"[Bot Manager] Error enviando alerta Discord: {e}")
+
 
 _bot_manager: Optional[BotManager] = None
 

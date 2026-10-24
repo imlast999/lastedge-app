@@ -1,0 +1,774 @@
+/**
+ * LastEdge — Finance Bento Positions Module
+ * Pure DOM implementation adapted from finance-bento.tsx (21st.dev institutional grade fintech)
+ * Powers:
+ *   1. Bento Card 1: Operaciones Abiertas (Open Positions with visual Trailing Stop & 1-Click Close)
+ *   2. Bento Card 2: Señales Pendientes de Confirmación (Approval Feed with 1-Click Approve & Execute)
+ *   3. Bento Card 3: Historial Completo de Operaciones (Trade Journal with top KPI chips & paginated closed trades)
+ *
+ * Strict Zero-Placeholder Policy: Consumes live endpoints /api/positions, /api/signals, /api/trades.
+ */
+
+(function (window) {
+    'use strict';
+
+    // Theme and asset color palette
+    const ASSET_COLORS = {
+        EURUSD: { bg: 'rgba(255, 255, 255, 0.08)', text: '#FFFFFF', border: 'rgba(255, 255, 255, 0.25)', dot: '#FFFFFF' },
+        XAUUSD: { bg: 'rgba(169, 178, 255, 0.12)', text: '#A9B2FF', border: 'rgba(169, 178, 255, 0.35)', dot: '#FFD700' },
+        BTCEUR: { bg: 'rgba(255, 179, 122, 0.12)', text: '#FFB37A', border: 'rgba(255, 179, 122, 0.35)', dot: '#FFB37A' },
+        BTCUSDT: { bg: 'rgba(255, 179, 122, 0.12)', text: '#FFB37A', border: 'rgba(255, 179, 122, 0.35)', dot: '#FFB37A' },
+        DEFAULT: { bg: 'rgba(255, 255, 255, 0.06)', text: '#E2E8F0', border: 'rgba(255, 255, 255, 0.15)', dot: '#94A3B8' }
+    };
+
+    class BentoPositionsManager {
+        constructor() {
+            this.container = null;
+            this.positions = [];
+            this.signals = [];
+            this.trades = [];
+            this.isEngineOnline = false;
+            this.isMT5Connected = false;
+            this.currentPage = 1;
+            this.pageSize = 8;
+            this.loadingApproveId = null;
+            this.closingTicket = null;
+        }
+
+        init(container) {
+            this.container = container;
+            this.renderStructure();
+            this.fetchInitialData();
+        }
+
+        renderStructure() {
+            if (!this.container) return;
+            this.container.innerHTML = `
+                <div class="fpb fpb-positions in">
+                    <div class="fpb-c">
+                        <!-- Header with live telemetry pulse -->
+                        <div class="top" style="margin-bottom: 22px;">
+                            <div class="top-left">
+                                <h1 style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="pulse-indicator" id="pos-pulse-dot"></span>
+                                    <span>Posiciones &amp; Flujo Operativo</span>
+                                    <span id="pos-header-asof" style="font-weight: 500; color: rgba(255,255,255,0.4); font-size: 13px; margin-left: 8px;">
+                                        Sincronizado con MT5
+                                    </span>
+                                </h1>
+                            </div>
+                            <div class="ctrls">
+                                <div class="seg" id="pos-status-seg">
+                                    <span id="pos-mt5-pill" class="status-pill pill-green" style="font-size: 11.5px; padding: 4px 10px;">
+                                        MT5 CONECTADO
+                                    </span>
+                                </div>
+                                <button class="btn-action" onclick="LastEdgeBentoPositions.instance.manualSync()" style="height: 32px; padding: 0 12px; font-size: 12px; border-radius: 12px;">
+                                    <i class="fa-solid fa-arrows-rotate" id="pos-sync-icon"></i> Sincronizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 12-Column Responsive Grid -->
+                        <div class="pos-grid">
+                            <!-- BENTO CARD 1: OPERACIONES ABIERTAS (Span 7) -->
+                            <div class="card glass pos-card-open" id="bento-card-open-pos">
+                                <div class="rim"></div>
+                                <div class="pos-card-header">
+                                    <div class="ttl">
+                                        <i class="fa-solid fa-layer-group" style="color: var(--acc); font-size: 15px;"></i>
+                                        <span>Operaciones Abiertas</span>
+                                        <span class="chip" id="chip-open-count" style="margin-left: 6px;">0</span>
+                                    </div>
+                                    <div id="open-total-pnl-chip" class="chip" style="background: rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace;">
+                                        Float: $0.00
+                                    </div>
+                                </div>
+                                <div class="pos-card-body" id="bento-open-positions-list">
+                                    <div class="pos-empty-state">
+                                        <div class="pos-empty-icon"><i class="fa-solid fa-shield-check"></i></div>
+                                        <div class="pos-empty-title">0 posiciones activas &middot; Margen 100% libre</div>
+                                        <div class="pos-empty-desc">Risk Engine v2 en guardia activa &middot; Sin exposición flotante</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BENTO CARD 2: SEÑALES PENDIENTES DE CONFIRMACIÓN (Span 5) -->
+                            <div class="card glass pos-card-pending" id="bento-card-pending-signals">
+                                <div class="rim"></div>
+                                <div class="pos-card-header">
+                                    <div class="ttl">
+                                        <i class="fa-solid fa-clock-rotate-left" style="color: #FFA500; font-size: 15px;"></i>
+                                        <span>Señales Pendientes</span>
+                                        <span class="chip" id="chip-pending-count" style="margin-left: 6px; background: rgba(255, 165, 0, 0.15); color: #FFA500; border: 1px solid rgba(255, 165, 0, 0.35);">
+                                            0
+                                        </span>
+                                    </div>
+                                    <span class="cap" style="color: #FFA500; font-size: 10.5px; letter-spacing: 0.05em;">1-CLICK APPROVAL</span>
+                                </div>
+                                <div class="pos-card-body" id="bento-pending-signals-list">
+                                    <div class="pos-empty-state">
+                                        <div class="pos-empty-icon" style="color: rgba(255, 255, 255, 0.25);"><i class="fa-solid fa-bell-slash"></i></div>
+                                        <div class="pos-empty-title">Sin señales pendientes</div>
+                                        <div class="pos-empty-desc">Las señales que requieran validación humana aparecerán aquí para ejecución instantánea.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BENTO CARD 3: HISTORIAL COMPLETO DE OPERACIONES (Span 12) -->
+                            <div class="card glass pos-card-journal" id="bento-card-journal">
+                                <div class="rim"></div>
+                                <div class="pos-card-header" style="flex-wrap: wrap; gap: 14px;">
+                                    <div class="ttl">
+                                        <i class="fa-solid fa-book-bookmark" style="color: #A9B2FF; font-size: 15px;"></i>
+                                        <span>Diario Cuantitativo de Operaciones (Trade Journal)</span>
+                                    </div>
+                                    <!-- Top KPI Chips Row -->
+                                    <div class="journal-kpi-row" id="journal-kpi-chips">
+                                        <div class="journal-kpi-chip">
+                                            <span class="kpi-label">Win Rate</span>
+                                            <span class="kpi-val" id="kpi-winrate" style="color: #10B981;">0.0%</span>
+                                        </div>
+                                        <div class="journal-kpi-chip">
+                                            <span class="kpi-label">PnL Cerrado</span>
+                                            <span class="kpi-val" id="kpi-total-pnl">$0.00</span>
+                                        </div>
+                                        <div class="journal-kpi-chip">
+                                            <span class="kpi-label">Trades</span>
+                                            <span class="kpi-val" id="kpi-total-trades">0</span>
+                                        </div>
+                                        <div class="journal-kpi-chip">
+                                            <span class="kpi-label">Prom. Pips</span>
+                                            <span class="kpi-val" id="kpi-avg-pips">0.0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="journal-table-wrap">
+                                    <table class="bento-trading-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Cierre</th>
+                                                <th>Par &amp; Dirección</th>
+                                                <th>Lotes</th>
+                                                <th>Entrada &rarr; Salida</th>
+                                                <th>Pips</th>
+                                                <th>Motivo de Salida</th>
+                                                <th style="text-align: right;">Beneficio Neto</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="bento-journal-tbody">
+                                            <tr>
+                                                <td colspan="7" style="text-align: center; color: rgba(255,255,255,0.4); padding: 36px;">
+                                                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Cargando historial de operaciones...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Pagination Controls -->
+                                <div class="journal-pagination" id="journal-pagination-ctrls">
+                                    <span id="journal-page-info" style="font-size: 12px; color: rgba(255,255,255,0.5); font-family: 'Geist Mono', monospace;">
+                                        Página 1 de 1
+                                    </span>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-action" id="btn-prev-page" onclick="LastEdgeBentoPositions.instance.prevPage()" style="height: 28px; padding: 0 10px; font-size: 11px;">
+                                            <i class="fa-solid fa-chevron-left"></i> Anterior
+                                        </button>
+                                        <button class="btn-action" id="btn-next-page" onclick="LastEdgeBentoPositions.instance.nextPage()" style="height: 28px; padding: 0 10px; font-size: 11px;">
+                                            Siguiente <i class="fa-solid fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async fetchInitialData() {
+            try {
+                const [posRes, sigRes, tradeRes] = await Promise.all([
+                    fetch('/api/positions').then(r => r.ok ? r.json() : { positions: [] }).catch(() => ({ positions: [] })),
+                    fetch('/api/signals').then(r => r.ok ? r.json() : { signals: [] }).catch(() => ({ signals: [] })),
+                    fetch('/api/trades').then(r => r.ok ? r.json() : []).catch(() => [])
+                ]);
+
+                this.positions = Array.isArray(posRes.positions) ? posRes.positions : (Array.isArray(posRes) ? posRes : []);
+                this.signals = Array.isArray(sigRes.signals) ? sigRes.signals : (Array.isArray(sigRes) ? sigRes : []);
+                this.trades = Array.isArray(tradeRes) ? tradeRes : [];
+
+                this.renderAll();
+            } catch (err) {
+                console.warn('[BentoPositions] Initial fetch error:', err);
+            }
+        }
+
+        update(telemetry) {
+            if (!telemetry) return;
+            this.isEngineOnline = telemetry.trading_engine_online === true;
+            const tEngine = telemetry.trading_engine || {};
+            const metrics = telemetry.metrics || {};
+            this.isMT5Connected = this.isEngineOnline && Boolean(
+                metrics.mt5_connected === true ||
+                tEngine.mt5_connected === true ||
+                (tEngine.health && tEngine.health.mt5_connected === true) ||
+                (tEngine.health && tEngine.health.mt5 && tEngine.health.mt5.connected === true)
+            );
+
+            if (Array.isArray(telemetry.positions)) {
+                this.positions = telemetry.positions;
+            }
+            if (Array.isArray(telemetry.signals)) {
+                this.signals = telemetry.signals;
+            }
+
+            this.updateHeaderPill();
+            this.renderOpenPositions();
+            this.renderPendingSignals();
+        }
+
+        updateHeaderPill() {
+            const pill = document.getElementById('pos-mt5-pill');
+            const dot = document.getElementById('pos-pulse-dot');
+            if (pill) {
+                if (!this.isEngineOnline) {
+                    pill.textContent = 'ENGINE OFFLINE (:8081)';
+                    pill.className = 'status-pill pill-red';
+                } else if (this.isMT5Connected) {
+                    pill.textContent = 'MT5 CONECTADO';
+                    pill.className = 'status-pill pill-green';
+                } else {
+                    pill.textContent = 'MT5 DESCONECTADO';
+                    pill.className = 'status-pill pill-red';
+                }
+            }
+            if (dot) {
+                dot.style.background = this.isMT5Connected ? '#10B981' : '#EF4444';
+                dot.style.boxShadow = this.isMT5Connected ? '0 0 10px #10B981' : '0 0 10px #EF4444';
+            }
+        }
+
+        renderAll() {
+            this.updateHeaderPill();
+            this.renderOpenPositions();
+            this.renderPendingSignals();
+            this.renderTradeJournal();
+        }
+
+        /**
+         * ── BENTO CARD 1: OPERACIONES ABIERTAS ──────────────────────────────
+         */
+        renderOpenPositions() {
+            const container = document.getElementById('bento-open-positions-list');
+            const countChip = document.getElementById('chip-open-count');
+            const totalPnlChip = document.getElementById('open-total-pnl-chip');
+            if (!container) return;
+
+            const count = this.positions.length;
+            if (countChip) countChip.textContent = count;
+
+            let totalFloat = 0;
+            this.positions.forEach(p => { totalFloat += Number(p.profit || 0); });
+            if (totalPnlChip) {
+                const sign = totalFloat >= 0 ? '+' : '';
+                const color = totalFloat >= 0 ? '#10B981' : '#EF4444';
+                totalPnlChip.innerHTML = `Float: <span style="color: ${color}; font-weight: 700;">${sign}$${totalFloat.toFixed(2)}</span>`;
+            }
+
+            if (count === 0) {
+                container.innerHTML = `
+                    <div class="pos-empty-state">
+                        <div class="pos-empty-icon"><i class="fa-solid fa-shield-check"></i></div>
+                        <div class="pos-empty-title">0 posiciones activas &middot; Margen 100% libre</div>
+                        <div class="pos-empty-desc">Risk Engine v2 en guardia activa &middot; Sin exposición flotante</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="pos-items-grid">';
+            this.positions.forEach(pos => {
+                const ticket = pos.ticket;
+                const sym = (pos.symbol || 'EURUSD').toUpperCase();
+                const type = (pos.type || 'BUY').toUpperCase();
+                const isBuy = type === 'BUY';
+                const lot = Number(pos.volume || pos.lot || 0.01).toFixed(2);
+                const openP = Number(pos.open_price || pos.openPrice || 0);
+                const curP = Number(pos.current_price || pos.marketPrice || pos.open_price || 0);
+                const sl = Number(pos.sl || 0);
+                const tp = Number(pos.tp || 0);
+                const pnl = Number(pos.profit || 0);
+                const pnlSign = pnl >= 0 ? '+' : '';
+                const pnlColor = pnl >= 0 ? '#10B981' : '#EF4444';
+
+                // Asset design tokens
+                const assetStyle = ASSET_COLORS[sym] || ASSET_COLORS.DEFAULT;
+
+                // Visual Trailing Stop Calculation
+                let trailingPct = 0;
+                let trailingText = 'Breakeven Pendiente';
+                let beSecured = false;
+
+                if (openP > 0 && curP > 0) {
+                    const priceDiff = isBuy ? (curP - openP) : (openP - curP);
+                    const pipScale = sym.includes('XAU') ? 0.1 : (sym.includes('BTC') ? 1.0 : 0.0001);
+                    const pipsGained = priceDiff / pipScale;
+
+                    if (tp > 0 && tp !== openP) {
+                        const targetDiff = Math.abs(tp - openP);
+                        trailingPct = Math.min(100, Math.max(0, (priceDiff / targetDiff) * 100));
+                    } else {
+                        trailingPct = Math.min(100, Math.max(0, pipsGained * 5));
+                    }
+
+                    if (sl > 0) {
+                        if (isBuy && sl >= openP) {
+                            beSecured = true;
+                            trailingText = `BE Protegido &middot; SL @ ${sl.toFixed(sym.includes('BTC') ? 2 : 5)}`;
+                        } else if (!isBuy && sl <= openP) {
+                            beSecured = true;
+                            trailingText = `BE Protegido &middot; SL @ ${sl.toFixed(sym.includes('BTC') ? 2 : 5)}`;
+                        } else {
+                            trailingText = `Recorrido: ${pipsGained.toFixed(1)} pips hacia BE`;
+                        }
+                    } else {
+                        trailingText = `Recorrido: ${pipsGained.toFixed(1)} pips`;
+                    }
+                }
+
+                const isClosing = this.closingTicket === ticket;
+
+                html += `
+                    <div class="pos-item-card">
+                        <div class="pos-item-top">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="pos-symbol-chip" style="background: ${assetStyle.bg}; color: ${assetStyle.text}; border-color: ${assetStyle.border};">
+                                    <span class="pos-dot" style="background: ${assetStyle.dot};"></span>
+                                    ${sym}
+                                </span>
+                                <span class="pos-type-tag ${isBuy ? 'tag-buy' : 'tag-sell'}">${type}</span>
+                                <span class="chip" style="font-size: 11px;">${lot} L</span>
+                                <span style="font-family: 'Geist Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.4);">#${ticket}</span>
+                            </div>
+                            <div class="pos-pnl-val" style="color: ${pnlColor};">
+                                ${pnlSign}$${pnl.toFixed(2)}
+                            </div>
+                        </div>
+
+                        <!-- Price Details Grid -->
+                        <div class="pos-price-row">
+                            <div class="price-cell">
+                                <span class="cell-label">Entrada</span>
+                                <span class="cell-val">${openP.toFixed(sym.includes('BTC') ? 2 : 5)}</span>
+                            </div>
+                            <div class="price-cell">
+                                <span class="cell-label">Mercado</span>
+                                <span class="cell-val" style="color: #FFFFFF;">${curP.toFixed(sym.includes('BTC') ? 2 : 5)}</span>
+                            </div>
+                            <div class="price-cell">
+                                <span class="cell-label">Stop Loss</span>
+                                <span class="cell-val" style="color: #EF4444;">${sl > 0 ? sl.toFixed(sym.includes('BTC') ? 2 : 5) : '—'}</span>
+                            </div>
+                            <div class="price-cell">
+                                <span class="cell-label">Take Profit</span>
+                                <span class="cell-val" style="color: #10B981;">${tp > 0 ? tp.toFixed(sym.includes('BTC') ? 2 : 5) : '—'}</span>
+                            </div>
+                        </div>
+
+                        <!-- Trailing Stop Visual Progress Bar -->
+                        <div class="trailing-container">
+                            <div class="trailing-header">
+                                <span class="trailing-title">
+                                    <i class="fa-solid fa-route" style="color: ${beSecured ? '#10B981' : 'var(--acc)'}; margin-right: 5px;"></i>
+                                    ${trailingText}
+                                </span>
+                                <span class="trailing-pct">${trailingPct.toFixed(0)}% a TP</span>
+                            </div>
+                            <div class="trailing-track">
+                                <div class="trailing-fill ${beSecured ? 'fill-be-secured' : ''}" style="width: ${trailingPct}%;"></div>
+                                <div class="trailing-be-marker" title="Breakeven Threshold"></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Row -->
+                        <div class="pos-item-actions">
+                            <button class="btn-close-pos" onclick="LastEdgeBentoPositions.instance.closePosition(${ticket}, this)" ${isClosing ? 'disabled' : ''}>
+                                ${isClosing ? '<i class="fa-solid fa-spinner fa-spin"></i> Cerrando...' : '<i class="fa-solid fa-xmark"></i> Cerrar Posición'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        /**
+         * ── BENTO CARD 2: SEÑALES PENDIENTES DE CONFIRMACIÓN ────────────────
+         */
+        renderPendingSignals() {
+            const container = document.getElementById('bento-pending-signals-list');
+            const countChip = document.getElementById('chip-pending-count');
+            if (!container) return;
+
+            // Filtrar señales en estado PROPOSED o PENDING
+            const pendingSignals = this.signals.filter(s => {
+                const st = (s.status || '').toLowerCase();
+                return st === 'proposed' || st === 'pending' || st === 'manual';
+            });
+
+            const count = pendingSignals.length;
+            if (countChip) countChip.textContent = count;
+
+            if (count === 0) {
+                container.innerHTML = `
+                    <div class="pos-empty-state">
+                        <div class="pos-empty-icon" style="color: rgba(255, 255, 255, 0.25);"><i class="fa-solid fa-bell-slash"></i></div>
+                        <div class="pos-empty-title">Sin señales pendientes</div>
+                        <div class="pos-empty-desc">Las señales que requieran validación humana aparecerán aquí para ejecución instantánea en 1 click.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="pending-signals-feed">';
+            pendingSignals.forEach(sig => {
+                const sigId = sig.id;
+                const sym = (sig.symbol || 'EURUSD').toUpperCase();
+                const type = (sig.type || sig.direction || 'BUY').toUpperCase();
+                const isBuy = type === 'BUY';
+                const entry = Number(sig.entry || sig.price || 0);
+                const sl = Number(sig.stopLoss || sig.sl || 0);
+                const tp = Number(sig.takeProfit || sig.tp || 0);
+                const rr = sig.rrRatio || sig.rr || 1.5;
+                const lot = Number(sig.lot || 0.01).toFixed(2);
+                const conf = (sig.confidence || 'MEDIUM').toUpperCase();
+                const strategy = sig.strategy || 'AutoSignals';
+                const assetStyle = ASSET_COLORS[sym] || ASSET_COLORS.DEFAULT;
+
+                const isApproving = this.loadingApproveId === String(sigId);
+
+                html += `
+                    <div class="pending-sig-card" id="pending-card-${sigId}">
+                        <div class="pending-sig-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="pos-symbol-chip" style="background: ${assetStyle.bg}; color: ${assetStyle.text}; border-color: ${assetStyle.border};">
+                                    <span class="pos-dot" style="background: ${assetStyle.dot};"></span>
+                                    ${sym}
+                                </span>
+                                <span class="pos-type-tag ${isBuy ? 'tag-buy' : 'tag-sell'}">${type}</span>
+                                <span class="chip" style="font-size: 10.5px;">${lot} L</span>
+                            </div>
+                            <span class="conf-pill conf-${conf.toLowerCase().replace(/[^a-z]/g, '')}">${conf}</span>
+                        </div>
+
+                        <div class="pending-sig-strategy">
+                            <i class="fa-solid fa-microchip" style="margin-right: 5px; color: rgba(255,255,255,0.4);"></i>
+                            ${strategy} &middot; R:R 1:${Number(rr).toFixed(2)}
+                        </div>
+
+                        <div class="pending-prices-row">
+                            <div><span class="lbl">Entrada:</span> <span class="val">${entry.toFixed(sym.includes('BTC') ? 2 : 5)}</span></div>
+                            <div><span class="lbl">SL:</span> <span class="val" style="color: #EF4444;">${sl.toFixed(sym.includes('BTC') ? 2 : 5)}</span></div>
+                            <div><span class="lbl">TP:</span> <span class="val" style="color: #10B981;">${tp.toFixed(sym.includes('BTC') ? 2 : 5)}</span></div>
+                        </div>
+
+                        <div class="pending-actions-row">
+                            <button class="btn-approve-1click" onclick="LastEdgeBentoPositions.instance.approveSignal('${sigId}', this)" ${isApproving ? 'disabled' : ''}>
+                                ${isApproving ? '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando en MT5...' : '<i class="fa-solid fa-bolt"></i> Aprobar y Ejecutar'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        /**
+         * ── BENTO CARD 3: HISTORIAL COMPLETO DE OPERACIONES ─────────────────
+         */
+        renderTradeJournal() {
+            const tbody = document.getElementById('bento-journal-tbody');
+            if (!tbody) return;
+
+            // Update Top KPI chips
+            const totalTrades = this.trades.length;
+            let wins = 0;
+            let totalProfit = 0;
+            let totalPips = 0;
+
+            this.trades.forEach(t => {
+                const profit = Number(t.profit || 0);
+                const pips = Number(t.pips || 0);
+                totalProfit += profit;
+                totalPips += pips;
+                if (profit > 0 || (t.closeReason || '').toUpperCase() === 'TAKE_PROFIT') {
+                    wins++;
+                }
+            });
+
+            const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : '0.0';
+            const avgPips = totalTrades > 0 ? (totalPips / totalTrades).toFixed(1) : '0.0';
+
+            const wrElem = document.getElementById('kpi-winrate');
+            const pnlElem = document.getElementById('kpi-total-pnl');
+            const ttElem = document.getElementById('kpi-total-trades');
+            const pipsElem = document.getElementById('kpi-avg-pips');
+
+            if (wrElem) wrElem.textContent = `${winRate}%`;
+            if (pnlElem) {
+                const sign = totalProfit >= 0 ? '+' : '';
+                pnlElem.textContent = `${sign}$${totalProfit.toFixed(2)}`;
+                pnlElem.style.color = totalProfit >= 0 ? '#10B981' : '#EF4444';
+            }
+            if (ttElem) ttElem.textContent = String(totalTrades);
+            if (pipsElem) pipsElem.textContent = `${avgPips} pips`;
+
+            if (totalTrades === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: rgba(255,255,255,0.4); padding: 36px;">
+                            <i class="fa-solid fa-check-circle" style="color: #10B981; margin-right: 6px;"></i>
+                            Diario institucional listo &middot; Sin operaciones cerradas registradas en el período.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Pagination calculation
+            const totalPages = Math.ceil(totalTrades / this.pageSize) || 1;
+            if (this.currentPage > totalPages) this.currentPage = totalPages;
+            if (this.currentPage < 1) this.currentPage = 1;
+
+            const startIdx = (this.currentPage - 1) * this.pageSize;
+            const endIdx = startIdx + this.pageSize;
+            const paginated = this.trades.slice(startIdx, endIdx);
+
+            const pageInfo = document.getElementById('journal-page-info');
+            if (pageInfo) pageInfo.textContent = `Página ${this.currentPage} de ${totalPages} (${totalTrades} trades)`;
+
+            const btnPrev = document.getElementById('btn-prev-page');
+            const btnNext = document.getElementById('btn-next-page');
+            if (btnPrev) btnPrev.disabled = this.currentPage <= 1;
+            if (btnNext) btnNext.disabled = this.currentPage >= totalPages;
+
+            let rowsHtml = '';
+            paginated.forEach(t => {
+                const sym = (t.symbol || 'EURUSD').toUpperCase();
+                const type = (t.type || 'BUY').toUpperCase();
+                const isBuy = type === 'BUY';
+                const lot = Number(t.lot || 0.01).toFixed(2);
+                const openP = Number(t.openPrice || 0);
+                const closeP = Number(t.closePrice || 0);
+                const pips = Number(t.pips || 0);
+                const profit = Number(t.profit || 0);
+                const pnlSign = profit >= 0 ? '+' : '';
+                const pnlColor = profit >= 0 ? '#10B981' : '#EF4444';
+
+                // Reason pill
+                const reason = (t.closeReason || 'MANUAL').toUpperCase();
+                let reasonPill = '<span class="reason-pill reason-manual">MANUAL</span>';
+                if (reason.includes('TAKE') || reason.includes('TP') || reason.includes('PROFIT')) {
+                    reasonPill = '<span class="reason-pill reason-tp">TAKE PROFIT</span>';
+                } else if (reason.includes('STOP') || reason.includes('SL') || reason.includes('LOSS')) {
+                    reasonPill = '<span class="reason-pill reason-sl">STOP LOSS</span>';
+                } else if (reason.includes('TRAIL') || reason.includes('BE')) {
+                    reasonPill = '<span class="reason-pill reason-trail">TRAILING STOP</span>';
+                }
+
+                // Date formatting
+                let dateStr = '—';
+                try {
+                    const d = new Date(t.closedAt || t.timestamp);
+                    dateStr = d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) + ' ' +
+                              d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                } catch (_) {}
+
+                rowsHtml += `
+                    <tr>
+                        <td style="font-family: 'Geist Mono', monospace; font-size: 11.5px; color: rgba(255,255,255,0.6);">${dateStr}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-weight: 700; color: #FFFFFF;">${sym}</span>
+                                <span class="pos-type-tag ${isBuy ? 'tag-buy' : 'tag-sell'}" style="font-size: 10px; padding: 2px 6px;">${type}</span>
+                            </div>
+                        </td>
+                        <td style="font-family: 'Geist Mono', monospace; font-size: 12px;">${lot}</td>
+                        <td style="font-family: 'Geist Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.75);">
+                            ${openP.toFixed(sym.includes('BTC') ? 2 : 5)} &rarr; ${closeP.toFixed(sym.includes('BTC') ? 2 : 5)}
+                        </td>
+                        <td style="font-family: 'Geist Mono', monospace; font-size: 12px; color: ${pips >= 0 ? '#10B981' : '#EF4444'};">
+                            ${pips >= 0 ? '+' : ''}${pips.toFixed(1)}
+                        </td>
+                        <td>${reasonPill}</td>
+                        <td style="text-align: right; font-family: 'Geist Mono', monospace; font-weight: 700; font-size: 13px; color: ${pnlColor};">
+                            ${pnlSign}$${profit.toFixed(2)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.renderTradeJournal();
+            }
+        }
+
+        nextPage() {
+            const totalPages = Math.ceil(this.trades.length / this.pageSize) || 1;
+            if (this.currentPage < totalPages) {
+                this.currentPage++;
+                this.renderTradeJournal();
+            }
+        }
+
+        /**
+         * ── 1-CLICK APPROVE & EXECUTE SIGNAL ─────────────────────────────────
+         */
+        async approveSignal(signalId, btnElement) {
+            if (this.loadingApproveId) return;
+            this.loadingApproveId = String(signalId);
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando en MT5...';
+            }
+
+            try {
+                const response = await fetch('/api/signals/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signal_id: Number(signalId) })
+                });
+
+                const result = await response.json();
+                if (result.ok) {
+                    // Feedback visual inmediato
+                    if (btnElement) {
+                        btnElement.innerHTML = '<i class="fa-solid fa-check"></i> ¡Ejecutado!';
+                        btnElement.style.background = '#10B981';
+                        btnElement.style.color = '#FFFFFF';
+                    }
+
+                    // Remover la señal de pendientes localmente
+                    this.signals = this.signals.filter(s => String(s.id) !== String(signalId));
+
+                    // Refrescar inmediatamente datos de MT5
+                    await this.syncFreshPositions();
+                } else {
+                    alert('Error aprobando señal: ' + (result.error || 'Fallo desconocido en MT5'));
+                    if (btnElement) {
+                        btnElement.disabled = false;
+                        btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Reintentar Aprobación';
+                    }
+                }
+            } catch (err) {
+                console.error('[BentoPositions] Approve error:', err);
+                alert('Error de conexión al aprobar señal: ' + err);
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Reintentar Aprobación';
+                }
+            } finally {
+                this.loadingApproveId = null;
+                this.renderPendingSignals();
+            }
+        }
+
+        /**
+         * ── CLOSE POSITION ACTION ───────────────────────────────────────────
+         */
+        async closePosition(ticket, btnElement) {
+            if (!confirm(`¿Confirmas el cierre inmediato de la posición #${ticket} en MetaTrader 5?`)) {
+                return;
+            }
+
+            this.closingTicket = ticket;
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cerrando...';
+            }
+
+            try {
+                const response = await fetch('/api/positions/close', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticket: Number(ticket) })
+                });
+
+                const result = await response.json();
+                if (result.ok) {
+                    // Remover posición localmente
+                    this.positions = this.positions.filter(p => Number(p.ticket) !== Number(ticket));
+                    this.renderOpenPositions();
+
+                    // Re-sincronizar posiciones y diario
+                    await this.syncFreshPositions();
+                } else {
+                    alert('Error cerrando posición: ' + (result.error || 'MT5 no pudo procesar la solicitud'));
+                }
+            } catch (err) {
+                console.error('[BentoPositions] Close error:', err);
+                alert('Error de conexión al cerrar posición: ' + err);
+            } finally {
+                this.closingTicket = null;
+                this.renderOpenPositions();
+            }
+        }
+
+        async syncFreshPositions() {
+            try {
+                const [posRes, sigRes, tradeRes] = await Promise.all([
+                    fetch('/api/positions').then(r => r.ok ? r.json() : { positions: [] }).catch(() => ({ positions: [] })),
+                    fetch('/api/signals').then(r => r.ok ? r.json() : { signals: [] }).catch(() => ({ signals: [] })),
+                    fetch('/api/trades').then(r => r.ok ? r.json() : []).catch(() => [])
+                ]);
+
+                if (posRes && Array.isArray(posRes.positions)) {
+                    this.positions = posRes.positions;
+                }
+                if (sigRes && Array.isArray(sigRes.signals)) {
+                    this.signals = sigRes.signals;
+                }
+                if (Array.isArray(tradeRes)) {
+                    this.trades = tradeRes;
+                }
+
+                this.renderAll();
+            } catch (e) {
+                console.warn('[BentoPositions] syncFreshPositions error:', e);
+            }
+        }
+
+        manualSync() {
+            const icon = document.getElementById('pos-sync-icon');
+            if (icon) icon.classList.add('fa-spin');
+            this.syncFreshPositions().finally(() => {
+                setTimeout(() => {
+                    if (icon) icon.classList.remove('fa-spin');
+                }, 600);
+            });
+        }
+    }
+
+    // Expose global singleton
+    const manager = new BentoPositionsManager();
+    window.LastEdgeBentoPositions = {
+        instance: manager,
+        init: function (mountElem) {
+            manager.init(mountElem);
+        },
+        update: function (telemetry) {
+            manager.update(telemetry);
+        }
+    };
+
+})(window);
