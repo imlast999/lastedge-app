@@ -317,7 +317,12 @@ class BotManager:
                     "text": tg_text,
                     "reply_markup": reply_markup
                 }
-                async with aiohttp.ClientSession() as session:
+                import ssl
+                ssl_ctx = ssl.create_default_context()
+                ssl_ctx.check_hostname = False
+                ssl_ctx.verify_mode = ssl.CERT_NONE
+                connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+                async with aiohttp.ClientSession(connector=connector) as session:
                     await session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5))
             except Exception as e:
                 logger.error(f"[Bot Manager] Error enviando alerta Telegram: {e}")
