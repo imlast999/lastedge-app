@@ -17,6 +17,93 @@
 
 <body>
 
+    <!-- ── 21st.dev input-otp-10 Web3 Security Lock Screen ─────────────────── -->
+    <div id="auth-lock-overlay" class="auth-lock-overlay wip-hidden">
+        <div class="auth-lock-backdrop"></div>
+        <div class="auth-card" id="auth-lock-card">
+            <!-- Radial ambient corner lights -->
+            <div class="auth-ambient-glow auth-ambient-tr"></div>
+            <div class="auth-ambient-glow auth-ambient-bl"></div>
+
+            <div class="auth-card-body">
+                <!-- Concentric Animated Visualizer (160x160) -->
+                <div class="auth-visualizer-container" id="auth-visualizer-container">
+                    <!-- Outer dashed ring (spin 60s) -->
+                    <div class="auth-ring-outer"></div>
+                    <!-- Mid ring (spin 30s reverse) -->
+                    <div class="auth-ring-mid"></div>
+                    <!-- Inner ring -->
+                    <div class="auth-ring-inner"></div>
+                    <!-- Subtle glow gradient pulse ring -->
+                    <div class="auth-ring-glow" id="auth-ring-glow"></div>
+
+                    <!-- Central 3D Particle Sphere Animation Canvas -->
+                    <div class="auth-sphere-wrapper" id="auth-sphere-wrapper">
+                        <canvas id="otp-particle-canvas" width="128" height="128"></canvas>
+                    </div>
+
+                    <!-- Shield Check Icon (pops up on unlock success) -->
+                    <div class="auth-shield-badge wip-hidden" id="auth-shield-badge">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                </div>
+
+                <!-- Title & Status Header -->
+                <div class="auth-header-text">
+                    <h3 class="auth-title" id="auth-title">ENTER CREDENTIALS</h3>
+                    <p class="auth-subtitle" id="auth-subtitle">
+                        Please input the 4-digit system PIN to access the institutional dashboard.
+                    </p>
+                </div>
+
+                <!-- 4 OTP Slots Container -->
+                <div class="auth-slots-wrapper" id="auth-slots-container" onclick="focusAuthPinInput()">
+                    <!-- Slot 0 -->
+                    <div class="auth-otp-slot active" id="otp-slot-0">
+                        <span class="auth-slot-char" id="otp-char-0"></span>
+                        <div class="auth-slot-caret" id="otp-caret-0"></div>
+                        <div class="auth-pulse-ring" id="otp-pulse-0"></div>
+                    </div>
+                    <!-- Slot 1 -->
+                    <div class="auth-otp-slot" id="otp-slot-1">
+                        <span class="auth-slot-char" id="otp-char-1"></span>
+                        <div class="auth-slot-caret wip-hidden" id="otp-caret-1"></div>
+                        <div class="auth-pulse-ring" id="otp-pulse-1"></div>
+                    </div>
+                    <!-- Slot 2 -->
+                    <div class="auth-otp-slot" id="otp-slot-2">
+                        <span class="auth-slot-char" id="otp-char-2"></span>
+                        <div class="auth-slot-caret wip-hidden" id="otp-caret-2"></div>
+                        <div class="auth-pulse-ring" id="otp-pulse-2"></div>
+                    </div>
+                    <!-- Slot 3 -->
+                    <div class="auth-otp-slot" id="otp-slot-3">
+                        <span class="auth-slot-char" id="otp-char-3"></span>
+                        <div class="auth-slot-caret wip-hidden" id="otp-caret-3"></div>
+                        <div class="auth-pulse-ring" id="otp-pulse-3"></div>
+                    </div>
+                </div>
+
+                <!-- Hidden Tablet/Mobile Numeric Input -->
+                <input 
+                    type="tel" 
+                    id="otp-hidden-input" 
+                    pattern="[0-9]*" 
+                    inputmode="numeric" 
+                    maxlength="4" 
+                    autocomplete="one-time-code" 
+                    aria-label="Security PIN"
+                    class="auth-hidden-input"
+                >
+
+                <!-- Signature Status Indicator -->
+                <div class="auth-status-container">
+                    <span class="auth-status-text" id="auth-status-text">Awaiting key signature...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Dashboard Layout (Sidebar + Main Workspace) -->
     <div id="admin-dashboard" class="app-layout">
         
@@ -135,6 +222,13 @@
                     </div>
                     <span class="nav-badge" id="theme-mode-label">Dark</span>
                 </button>
+                <button class="nav-item" onclick="lockDashboard()" title="Lock Dashboard (⌘L)">
+                    <div class="nav-item-left">
+                        <i class="fa-solid fa-lock" id="sidebar-lock-icon"></i>
+                        <span>Lock Screen</span>
+                    </div>
+                    <kbd>⌘L</kbd>
+                </button>
             </div>
 
         </aside>
@@ -190,6 +284,9 @@
                     </button>
                     <button class="header-action-btn" onclick="toggleThemeMode()" title="Toggle dark/light theme">
                         <i class="fa-solid fa-moon" id="theme-toggle-icon"></i>
+                    </button>
+                    <button class="header-action-btn" id="header-lock-btn" onclick="lockDashboard()" title="Lock Dashboard (⌘L)">
+                        <i class="fa-solid fa-lock"></i>
                     </button>
                 </div>
 
@@ -989,6 +1086,13 @@
                         <i class="fa-solid fa-circle-half-stroke"></i>
                         <span>Toggle Theme (Dark / Light)</span>
                     </div>
+                </div>
+                <div class="command-item" onclick="executeCommand('lock')">
+                    <div class="command-item-left">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Lock Screen (Security PIN)</span>
+                    </div>
+                    <kbd>⌘L</kbd>
                 </div>
             </div>
             <div class="command-footer">

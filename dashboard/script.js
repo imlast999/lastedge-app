@@ -13,6 +13,7 @@ let liveDataCache = null;
 let pollingTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    initAuthLockScreen();
     initThemeSetting();
     initAppShell();
     initBentoOverview();
@@ -2052,6 +2053,8 @@ function executeCommand(action) {
         refreshDashboardData();
     } else if (action === 'theme') {
         toggleThemeMode();
+    } else if (action === 'lock') {
+        lockDashboard();
     }
 }
 
@@ -2602,6 +2605,419 @@ function renderStrategyRadar(radarData) {
             `;
         }).join('');
     }
+}
+
+
+/* ============================================================================
+   21st.dev input-otp-10 Web3 Security Lock Screen Logic
+   ============================================================================ */
+
+let isAuthParticleRunning = false;
+let authParticleAnimationId = null;
+let authCurrentPin = "";
+let isVerifyingAuth = false;
+let particleSuccessMode = false;
+
+window.setParticleSphereSuccess = function(val) {
+    particleSuccessMode = Boolean(val);
+};
+
+/**
+ * Initialize 4-digit PIN Auth Lock Screen
+ */
+function initAuthLockScreen() {
+    const overlay = document.getElementById('auth-lock-overlay');
+    const input = document.getElementById('otp-hidden-input');
+    if (!overlay || !input) return;
+
+    const isAuthed = localStorage.getItem('lastedge_dashboard_auth') === 'true';
+    if (isAuthed) {
+        overlay.classList.add('wip-hidden');
+        overlay.classList.add('unlocked');
+    } else {
+        showAuthLockScreen();
+    }
+
+    input.addEventListener('input', handlePinInputChange);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && input.value.length === 4) {
+            verifyDashboardPin(input.value);
+        }
+    });
+
+    // Global shortcut ⌘L / Ctrl+L to lock screen
+    window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && (e.key === 'l' || e.key === 'L')) {
+            e.preventDefault();
+            lockDashboard();
+        }
+    });
+}
+
+/**
+ * Display lock screen overlay and initialize input & particles
+ */
+function showAuthLockScreen() {
+    const overlay = document.getElementById('auth-lock-overlay');
+    const card = document.getElementById('auth-lock-card');
+    const input = document.getElementById('otp-hidden-input');
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+    const statusText = document.getElementById('auth-status-text');
+    const shield = document.getElementById('auth-shield-badge');
+    const vis = document.getElementById('auth-visualizer-container');
+
+    if (!overlay) return;
+
+    overlay.classList.remove('wip-hidden', 'unlocked');
+    if (card) card.classList.remove('is-error', 'is-success', 'is-shaking');
+    if (vis) vis.classList.remove('is-success');
+    if (shield) shield.classList.add('wip-hidden');
+    if (title) title.textContent = "ENTER CREDENTIALS";
+    if (subtitle) subtitle.textContent = "Please input the 4-digit system PIN to access the institutional dashboard.";
+    if (statusText) statusText.textContent = "AWAITING KEY SIGNATURE...";
+
+    authCurrentPin = "";
+    isVerifyingAuth = false;
+    resetPinSlots();
+
+    if (input) {
+        input.value = "";
+        input.disabled = false;
+        setTimeout(() => input.focus(), 120);
+    }
+    startParticleSphereCanvas();
+}
+
+/**
+ * Lock dashboard and clear stored authorization
+ */
+function lockDashboard() {
+    localStorage.removeItem('lastedge_dashboard_auth');
+    showAuthLockScreen();
+}
+
+/**
+ * Focus hidden input on slot container click
+ */
+function focusAuthPinInput() {
+    const input = document.getElementById('otp-hidden-input');
+    if (input && !isVerifyingAuth) {
+        input.focus();
+    }
+}
+
+/**
+ * Reset all 4 PIN slots to initial empty state
+ */
+function resetPinSlots() {
+    for (let i = 0; i < 4; i++) {
+        const slot = document.getElementById(`otp-slot-${i}`);
+        const charEl = document.getElementById(`otp-char-${i}`);
+        const caret = document.getElementById(`otp-caret-${i}`);
+        const pulse = document.getElementById(`otp-pulse-${i}`);
+        if (slot) {
+            slot.className = `auth-otp-slot ${i === 0 ? 'active' : ''}`;
+        }
+        if (charEl) charEl.textContent = '';
+        if (caret) caret.classList.toggle('wip-hidden', i !== 0);
+        if (pulse) pulse.classList.remove('pulsing');
+    }
+}
+
+/**
+ * Handle numeric PIN input change
+ */
+function handlePinInputChange(e) {
+    if (isVerifyingAuth) return;
+    const rawVal = e.target.value.replace(/\D/g, '').slice(0, 4);
+    e.target.value = rawVal;
+    const prevLen = authCurrentPin.length;
+    authCurrentPin = rawVal;
+    const len = rawVal.length;
+
+    // Update each slot
+    for (let i = 0; i < 4; i++) {
+        const slot = document.getElementById(`otp-slot-${i}`);
+        const charEl = document.getElementById(`otp-char-${i}`);
+        const caret = document.getElementById(`otp-caret-${i}`);
+        const pulse = document.getElementById(`otp-pulse-${i}`);
+
+        const hasChar = i < len;
+        const isCurrentActive = i === len;
+
+        if (charEl) {
+            charEl.textContent = hasChar ? rawVal[i] : '';
+        }
+
+        if (slot) {
+            slot.classList.remove('active', 'is-filled', 'is-error', 'is-success');
+            if (hasChar) {
+                slot.classList.add('is-filled');
+            } else if (isCurrentActive) {
+                slot.classList.add('active');
+            }
+        }
+
+        if (caret) {
+            caret.classList.toggle('wip-hidden', !isCurrentActive);
+        }
+
+        // Trigger pulse ring on newly added digit
+        if (pulse && hasChar && i === len - 1 && len > prevLen) {
+            pulse.classList.remove('pulsing');
+            void pulse.offsetWidth; // force reflow
+            pulse.classList.add('pulsing');
+        }
+    }
+
+    // Update signature status text
+    const statusText = document.getElementById('auth-status-text');
+    if (statusText) {
+        if (len === 0) {
+            statusText.textContent = "AWAITING KEY SIGNATURE...";
+        } else if (len < 4) {
+            statusText.textContent = `ENTERING SIGNATURE: ${len} / 4`;
+        } else {
+            statusText.textContent = "VERIFYING SIGNATURE...";
+        }
+    }
+
+    // Auto verify when 4 digits entered
+    if (len === 4) {
+        verifyDashboardPin(rawVal);
+    }
+}
+
+/**
+ * Verify PIN against backend /api/auth/verify
+ */
+async function verifyDashboardPin(pin) {
+    if (isVerifyingAuth) return;
+    isVerifyingAuth = true;
+    const input = document.getElementById('otp-hidden-input');
+    const card = document.getElementById('auth-lock-card');
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+    const statusText = document.getElementById('auth-status-text');
+    const vis = document.getElementById('auth-visualizer-container');
+    const shield = document.getElementById('auth-shield-badge');
+    const overlay = document.getElementById('auth-lock-overlay');
+
+    if (input) input.disabled = true;
+
+    try {
+        const res = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: pin })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 200 && data.ok) {
+            // ── Success Flow ─────────────────────────────────────────────
+            if (card) {
+                card.classList.remove('is-error', 'is-shaking');
+                card.classList.add('is-success');
+            }
+            if (vis) vis.classList.add('is-success');
+            if (shield) shield.classList.remove('wip-hidden');
+            if (title) title.textContent = "SYSTEM KEY DECRYPTED";
+            if (subtitle) subtitle.textContent = "Session authorization successfully validated by Security Hub.";
+            if (statusText) statusText.textContent = "SESSION AUTHORIZATION VALIDATED";
+
+            // Mark all slots as success
+            for (let i = 0; i < 4; i++) {
+                const slot = document.getElementById(`otp-slot-${i}`);
+                const caret = document.getElementById(`otp-caret-${i}`);
+                if (slot) {
+                    slot.classList.remove('active', 'is-error');
+                    slot.classList.add('is-success');
+                }
+                if (caret) caret.classList.add('wip-hidden');
+            }
+
+            // Set particle sphere to emerald success mode
+            if (window.setParticleSphereSuccess) {
+                window.setParticleSphereSuccess(true);
+            }
+
+            localStorage.setItem('lastedge_dashboard_auth', 'true');
+
+            // Smooth fadeout revealing dashboard in 700ms
+            setTimeout(() => {
+                if (overlay) overlay.classList.add('unlocked');
+                setTimeout(() => {
+                    if (overlay) overlay.classList.add('wip-hidden');
+                    stopParticleSphereCanvas();
+                    isVerifyingAuth = false;
+                }, 700);
+            }, 700);
+
+        } else {
+            // ── Error Flow ───────────────────────────────────────────────
+            throw new Error(data.error || "Invalid PIN");
+        }
+    } catch (err) {
+        if (card) {
+            card.classList.remove('is-shaking');
+            void card.offsetWidth;
+            card.classList.add('is-shaking', 'is-error');
+        }
+        if (title) title.textContent = "ACCESS DENIED";
+        if (subtitle) subtitle.textContent = "Credenciales inválidas. Inténtelo de nuevo.";
+        if (statusText) statusText.textContent = "INVALID KEY SIGNATURE";
+
+        for (let i = 0; i < 4; i++) {
+            const slot = document.getElementById(`otp-slot-${i}`);
+            const caret = document.getElementById(`otp-caret-${i}`);
+            if (slot) {
+                slot.classList.remove('active', 'is-success');
+                slot.classList.add('is-error');
+            }
+            if (caret) caret.classList.add('wip-hidden');
+        }
+
+        setTimeout(() => {
+            if (card) card.classList.remove('is-shaking');
+        }, 500);
+
+        setTimeout(() => {
+            authCurrentPin = "";
+            if (card) card.classList.remove('is-error');
+            if (title) title.textContent = "ENTER CREDENTIALS";
+            if (subtitle) subtitle.textContent = "Please input the 4-digit system PIN to access the institutional dashboard.";
+            if (statusText) statusText.textContent = "AWAITING KEY SIGNATURE...";
+            resetPinSlots();
+            if (input) {
+                input.value = "";
+                input.disabled = false;
+                input.focus();
+            }
+            isVerifyingAuth = false;
+        }, 1100);
+    }
+}
+
+/**
+ * 3D Particle Sphere Animation Engine (HTML5 Canvas)
+ */
+function startParticleSphereCanvas() {
+    const canvas = document.getElementById('otp-particle-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    particleSuccessMode = false;
+    isAuthParticleRunning = true;
+
+    const dpr = window.devicePixelRatio || 1;
+    const size = 120;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Generate 140 equidistant spherical nodes (Fibonacci sphere algorithm)
+    const points = [];
+    const numPoints = 140;
+    const radius = 45;
+    for (let i = 0; i < numPoints; i++) {
+        const phi = Math.acos(1 - 2 * (i + 0.5) / numPoints);
+        const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
+        points.push({
+            x: radius * Math.sin(phi) * Math.cos(theta),
+            y: radius * Math.sin(phi) * Math.sin(theta),
+            z: radius * Math.cos(phi)
+        });
+    }
+
+    const angleX = 0.003;
+    const angleY = 0.006;
+    const cx = size / 2;
+    const cy = size / 2;
+    const fov = 130;
+
+    function render() {
+        if (!isAuthParticleRunning) return;
+        ctx.clearRect(0, 0, size, size);
+
+        const cosX = Math.cos(angleX);
+        const sinX = Math.sin(angleX);
+        const cosY = Math.cos(angleY);
+        const sinY = Math.sin(angleY);
+
+        const projected = [];
+        for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            // Rotate around Y
+            const x1 = p.x * cosY + p.z * sinY;
+            const z1 = -p.x * sinY + p.z * cosY;
+            // Rotate around X
+            const y2 = p.y * cosX - z1 * sinX;
+            const z2 = p.y * sinX + z1 * cosX;
+
+            p.x = x1;
+            p.y = y2;
+            p.z = z2;
+
+            const scale = fov / (fov - z2);
+            const px = cx + x1 * scale;
+            const py = cy + y2 * scale;
+            const alpha = Math.max(0.15, Math.min(0.95, ((z2 + radius) / (2 * radius)) * 0.8 + 0.2));
+            const dotR = Math.max(0.8, Math.min(2.4, 1.3 * scale));
+
+            projected.push({ x: px, y: py, z: z2, alpha, dotR });
+        }
+
+        // Draw constellation lines between nearby points
+        for (let i = 0; i < projected.length; i++) {
+            for (let j = i + 1; j < projected.length; j++) {
+                const dx = projected[i].x - projected[j].x;
+                const dy = projected[i].y - projected[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 18) {
+                    const lineAlpha = (1 - dist / 18) * Math.min(projected[i].alpha, projected[j].alpha) * 0.35;
+                    ctx.strokeStyle = particleSuccessMode 
+                        ? `rgba(16, 185, 129, ${lineAlpha})`
+                        : `rgba(99, 102, 241, ${lineAlpha})`;
+                    ctx.lineWidth = 0.6;
+                    ctx.beginPath();
+                    ctx.moveTo(projected[i].x, projected[i].y);
+                    ctx.lineTo(projected[j].x, projected[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Draw particle nodes
+        for (let i = 0; i < projected.length; i++) {
+            const pt = projected[i];
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, pt.dotR, 0, Math.PI * 2);
+            if (particleSuccessMode) {
+                ctx.fillStyle = `rgba(16, 185, 129, ${pt.alpha})`;
+                ctx.shadowColor = '#10b981';
+                ctx.shadowBlur = 6;
+            } else {
+                ctx.fillStyle = pt.z > 0 
+                    ? `rgba(129, 140, 248, ${pt.alpha})`
+                    : `rgba(56, 189, 248, ${pt.alpha})`;
+                ctx.shadowColor = pt.z > 0 ? '#6366f1' : '#38bdf8';
+                ctx.shadowBlur = 4;
+            }
+            ctx.fill();
+        }
+
+        authParticleAnimationId = requestAnimationFrame(render);
+    }
+
+    cancelAnimationFrame(authParticleAnimationId);
+    authParticleAnimationId = requestAnimationFrame(render);
+}
+
+function stopParticleSphereCanvas() {
+    isAuthParticleRunning = false;
+    cancelAnimationFrame(authParticleAnimationId);
 }
 
 

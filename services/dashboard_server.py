@@ -92,8 +92,26 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
         research_client = get_research_client()
 
         try:
+            # ── Dashboard Authentication Status ──────────────────────────────
+            if path in ("/api/auth/status", "/api/auth"):
+                auth_header = self.headers.get("Authorization", "")
+                token = ""
+                if auth_header.startswith("Bearer "):
+                    token = auth_header[7:].strip()
+                elif auth_header:
+                    token = auth_header.strip()
+                token = token or self.headers.get("X-Auth-Token", "")
+                is_valid = (token == "lastedge_auth_valid")
+                self._send_json(200, {
+                    "ok": True,
+                    "authenticated": is_valid,
+                    "valid": is_valid,
+                    "pin_required": True,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+
             # ── App Health & Overview (Fast Probes) ───────────────────────────
-            if path in ("/api/app/health", "/api/health", "/health", "/api/healthz"):
+            elif path in ("/api/app/health", "/api/health", "/health", "/api/healthz"):
                 import socket
                 def _fast_probe(p: int) -> bool:
                     try:
@@ -578,7 +596,23 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 raw_body = self.rfile.read(content_length).decode("utf-8")
                 body_data = json.loads(raw_body) if raw_body else {}
 
-            if path in ("/api/positions/close", "/api/trading/positions/close"):
+            if path in ("/api/auth/verify", "/api/auth/login", "/api/auth"):
+                submitted_pin = str(body_data.get("pin", "")).strip()
+                expected_pin = str(os.getenv("DASHBOARD_PIN", "1623")).strip()
+                if submitted_pin and submitted_pin == expected_pin:
+                    self._send_json(200, {
+                        "ok": True,
+                        "token": "lastedge_auth_valid",
+                        "message": "Access granted"
+                    })
+                else:
+                    self._send_json(401, {
+                        "ok": False,
+                        "error": "Invalid PIN"
+                    })
+                return
+
+            elif path in ("/api/positions/close", "/api/trading/positions/close"):
                 ticket = body_data.get("ticket")
                 if ticket is None:
                     self._send_json(400, {"ok": False, "error": "Missing 'ticket' parameter."})
