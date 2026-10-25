@@ -40,6 +40,7 @@ class BotManager:
 
         self.trading_client = get_trading_client()
         self._notified_signals: set = set()
+        self._pending_tg_messages: Dict[str, Dict[str, Any]] = {}
 
         self.discord_bot = None
         self.commands_service = None
@@ -220,6 +221,43 @@ class BotManager:
                                 except Exception as n_err:
                                     logger.error(f"[Signals Watcher] Error notificando señal #{sig_id}: {n_err}")
 
+                # Comprobar expiración o cambio de estado de señales notificadas por Telegram
+                now_ts = time.time()
+                for p_sig_id, tg_info in list(self._pending_tg_messages.items()):
+                    is_time_expired = (now_ts - tg_info.get("sent_at", 0)) >= 600
+                    matching_sig = next((s for s in signals if str(s.get("id") or s.get("signal_id")) == str(p_sig_id)), None)
+                    sig_status = str(matching_sig.get("status", "")).upper() if matching_sig else ""
+
+                    if is_time_expired or sig_status in ("EXPIRED", "REJECTED", "REJECTED_MANUAL"):
+                        if is_time_expired and sig_status in ("PROPOSED", "PENDING"):
+                            try:
+                                await asyncio.to_thread(self.trading_client.reject_signal, int(p_sig_id))
+                            except Exception:
+                                pass
+
+                        sym = tg_info.get("symbol", "N/A")
+                        direction = tg_info.get("direction", "BUY")
+                        px = tg_info.get("price", "N/A")
+                        expired_text = (
+                            "⏳ SEÑAL EXPIRADA (Sin confirmación tras 10 min)\n"
+                            "━━━━━━━━━━━━━━━━━━\n"
+                            f"Par: {sym} | Dirección: {direction}\n"
+                            f"Precio: {px}\n"
+                            "Estado: EXPIRADA ⌛\n"
+                            "━━━━━━━━━━━━━━━━━━\n"
+                            "⚠️ Esta señal ya no está disponible para su ejecución."
+                        )
+                        logger.info(f"⏳ [Signals Watcher] Editando mensaje Telegram de señal #{p_sig_id} a EXPIRADA...")
+                        await self._edit_telegram_message(
+                            tg_info["chat_id"],
+                            tg_info["message_id"],
+                            expired_text,
+                            reply_markup={"inline_keyboard": []}
+                        )
+                        self._pending_tg_messages.pop(p_sig_id, None)
+                    elif sig_status in ("EXECUTED", "ACCEPTED"):
+                        self._pending_tg_messages.pop(p_sig_id, None)
+
                 # Limpiar del set las señales que hayan expirado o hayan dejado de estar pendientes
                 if self._notified_signals:
                     self._notified_signals.intersection_update(current_pending_ids)
@@ -260,6 +298,35 @@ class BotManager:
                 "running": self._telegram_running
             }
         }
+
+    async def _edit_telegram_message(
+        self,
+        chat_id: Any,
+        message_id: int,
+        text: str,
+        reply_markup: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        if not self.telegram_token:
+            return False
+        try:
+            import aiohttp, ssl
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+            connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+            url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageText"
+            payload = {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "text": text,
+                "reply_markup": reply_markup if reply_markup is not None else {"inline_keyboard": []}
+            }
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                    return resp.status == 200
+        except Exception as e:
+            logger.debug(f"[Bot Manager] Error editando mensaje #{message_id}: {e}")
+            return False
 
     def notify_pending_signal(self, signal_data: Dict[str, Any]) -> None:
         """Notifica inmediatamente a Telegram y Discord cuando una señal requiera confirmación humana."""
@@ -323,7 +390,19 @@ class BotManager:
                 ssl_ctx.verify_mode = ssl.CERT_NONE
                 connector = aiohttp.TCPConnector(ssl=ssl_ctx)
                 async with aiohttp.ClientSession(connector=connector) as session:
-                    await session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5))
+                    async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            msg_id = data.get("result", {}).get("message_id")
+                            if msg_id and signal_id:
+                                self._pending_tg_messages[str(signal_id)] = {
+                                    "message_id": msg_id,
+                                    "chat_id": self.telegram_chat_id,
+                                    "symbol": symbol,
+                                    "direction": direction,
+                                    "price": price,
+                                    "sent_at": time.time(),
+                                }
             except Exception as e:
                 logger.error(f"[Bot Manager] Error enviando alerta Telegram: {e}")
 

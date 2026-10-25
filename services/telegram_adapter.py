@@ -238,7 +238,11 @@ class TelegramAdapter:
 
             # Sub-caso Error
             else:
-                err_text = f"❌ Error al ejecutar señal #{sig_id}: {res.get('error') or res.get('message', 'Fallo desconocido')}"
+                err_val = res.get('error') or res.get('message', 'Fallo desconocido')
+                if "expirad" in str(err_val).lower():
+                    err_text = f"⏳ SEÑAL EXPIRADA | {err_val}"
+                else:
+                    err_text = f"❌ Error al ejecutar señal #{sig_id}: {err_val}"
                 await self._edit_message_text(session, chat_id, message_id, err_text, reply_markup={"inline_keyboard": []})
 
         # ── Caso C: Confirmar Fuerza tras Desviación (force_execute) ──────────
