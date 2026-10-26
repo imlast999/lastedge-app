@@ -20,6 +20,7 @@ on:
       - 'mobile-app/**'
       - 'scripts/sync_version.py'
       - 'VERSION'
+      - '.github/workflows/build-apk.yml'
     tags:
       - 'v*'
 
@@ -71,18 +72,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle Build Cache
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Cache Gradle Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('mobile-app/artifacts/mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile-app/artifacts/mobile/android/build.gradle') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses || true
 
       - name: Build Release APK
         run: |
