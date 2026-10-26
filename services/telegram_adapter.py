@@ -25,6 +25,7 @@ import sys
 import time
 import logging
 import asyncio
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 import aiohttp
 
@@ -146,6 +147,7 @@ class TelegramAdapter:
                 "chat_id": chat_id,
                 "message_id": message_id,
                 "text": text,
+                "parse_mode": "Markdown",
             }
             if reply_markup is not None:
                 payload["reply_markup"] = reply_markup
@@ -155,8 +157,12 @@ class TelegramAdapter:
             client_timeout = aiohttp.ClientTimeout(total=6)
             async with session.post(url, json=payload, timeout=client_timeout) as resp:
                 if resp.status != 200:
-                    err_msg = await resp.text()
-                    logger.debug(f"[TelegramAdapter] editMessageText warning (status {resp.status}): {err_msg}")
+                    # Retry without parse_mode in case of markdown formatting errors
+                    payload.pop("parse_mode", None)
+                    async with session.post(url, json=payload, timeout=client_timeout) as retry_resp:
+                        if retry_resp.status != 200:
+                            err_msg = await retry_resp.text()
+                            logger.debug(f"[TelegramAdapter] editMessageText warning (status {retry_resp.status}): {err_msg}")
         except Exception as e:
             logger.error(f"[TelegramAdapter] Error editando mensaje #{message_id}: {e}")
 
@@ -262,6 +268,20 @@ class TelegramAdapter:
             else:
                 err_text = f"❌ Error ejecutando a mercado señal #{sig_id}: {res.get('error') or res.get('message', 'Fallo desconocido')}"
                 await self._edit_message_text(session, chat_id, message_id, err_text, reply_markup={"inline_keyboard": []})
+
+        # ── Caso D: Actualizar Posiciones en tiempo real ──────────────────────
+        elif data == "refresh_positions":
+            r_text, r_markup = await self._render_positions()
+            await self._edit_message_text(session, chat_id, message_id, r_text, reply_markup=r_markup)
+            if cq_id:
+                await self._answer_callback_query(session, cq_id, "✅ Posiciones actualizadas")
+
+        # ── Caso E: Actualizar Estado del Bot en tiempo real ──────────────────
+        elif data == "refresh_status":
+            r_text, r_markup = await self._render_status()
+            await self._edit_message_text(session, chat_id, message_id, r_text, reply_markup=r_markup)
+            if cq_id:
+                await self._answer_callback_query(session, cq_id, "✅ Estado actualizado")
 
 
     @staticmethod
@@ -426,12 +446,15 @@ class TelegramAdapter:
         )
         await self._send_response(session, chat_id, help_text)
 
-    async def _cmd_status(self, session: aiohttp.ClientSession, chat_id: int):
+    async def _render_status(self) -> tuple[str, Dict[str, Any]]:
         if self.bot_service:
             st = self.bot_service.get_system_status()
+            positions = self.bot_service.get_open_positions()
         else:
             t_stat = await asyncio.to_thread(self.trading_client.get_status)
             metrics_res = await asyncio.to_thread(self.trading_client.get_metrics)
+            pos_res = await asyncio.to_thread(self.trading_client.get_positions)
+            positions = pos_res.get("positions", []) if isinstance(pos_res, dict) else (pos_res if isinstance(pos_res, list) else [])
             metrics = metrics_res.get("metrics", {})
             cb = metrics.get("circuit_breaker", {})
             health = t_stat.get("health", {})
@@ -454,45 +477,105 @@ class TelegramAdapter:
         cb = st.get("circuit_breaker", {})
         cb_st = "🟢 Activo" if cb.get("can_trade", True) else "🔴 Pausado"
 
-        text = (
-            "⚡ LastEdge — Estado del Bot\n\n"
-            f"• Estado: {st.get('system_status', 'ONLINE')}\n"
-            f"• Uptime: {st.get('uptime_formatted', '—')}\n"
-            f"• MT5 Broker: {mt5_st}\n"
-            f"• Cuenta: {st.get('account_number') or '—'}\n"
-            f"• Circuit Breaker: {cb_st} (×{cb.get('risk_multiplier', 1.0):.1f})\n"
-            f"• Autosignals: {'✅ Activo' if st.get('autosignals_enabled') else '⏸ Desactivado'}\n"
-            f"• Pares Monitoreados: {', '.join(st.get('monitored_symbols', []))}\n"
-            f"• Filtro Noticias: {st.get('news_indicator', '🟢 OK')}\n"
-        )
-        await self._send_response(session, chat_id, text)
+        open_count = len(positions)
+        total_profit = sum(float(p.get("profit", 0.0)) for p in positions)
+        total_pnl_emoji = "🟢" if total_profit >= 0 else "🔴"
+        pnl_summary = f"{total_pnl_emoji} {total_profit:+.2f} USD ({open_count} abiertas)" if open_count > 0 else "0.00 USD (0 abiertas)"
+        now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
 
-    async def _cmd_positions(self, session: aiohttp.ClientSession, chat_id: int):
+        text = (
+            "⚡ *LastEdge — Estado del Bot*\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            f"• *Estado General:* `{st.get('system_status', 'ONLINE')}`\n"
+            f"• *MT5 Broker:* {mt5_st} (Cuenta: `{st.get('account_number') or '—'}`)\n"
+            f"• *P&L Flotante Total:* *{pnl_summary}*\n"
+            f"• *Uptime:* `{st.get('uptime_formatted', '—')}`\n"
+            f"• *Circuit Breaker:* {cb_st} (Multiplicador: `×{cb.get('risk_multiplier', 1.0):.1f}`)\n"
+            f"• *Autosignals:* {'✅ Activo' if st.get('autosignals_enabled') else '⏸ Desactivado'}\n"
+            f"• *Pares Monitoreados:* `{', '.join(st.get('monitored_symbols', []))}`\n"
+            f"• *Filtro de Noticias:* {st.get('news_indicator', '🟢 OK')}\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            f"⏰ _Actualizado: {now_str}_"
+        )
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🔄 Actualizar Estado", "callback_data": "refresh_status"},
+                    {"text": "📊 Ver Posiciones", "callback_data": "refresh_positions"}
+                ]
+            ]
+        }
+        return text, markup
+
+    async def _render_positions(self) -> tuple[str, Dict[str, Any]]:
         if self.bot_service:
             positions = self.bot_service.get_open_positions()
         else:
             res = await asyncio.to_thread(self.trading_client.get_positions)
-            positions = res.get("positions", [])
+            positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+
+        now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🔄 Actualizar Posiciones", "callback_data": "refresh_positions"}
+                ]
+            ]
+        }
 
         if not positions:
-            await self._send_response(session, chat_id, "ℹ️ No hay posiciones abiertas actualmente en MT5.")
-            return
+            text = (
+                "📊 *Posiciones abiertas en MT5 (0)*\n"
+                "━━━━━━━━━━━━━━━━━━\n"
+                "💰 *P&L Flotante Total:* `0.00 USD`\n"
+                "━━━━━━━━━━━━━━━━━━\n"
+                "ℹ️ _No hay posiciones abiertas actualmente en MT5._\n\n"
+                f"⏰ _Actualizado: {now_str}_"
+            )
+            return text, markup
 
-        text = f"📊 Posiciones Abiertas en MT5 ({len(positions)})\n\n"
+        total_profit = sum(float(p.get("profit", 0.0)) for p in positions)
+        total_lots = sum(float(p.get("volume", 0.0)) for p in positions)
+        total_pnl_emoji = "🟢" if total_profit >= 0 else "🔴"
+
+        text = (
+            f"📊 *Posiciones abiertas en MT5 ({len(positions)})*\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            f"💰 *P&L Flotante Total:* {total_pnl_emoji} *{total_profit:+.2f} USD* (Volumen: `{total_lots:.2f}` lotes)\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+        )
+
         for p in positions:
             profit = float(p.get("profit", 0.0))
             pnl_emoji = "🟢" if profit >= 0 else "🔴"
             ticket = p.get("ticket", 0)
             symbol = p.get("symbol", "EURUSD")
-            ptype = p.get("type", "BUY")
+            ptype = str(p.get("type", "BUY")).upper()
             vol = float(p.get("volume", 0.0))
             open_p = float(p.get("open_price", 0.0))
+            curr_p = float(p.get("current_price", open_p))
+            sl = float(p.get("sl", 0.0))
+            tp = float(p.get("tp", 0.0))
+
             text += (
-                f"• #{ticket} — {symbol} ({ptype})\n"
-                f"  Lotes: {vol:.2f} | Entrada: {open_p:.5f}\n"
-                f"  P&L: {pnl_emoji} {profit:+.2f} €\n\n"
+                f"• *#{ticket} — {symbol} ({ptype})*\n"
+                f"  Lotes: `{vol:.2f}` | Entrada: `{open_p:.5f}`\n"
+                f"  Actual: `{curr_p:.5f}` | P&L: {pnl_emoji} *{profit:+.2f} USD*\n"
             )
-        await self._send_response(session, chat_id, text)
+            if sl > 0 or tp > 0:
+                text += f"  SL: `{sl:.5f}` | TP: `{tp:.5f}`\n"
+            text += "\n"
+
+        text += f"━━━━━━━━━━━━━━━━━━\n⏰ _Actualizado: {now_str}_"
+        return text, markup
+
+    async def _cmd_status(self, session: aiohttp.ClientSession, chat_id: int):
+        text, markup = await self._render_status()
+        await self._send_response(session, chat_id, text, reply_markup=markup)
+
+    async def _cmd_positions(self, session: aiohttp.ClientSession, chat_id: int):
+        text, markup = await self._render_positions()
+        await self._send_response(session, chat_id, text, reply_markup=markup)
 
     async def _cmd_close_position(self, session: aiohttp.ClientSession, chat_id: int, args: List[str]):
         if not args or not args[0].isdigit():

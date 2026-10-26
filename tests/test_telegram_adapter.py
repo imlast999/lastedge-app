@@ -159,6 +159,35 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         json_sent = mock_session.post.call_args[1]["json"]
         self.assertIn("LastEdge — Estado del Bot", json_sent["text"])
 
+    async def test_refresh_positions_callback(self):
+        self.bot_service.get_open_positions.return_value = [
+            {"ticket": 111, "symbol": "EURUSD", "type": "SELL", "volume": 0.1, "open_price": 1.12, "profit": -5.5, "sl": 1.13, "tp": 1.11}
+        ]
+        mock_session, mock_post = self._create_mock_session()
+        cq = {
+            "id": "cq_123",
+            "data": "refresh_positions",
+            "message": {"message_id": 999, "chat": {"id": 12345}},
+            "from": {"id": "12345"}
+        }
+        await self.adapter._process_callback_query(mock_session, cq)
+        self.assertTrue(mock_session.post.called)
+        calls = [c[1]["json"] for c in mock_session.post.call_args_list if "text" in c[1].get("json", {})]
+        self.assertTrue(any("P&L Flotante Total" in c["text"] for c in calls))
+
+    async def test_refresh_status_callback(self):
+        mock_session, mock_post = self._create_mock_session()
+        cq = {
+            "id": "cq_456",
+            "data": "refresh_status",
+            "message": {"message_id": 999, "chat": {"id": 12345}},
+            "from": {"id": "12345"}
+        }
+        await self.adapter._process_callback_query(mock_session, cq)
+        self.assertTrue(mock_session.post.called)
+        calls = [c[1]["json"] for c in mock_session.post.call_args_list if "text" in c[1].get("json", {})]
+        self.assertTrue(any("LastEdge — Estado del Bot" in c["text"] for c in calls))
+
 
 if __name__ == '__main__':
     unittest.main()
