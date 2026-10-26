@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import os
 import sys
+import time
+import json
 import asyncio
 import logging
 import threading
@@ -40,7 +42,13 @@ class BotManager:
 
         self.trading_client = get_trading_client()
         self._notified_signals: set = set()
-        self._pending_tg_messages: Dict[str, Dict[str, Any]] = {}
+
+        self._pending_tg_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+            "pending_tg_signals.json"
+        )
+        self._pending_tg_messages: Dict[str, Dict[str, Any]] = self._load_pending_tg_messages()
 
         self.discord_bot = None
         self.commands_service = None
@@ -52,6 +60,25 @@ class BotManager:
 
         self._discord_connected = False
         self._telegram_running = False
+
+    def _load_pending_tg_messages(self) -> Dict[str, Dict[str, Any]]:
+        try:
+            if os.path.exists(self._pending_tg_file):
+                with open(self._pending_tg_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return data
+        except Exception as e:
+            logger.debug(f"[Bot Manager] Error cargando mensajes pendientes: {e}")
+        return {}
+
+    def _save_pending_tg_messages(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self._pending_tg_file), exist_ok=True)
+            with open(self._pending_tg_file, "w", encoding="utf-8") as f:
+                json.dump(self._pending_tg_messages, f, indent=2)
+        except Exception as e:
+            logger.debug(f"[Bot Manager] Error guardando mensajes pendientes: {e}")
 
     def is_any_bot_configured(self) -> bool:
         has_discord = bool(self.discord_token and len(self.discord_token.strip()) > 10)
@@ -200,7 +227,8 @@ class BotManager:
 
     async def _run_signals_watcher(self):
         """Monitorea periódicamente las señales pendientes en Trading Engine y despacha alertas interactivas."""
-        logger.info("📡 [Signals Watcher] Monitor de señales pendientes activado (intervalo: 5s).")
+        print("📡 [Signals Watcher] Monitor de señales pendientes activado (intervalo: 5s).")
+        sys.stdout.flush()
         while self.is_running:
             try:
                 res = await asyncio.to_thread(self.trading_client.get_signals)
@@ -215,16 +243,19 @@ class BotManager:
                             current_pending_ids.add(sig_id)
                             if sig_id not in self._notified_signals:
                                 self._notified_signals.add(sig_id)
-                                logger.info(f"🔔 [Signals Watcher] Señal pendiente #{sig_id} detectada. Despachando alertas...")
+                                print(f"🔔 [Signals Watcher] Señal pendiente #{sig_id} detectada. Despachando alertas...")
+                                sys.stdout.flush()
                                 try:
                                     await self._async_notify_pending_signal(sig)
                                 except Exception as n_err:
-                                    logger.error(f"[Signals Watcher] Error notificando señal #{sig_id}: {n_err}")
+                                    print(f"❌ [Signals Watcher] Error notificando señal #{sig_id}: {n_err}")
+                                    sys.stdout.flush()
 
                 # Comprobar expiración o cambio de estado de señales notificadas por Telegram
                 now_ts = time.time()
                 for p_sig_id, tg_info in list(self._pending_tg_messages.items()):
-                    is_time_expired = (now_ts - tg_info.get("sent_at", 0)) >= 600
+                    sent_at = tg_info.get("sent_at", 0)
+                    is_time_expired = (now_ts - sent_at) >= 600 if sent_at else False
                     matching_sig = next((s for s in signals if str(s.get("id") or s.get("signal_id")) == str(p_sig_id)), None)
                     sig_status = str(matching_sig.get("status", "")).upper() if matching_sig else ""
 
@@ -239,31 +270,38 @@ class BotManager:
                         direction = tg_info.get("direction", "BUY")
                         px = tg_info.get("price", "N/A")
                         expired_text = (
-                            "⏳ SEÑAL EXPIRADA (Sin confirmación tras 10 min)\n"
+                            "⏳ *SEÑAL EXPIRADA (10 minutos sin confirmación)*\n"
                             "━━━━━━━━━━━━━━━━━━\n"
-                            f"Par: {sym} | Dirección: {direction}\n"
-                            f"Precio: {px}\n"
-                            "Estado: EXPIRADA ⌛\n"
+                            f"Par: *{sym}* | Dirección: *{direction}*\n"
+                            f"Precio: `{px}`\n"
+                            "Estado: *EXPIRADA* ⌛\n"
                             "━━━━━━━━━━━━━━━━━━\n"
                             "⚠️ Esta señal ya no está disponible para su ejecución."
                         )
-                        logger.info(f"⏳ [Signals Watcher] Editando mensaje Telegram de señal #{p_sig_id} a EXPIRADA...")
-                        await self._edit_telegram_message(
+                        print(f"⏳ [Signals Watcher] Editando mensaje Telegram #{tg_info.get('message_id')} de señal #{p_sig_id} a EXPIRADA...")
+                        sys.stdout.flush()
+                        ok = await self._edit_telegram_message(
                             tg_info["chat_id"],
                             tg_info["message_id"],
                             expired_text,
                             reply_markup={"inline_keyboard": []}
                         )
+                        if ok:
+                            print(f"✅ [Signals Watcher] Mensaje Telegram #{tg_info.get('message_id')} editado a EXPIRADA (botones retirados).")
+                            sys.stdout.flush()
                         self._pending_tg_messages.pop(p_sig_id, None)
+                        self._save_pending_tg_messages()
                     elif sig_status in ("EXECUTED", "ACCEPTED"):
                         self._pending_tg_messages.pop(p_sig_id, None)
+                        self._save_pending_tg_messages()
 
                 # Limpiar del set las señales que hayan expirado o hayan dejado de estar pendientes
                 if self._notified_signals:
                     self._notified_signals.intersection_update(current_pending_ids)
 
             except Exception as e:
-                logger.debug(f"[Signals Watcher] Error en ciclo de sondeo: {e}")
+                print(f"⚠️ [Signals Watcher] Error en ciclo de sondeo: {e}")
+                sys.stdout.flush()
 
             await asyncio.sleep(5)
 
@@ -319,13 +357,28 @@ class BotManager:
                 "chat_id": chat_id,
                 "message_id": message_id,
                 "text": text,
+                "parse_mode": "Markdown",
                 "reply_markup": reply_markup if reply_markup is not None else {"inline_keyboard": []}
             }
+            client_timeout = aiohttp.ClientTimeout(total=6)
             async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                    return resp.status == 200
+                async with session.post(url, json=payload, timeout=client_timeout) as resp:
+                    if resp.status == 200:
+                        return True
+                    # Reintentar sin parse_mode si falla por formateo markdown
+                    payload.pop("parse_mode", None)
+                    async with session.post(url, json=payload, timeout=client_timeout) as retry_resp:
+                        if retry_resp.status == 200:
+                            return True
+                        err_text = await retry_resp.text()
+                        print(f"⚠️ [Bot Manager] editMessageText falló (status {retry_resp.status}): {err_text}")
+                        sys.stdout.flush()
+                        if "message is not modified" in err_text.lower() or "message to edit not found" in err_text.lower():
+                            return True
+                        return False
         except Exception as e:
-            logger.debug(f"[Bot Manager] Error editando mensaje #{message_id}: {e}")
+            print(f"⚠️ [Bot Manager] Error editando mensaje #{message_id}: {e}")
+            sys.stdout.flush()
             return False
 
     def notify_pending_signal(self, signal_data: Dict[str, Any]) -> None:
@@ -403,6 +456,9 @@ class BotManager:
                                     "price": price,
                                     "sent_at": time.time(),
                                 }
+                                self._save_pending_tg_messages()
+                                print(f"🔔 [Signals Watcher] Señal #{signal_id} ({symbol}) enviada a Telegram. Message ID: {msg_id}")
+                                sys.stdout.flush()
             except Exception as e:
                 logger.error(f"[Bot Manager] Error enviando alerta Telegram: {e}")
 
