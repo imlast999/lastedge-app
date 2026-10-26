@@ -620,6 +620,27 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     })
                 return
 
+            elif path in ("/api/positions/close_all", "/api/panic", "/api/trading/positions/close_all"):
+                submitted_pin = str(body_data.get("pin", "")).strip()
+                expected_pin = str(os.getenv("DASHBOARD_PIN", "1623")).strip()
+                if submitted_pin and submitted_pin != expected_pin:
+                    self._send_json(401, {"ok": False, "error": "Invalid PIN"})
+                    return
+                pos_res = trading_client.get_positions()
+                positions = pos_res.get("positions", []) if isinstance(pos_res, dict) else (pos_res if isinstance(pos_res, list) else [])
+                results = []
+                for p in positions:
+                    t = p.get("ticket")
+                    if t:
+                        results.append(trading_client.close_position(int(t)))
+                self._send_json(200, {
+                    "ok": True,
+                    "message": f"{len(results)} posiciones cerradas con éxito en MT5.",
+                    "closed_count": len(results),
+                    "details": results
+                })
+                return
+
             elif path in ("/api/positions/close", "/api/trading/positions/close"):
                 ticket = body_data.get("ticket")
                 if ticket is None:
