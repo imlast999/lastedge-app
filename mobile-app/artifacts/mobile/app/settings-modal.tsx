@@ -34,6 +34,7 @@ import {
   resolveApiConfig,
   maskSecret,
   getAppVersion,
+  getAppFullVersion,
 } from "@/lib/apiConfig";
 import { testServerConnection } from "@/services/connectionTest";
 import {
@@ -474,7 +475,7 @@ export default function SettingsScreen() {
 
       {/* ── Acerca de ── */}
       <SettingsSection title="Acerca de">
-        <SettingsRow icon="box" label="Versión" value={getAppVersion()} />
+        <SettingsRow icon="box" label="Versión" value={getAppFullVersion()} />
         <SettingsRow
           icon="cpu"
           label="Expo SDK"

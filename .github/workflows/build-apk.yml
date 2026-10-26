@@ -1,0 +1,136 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Crear GitHub Release con el APK'
+        required: false
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Marcar como Pre-release'
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile-app/**'
+      - 'scripts/sync_version.py'
+      - 'VERSION'
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build & Package LastEdge APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync Dynamic App Version
+        id: sync_version
+        run: |
+          python scripts/sync_version.py
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'mobile-app/pnpm-lock.yaml'
+
+      - name: Install Monorepo Dependencies
+        run: |
+          cd mobile-app
+          pnpm install --no-frozen-lockfile
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('mobile-app/artifacts/mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile-app/artifacts/mobile/android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Release APK
+        run: |
+          cd mobile-app/artifacts/mobile/android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon -x lint -x test
+
+      - name: Prepare APK Output
+        id: prepare_apk
+        run: |
+          VERSION="${{ steps.sync_version.outputs.VERSION }}"
+          BUILD_DIR="mobile-app/artifacts/mobile/android/app/build/outputs/apk/release"
+          APK_PATH=$(find "$BUILD_DIR" -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::No APK found in $BUILD_DIR"
+            exit 1
+          fi
+          TARGET_NAME="LastEdge-v${VERSION}.apk"
+          TARGET_PATH="${BUILD_DIR}/${TARGET_NAME}"
+          cp "$APK_PATH" "$TARGET_PATH"
+          echo "apk_path=${TARGET_PATH}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${TARGET_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Built APK ready: ${TARGET_NAME}"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.prepare_apk.outputs.apk_name }}
+          path: ${{ steps.prepare_apk.outputs.apk_path }}
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.prepare_apk.outputs.version }}
+          name: LastEdge v${{ steps.prepare_apk.outputs.version }}
+          body: |
+            ## 🚀 LastEdge Mobile v${{ steps.prepare_apk.outputs.version }}
+
+            - **Versión**: `${{ steps.prepare_apk.outputs.version }}`
+            - **Build Code**: `${{ steps.sync_version.outputs.VERSION_CODE }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Firma**: Keystore de producción (actualización in-place garantizada)
+
+            ### 📲 Descarga Directa del APK
+            Descarga `LastEdge-v${{ steps.prepare_apk.outputs.version }}.apk` e instálalo directamente sobre la versión anterior.
+          files: ${{ steps.prepare_apk.outputs.apk_path }}
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease == true || github.event.inputs.prerelease == 'true' }}

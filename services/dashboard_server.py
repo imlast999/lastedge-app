@@ -29,6 +29,8 @@ from services.clients.research_client import get_research_client
 
 logger = logging.getLogger(__name__)
 
+APP_DIR = Path(__file__).resolve().parent.parent
+
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
@@ -111,6 +113,26 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 })
 
             # ── App Health & Overview (Fast Probes) ───────────────────────────
+            # ?? Dynamic Version Endpoint ?????????????????????????????????????
+            elif path in ("/api/version", "/api/app/version"):
+                version_path = APP_DIR / "VERSION"
+                version_str = "1.1.0"
+                if version_path.exists():
+                    try:
+                        version_str = version_path.read_text(encoding="utf-8").strip()
+                    except Exception:
+                        pass
+                parts = version_str.split(".")
+                build_num = int(parts[-1]) if parts and parts[-1].isdigit() else 1
+                self._send_json(200, {
+                    "ok": True,
+                    "service": "LastEdge App",
+                    "version": version_str,
+                    "version_code": build_num,
+                    "release_name": f"LastEdge v{version_str}",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+
             elif path in ("/api/app/health", "/api/health", "/health", "/api/healthz"):
                 import socket
                 def _fast_probe(p: int) -> bool:

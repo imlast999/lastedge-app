@@ -1,12 +1,13 @@
 {
   "name": "workspace",
-  "version": "0.0.0",
+  "version": "1.1.33",
   "license": "MIT",
   "scripts": {
     "preinstall": "node -e \"if (process.env.npm_config_user_agent && !process.env.npm_config_user_agent.includes('pnpm')) { console.error('Use pnpm instead'); process.exit(1); }\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "version:sync": "python ../scripts/sync_version.py"
   },
   "private": true,
   "devDependencies": {

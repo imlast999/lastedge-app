@@ -50,5 +50,16 @@ export function maskSecret(secret: string): string {
 }
 
 export function getAppVersion(): string {
-  return Constants.expoConfig?.version ?? "1.0.0";
+  return Constants.expoConfig?.version ?? "1.1.0";
+}
+
+export function getAppBuildNumber(): string {
+  const code = Constants.expoConfig?.android?.versionCode;
+  return code ? String(code) : "";
+}
+
+export function getAppFullVersion(): string {
+  const version = getAppVersion();
+  const build = getAppBuildNumber();
+  return build ? `v${version} (Build ${build})` : `v${version}`;
 }

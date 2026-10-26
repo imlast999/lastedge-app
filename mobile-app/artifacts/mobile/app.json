@@ -2,7 +2,7 @@
   "expo": {
     "name": "LastEdge",
     "slug": "lastedge",
-    "version": "1.0.0",
+    "version": "1.1.33",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lastedge",
@@ -19,7 +19,8 @@
     "android": {
       "backgroundColor": "#09090b",
       "package": "com.lastedge.app",
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "versionCode": 33
     },
     "web": {
       "favicon": "./assets/images/icon.png"
