@@ -662,6 +662,311 @@
                             </div>
                         </div>
 
+                        <!-- ============================================================ -->
+                        <!-- SUITE CIENTÍFICA PEDAGÓGICA: LOS 6 PILARES CUANTITATIVOS -->
+                        <!-- Fórmula: DATO + COMPARATIVA INSTITUCIONAL + EXPLICACIÓN HUMANA -->
+                        <!-- ============================================================ -->
+                        <div class="pedagogical-suite" id="dashboard-pedagogical-suite">
+                            <div class="suite-header">
+                                <div class="suite-title-wrap">
+                                    <div class="suite-icon-box">
+                                        <i class="fa-solid fa-atom"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="suite-heading">Suite Científica Institucional — Evaluación por 6 Pilares</h3>
+                                        <p class="suite-subheading">Fórmula Pedagógica: <strong>DATO + COMPARATIVA INSTITUCIONAL + EXPLICACIÓN HUMANA</strong></p>
+                                    </div>
+                                </div>
+                                <span class="pillar-benchmark-pill" style="border-color: rgba(16, 185, 129, 0.4); color: #10B981; font-weight: 700;">
+                                    <i class="fa-solid fa-shield-check"></i> LastEdge Institutional Framework v2.0
+                                </span>
+                            </div>
+
+                            <div class="pillars-grid">
+                                <!-- PILAR 1: MONTE CARLO -->
+                                <div class="pillar-bento-card">
+                                    <div>
+                                        <div class="pillar-card-top">
+                                            <div class="pillar-title-area">
+                                                <i class="fa-solid fa-dice"></i>
+                                                <span>Pilar 1: Monte Carlo (1,000 Iter)</span>
+                                            </div>
+                                            <span id="p1-badge" class="pillar-badge passed">PASSED</span>
+                                        </div>
+                                        <div class="pillar-dato-row">
+                                            <span class="pillar-dato-value" id="p1-ruin">0.2%</span>
+                                            <span class="pillar-benchmark-pill">Target: Ruina &lt; 1.0%</span>
+                                        </div>
+                                        <div class="pillar-stats-chips">
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">DD 95% Confianza</div>
+                                                <div class="pillar-chip-value" id="p1-dd95">6.4%</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">DD 99% Confianza</div>
+                                                <div class="pillar-chip-value" id="p1-dd99">8.8%</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Beneficio Mediano</div>
+                                                <div class="pillar-chip-value" id="p1-median-profit">+653 pips</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Peor Caso (P5)</div>
+                                                <div class="pillar-chip-value" id="p1-worst-profit">+149 pips</div>
+                                            </div>
+                                        </div>
+                                        <p class="pillar-explanation" id="p1-explanation">
+                                            Simulamos 1,000 permutaciones estocásticas desordenando aleatoriamente tus operaciones. Un riesgo de ruina inferior al 1% demuestra matemáticamente que la estrategia no depende de rachas fortuitas.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <div class="pillar-accordion-toggle" onclick="togglePillarAccordion('p1-acc')">
+                                            <span><i class="fa-solid fa-circle-question" style="margin-right: 6px;"></i> ¿Qué significa este dato?</span>
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                        <div id="p1-acc" class="pillar-accordion-content">
+                                            <strong>Impacto en capital real:</strong> Si el mercado atraviesa una racha adversa donde las pérdidas se concentran al inicio, el Drawdown se mantiene contenido dentro de los márgenes institucionales (&lt; 10%). Esto garantiza supervivencia frente al peor escenario de orden de trades.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PILAR 2: WALK FORWARD ANALYSIS -->
+                                <div class="pillar-bento-card">
+                                    <div>
+                                        <div class="pillar-card-top">
+                                            <div class="pillar-title-area">
+                                                <i class="fa-solid fa-arrows-split-up-and-left"></i>
+                                                <span>Pilar 2: Walk-Forward Analysis</span>
+                                            </div>
+                                            <span id="p2-badge" class="pillar-badge passed">PASSED</span>
+                                        </div>
+                                        <div class="pillar-dato-row">
+                                            <span class="pillar-dato-value" id="p2-wfe">82.1%</span>
+                                            <span class="pillar-benchmark-pill">Target: WFE &ge; 60%</span>
+                                        </div>
+                                        <div class="pillar-stats-chips">
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Estabilidad OOS</div>
+                                                <div class="pillar-chip-value" id="p2-status">ROBUSTA</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Consistencia</div>
+                                                <div class="pillar-chip-value" id="p2-consistency">0.86 / 1.00</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Train PF vs Test PF</div>
+                                                <div class="pillar-chip-value" id="p2-pf-ratio">2.15 vs 1.85</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Ventanas OOS</div>
+                                                <div class="pillar-chip-value" id="p2-windows-count">4 / 4 Estables</div>
+                                            </div>
+                                        </div>
+                                        <p class="pillar-explanation" id="p2-explanation">
+                                            La Eficiencia WFE (&gt; 60%) certifica que el sistema captura dinámicas reales del activo y no memorizó el pasado. Los parámetros se adaptan con fluidez entre ventanas In-Sample y Out-Of-Sample.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <div class="pillar-accordion-toggle" onclick="togglePillarAccordion('p2-acc')">
+                                            <span><i class="fa-solid fa-circle-question" style="margin-right: 6px;"></i> ¿Qué significa este dato?</span>
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                        <div id="p2-acc" class="pillar-accordion-content">
+                                            <strong>Detección de Overfitting:</strong> Un WFE &lt; 50% revela que los parámetros están sobreoptimizados y se degradarán en vivo. Un valor &ge; 60% confirma que la ventaja predictiva perdura fuera de la muestra de calibración.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PILAR 3: DEFLATED SHARPE & OVERFITTING -->
+                                <div class="pillar-bento-card">
+                                    <div>
+                                        <div class="pillar-card-top">
+                                            <div class="pillar-title-area">
+                                                <i class="fa-solid fa-chart-line"></i>
+                                                <span>Pilar 3: Deflated Sharpe &amp; Sesgo</span>
+                                            </div>
+                                            <span id="p3-badge" class="pillar-badge passed">PASSED</span>
+                                        </div>
+                                        <div class="pillar-dato-row">
+                                            <span class="pillar-dato-value" id="p3-dsr">1.72</span>
+                                            <span class="pillar-benchmark-pill">Target: DSR &ge; 1.00 (p &lt; 0.05)</span>
+                                        </div>
+                                        <div class="pillar-stats-chips">
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Sharpe Nominal</div>
+                                                <div class="pillar-chip-value" id="p3-sharpe">2.10</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Sortino Ratio</div>
+                                                <div class="pillar-chip-value" id="p3-sortino">2.85</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">P-Value Estadístico</div>
+                                                <div class="pillar-chip-value" id="p3-pvalue">0.003</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Riesgo Data-Snooping</div>
+                                                <div class="pillar-chip-value" id="p3-risk" style="color: #10B981;">Descartado</div>
+                                            </div>
+                                        </div>
+                                        <p class="pillar-explanation" id="p3-explanation">
+                                            El Deflated Sharpe descuenta el sesgo de selección multiplicativo (data snooping). Al ser &gt; 1.00 con p-value significativo, certifica rigor científico y descarta que el rendimiento sea puro ruido estadístico.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <div class="pillar-accordion-toggle" onclick="togglePillarAccordion('p3-acc')">
+                                            <span><i class="fa-solid fa-circle-question" style="margin-right: 6px;"></i> ¿Qué significa este dato?</span>
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                        <div id="p3-acc" class="pillar-accordion-content">
+                                            <strong>Diferencia con Sharpe ordinario:</strong> El Sharpe tradicional premia la rentabilidad pero ignora cuántas combinaciones probaste hasta encontrar una buena. El DSR castiga el número de pruebas y el sesgo de curtosis/asimetría de los retornos.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PILAR 4: PAYOFF & EJECUCIÓN -->
+                                <div class="pillar-bento-card">
+                                    <div>
+                                        <div class="pillar-card-top">
+                                            <div class="pillar-title-area">
+                                                <i class="fa-solid fa-scale-balanced"></i>
+                                                <span>Pilar 4: Payoff &amp; Calidad Ejecución</span>
+                                            </div>
+                                            <span id="p4-badge" class="pillar-badge passed">PASSED</span>
+                                        </div>
+                                        <div class="pillar-dato-row">
+                                            <span class="pillar-dato-value" id="p4-pf">2.08</span>
+                                            <span class="pillar-benchmark-pill">Target: PF &ge; 1.30 · CB &lt; 4</span>
+                                        </div>
+                                        <div class="pillar-stats-chips">
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Expectancy / Trade</div>
+                                                <div class="pillar-chip-value" id="p4-expectancy">+14.2 pips (+$42)</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Win Rate</div>
+                                                <div class="pillar-chip-value" id="p4-winrate">58.2%</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Risk:Reward Ratio</div>
+                                                <div class="pillar-chip-value" id="p4-rr">1 : 2.65</div>
+                                            </div>
+                                            <div class="pillar-chip">
+                                                <div class="pillar-chip-label">Racha Máx vs Límite CB</div>
+                                                <div class="pillar-chip-value" id="p4-consec" style="color: #10B981;">3 vs 4 Límite</div>
+                                            </div>
+                                        </div>
+                                        <p class="pillar-explanation" id="p4-explanation">
+                                            Esperanza matemática altamente positiva por operación con holgura frente a spread y comisiones. La peor racha de pérdidas jamás alcanzó el corte forzoso del Circuit Breaker (4 operaciones consecutivas).
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <div class="pillar-accordion-toggle" onclick="togglePillarAccordion('p4-acc')">
+                                            <span><i class="fa-solid fa-circle-question" style="margin-right: 6px;"></i> ¿Qué significa este dato?</span>
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                        <div id="p4-acc" class="pillar-accordion-content">
+                                            <strong>Preservación de Cuenta:</strong> Una esperanza matemática neta de +14.2 pips amortigua deslizamientos (slippage) del broker. El respeto al Circuit Breaker previene espirales de pérdidas psicológicas o técnicas.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PILAR 5: STRESS TEST REGÍMENES -->
+                                <div class="pillar-bento-card" style="grid-column: 1 / -1;">
+                                    <div>
+                                        <div class="pillar-card-top">
+                                            <div class="pillar-title-area">
+                                                <i class="fa-solid fa-mountain-sun"></i>
+                                                <span>Pilar 5: Stress Test por 4 Regímenes Macro de Mercado</span>
+                                            </div>
+                                            <span id="p5-badge" class="pillar-badge passed">PASSED</span>
+                                        </div>
+                                        <div class="pillar-dato-row">
+                                            <span class="pillar-dato-value" id="p5-count">4 / 4 Resilientes</span>
+                                            <span class="pillar-benchmark-pill">Target: Sin pérdidas estructurales en Chop/Rango</span>
+                                        </div>
+                                        <div class="regimes-container" id="p5-regimes-grid">
+                                            <div class="regime-item">
+                                                <div class="regime-item-title">
+                                                    <span><i class="fa-solid fa-arrow-trend-up" style="color: #10B981;"></i> Bull Trend</span>
+                                                    <span class="regime-badge passed">PASSED</span>
+                                                </div>
+                                                <div class="regime-metrics">
+                                                    <strong>WR:</strong> 75.0% · <strong>PF:</strong> 2.80<br>
+                                                    <strong>PnL:</strong> +$1,420 (42 trades)
+                                                </div>
+                                            </div>
+                                            <div class="regime-item">
+                                                <div class="regime-item-title">
+                                                    <span><i class="fa-solid fa-arrow-trend-down" style="color: #38BDF8;"></i> Bear Trend</span>
+                                                    <span class="regime-badge passed">PASSED</span>
+                                                </div>
+                                                <div class="regime-metrics">
+                                                    <strong>WR:</strong> 52.0% · <strong>PF:</strong> 1.65<br>
+                                                    <strong>PnL:</strong> +$480 (35 trades)
+                                                </div>
+                                            </div>
+                                            <div class="regime-item">
+                                                <div class="regime-item-title">
+                                                    <span><i class="fa-solid fa-left-right" style="color: #F59E0B;"></i> Chop / Rango</span>
+                                                    <span class="regime-badge warning">WARNING</span>
+                                                </div>
+                                                <div class="regime-metrics">
+                                                    <strong>WR:</strong> 40.0% · <strong>PF:</strong> 1.05<br>
+                                                    <strong>PnL:</strong> +$30 (25 trades)
+                                                </div>
+                                            </div>
+                                            <div class="regime-item">
+                                                <div class="regime-item-title">
+                                                    <span><i class="fa-solid fa-bolt-lightning" style="color: #EC4899;"></i> Shock Volatilidad</span>
+                                                    <span class="regime-badge passed">PASSED</span>
+                                                </div>
+                                                <div class="regime-metrics">
+                                                    <strong>WR:</strong> 64.0% · <strong>PF:</strong> 2.20<br>
+                                                    <strong>PnL:</strong> +$890 (18 trades)
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="pillar-explanation" id="p5-explanation">
+                                            La estrategia extrae el grueso de su alfa en tendencias y expansión de volatilidad. En fases de compresión o chop lateral, el sistema se mantiene neutro sin sangrado de capital, validando los filtros de consolidación.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <div class="pillar-accordion-toggle" onclick="togglePillarAccordion('p5-acc')">
+                                            <span><i class="fa-solid fa-circle-question" style="margin-right: 6px;"></i> ¿Qué significa este dato?</span>
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                        <div id="p5-acc" class="pillar-accordion-content">
+                                            <strong>Por qué mueren los algoritmos:</strong> El 80% de los bots fallan porque están calibrados para un solo régimen de mercado. Este desglose audita la estrategia en 4 escenarios macroeconómicos independientes para garantizar que no sufra quiebre cuando el mercado cambie de ciclo.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PILAR 6: VEREDICTO INSTITUCIONAL Y PROMOCIÓN -->
+                                <div class="pillar-verdict-banner">
+                                    <div class="verdict-left">
+                                        <div class="score-circle">
+                                            <span class="score-number" id="p6-score">95</span>
+                                            <span class="score-max">/ 100</span>
+                                        </div>
+                                        <div class="verdict-info">
+                                            <h3>
+                                                <span id="p6-title">ALTA CONVICCIÓN INSTITUCIONAL</span>
+                                                <span id="p6-badge" class="pillar-badge passed">INSTITUTIONAL GRADE</span>
+                                            </h3>
+                                            <p id="p6-description">
+                                                Rendimiento asimétrico sobresaliente en fases tendenciales y volatilidad. Ratio de Sharpe Deflactado estadísticamente significativo sin sobreajuste. Validada formalmente para despliegue directo en trading real.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button id="btn-promote-strategy" class="btn-promote-production" onclick="promoteCurrentStrategy()">
+                                        <i class="fa-solid fa-rocket"></i>
+                                        <span id="btn-promote-text">Promocionar a Producción en MT5</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Scientific Guidance & Actionable Recommendations -->
                         <div style="padding: 20px 24px;">
                             <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">

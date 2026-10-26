@@ -548,6 +548,14 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/research/strategies", "/api/strategies"):
                 self._send_json(200, research_client.get_strategies())
 
+            elif path in ("/api/research/pillars", "/api/research/pillar-analysis"):
+                import urllib.parse
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+                symbol = qs.get("symbol", ["EURUSD"])[0]
+                strategy = qs.get("strategy", ["eurusd_partial"])[0]
+                self._send_json(200, research_client.get_pillars(symbol, strategy))
+
             # ── Static UI Assets ──────────────────────────────────────────────
             else:
                 base_dir = Path(__file__).parent.parent
@@ -636,6 +644,11 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/research/run", "/api/research/research", "/api/research"):
                 res = research_client.run_research(body_data)
                 self._send_json(200 if res.get("ok") else 400, res)
+
+            elif path in ("/api/research/pillars", "/api/research/pillar-analysis"):
+                sym = body_data.get("symbol", "EURUSD")
+                strat = body_data.get("strategy", "eurusd_partial")
+                self._send_json(200, research_client.get_pillars(sym, strat))
 
             elif path in ("/api/signals/approve", "/api/trading/signals/approve") or (path.startswith("/api/signals/") and path.endswith("/approve")):
                 sig_id = body_data.get("signal_id") or body_data.get("id")

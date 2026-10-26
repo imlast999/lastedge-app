@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -17,35 +18,55 @@ interface Props {
   onReject?: (id: string) => Promise<void>;
 }
 
-function formatTimeAgo(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  return `${Math.floor(mins / 60)}h ago`;
-}
+const TTL_TOTAL_SECONDS = 10 * 60; // 10 minutes
 
 export function SignalCard({ signal, onAccept, onReject }: Props) {
   const colors = useColors();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
+    try {
+      const createdTime = new Date(signal.timestamp || new Date()).getTime();
+      const elapsedSec = Math.floor((Date.now() - createdTime) / 1000);
+      return Math.max(0, TTL_TOTAL_SECONDS - elapsedSec);
+    } catch {
+      return 0;
+    }
+  });
+
+  // 1-second countdown interval
+  useEffect(() => {
+    const timer = setInterval(() => {
+      try {
+        const createdTime = new Date(signal.timestamp || new Date()).getTime();
+        const elapsedSec = Math.floor((Date.now() - createdTime) / 1000);
+        const rem = Math.max(0, TTL_TOTAL_SECONDS - elapsedSec);
+        setSecondsRemaining(rem);
+      } catch {
+        setSecondsRemaining(0);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [signal.timestamp]);
+
+  const rawStatus = String(signal.status || "pending").toLowerCase();
+  const isBackendExpired = rawStatus === "expired" || rawStatus === "expired_ttl";
+  const isTimeExpired = secondsRemaining <= 0;
+  const isExpired = isBackendExpired || isTimeExpired;
+
+  const isPending = !isExpired && (rawStatus === "pending" || rawStatus === "proposed");
+  const isActive = rawStatus === "active" || rawStatus === "executed" || rawStatus === "accepted";
+  const isRejected = rawStatus === "rejected" || rawStatus === "rejected_manual";
 
   const isBuy = signal.type === "BUY";
-  const typeColor = isBuy ? colors.buy : colors.sell;
-  const isPending = signal.status === "pending";
-  const isActive = signal.status === "active";
-  const isRejected = signal.status === "rejected";
-
-  const statusColors: Record<Signal["status"], string> = {
-    pending: colors.pending,
-    active: colors.profit,
-    closed: colors.mutedForeground,
-    rejected: colors.loss,
-  };
+  const typeColor = isBuy ? "#3B82F6" : "#F43F5E";
 
   const handleAccept = async () => {
-    if (!onAccept || accepting) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!onAccept || accepting || isExpired) return;
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     setAccepting(true);
     try {
       await onAccept(signal.id);
@@ -55,8 +76,10 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
   };
 
   const handleReject = async () => {
-    if (!onReject || rejecting) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!onReject || rejecting || isExpired) return;
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     setRejecting(true);
     try {
       await onReject(signal.id);
@@ -65,108 +88,142 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
     }
   };
 
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   return (
     <View
       style={[
         styles.card,
-        {
-          backgroundColor: colors.card,
-          borderColor: isPending ? colors.pending : colors.border,
-          borderWidth: isPending ? 1.5 : 1,
-        },
+        isPending && styles.cardPending,
+        isExpired && styles.cardExpired,
       ]}
     >
+      {/* Top Banner: Pending with TTL Countdown vs Expired Badge */}
       {isPending && (
-        <View style={[styles.pendingBadge, { backgroundColor: `${colors.pending}20` }]}>
-          <View style={[styles.pulseDot, { backgroundColor: colors.pending }]} />
-          <Text style={[styles.pendingText, { color: colors.pending }]}>REQUIRES ACTION</Text>
+        <View style={styles.pendingHeader}>
+          <View style={styles.pulseRow}>
+            <View style={styles.pulseDot} />
+            <Text style={styles.pendingTitle}>SEÑAL PENDIENTE · REQUIERE ACCIÓN</Text>
+          </View>
+          <View style={styles.ttlBadge}>
+            <Feather name="clock" size={11} color="#F59E0B" />
+            <Text style={styles.ttlText}>
+              TTL: {formatCountdown(secondsRemaining)}
+            </Text>
+          </View>
         </View>
       )}
 
+      {isExpired && (
+        <View style={styles.expiredBadge}>
+          <Feather name="clock" size={12} color="#F59E0B" />
+          <Text style={styles.expiredText}>
+            ⏳ SEÑAL EXPIRADA (Sin confirmación tras 10 min)
+          </Text>
+        </View>
+      )}
+
+      {/* Main Signal Identification Row */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.symbol, { color: colors.foreground }]}>{signal.symbol}</Text>
+          <Text style={styles.symbol}>{signal.symbol}</Text>
           <View style={[styles.typeBadge, { backgroundColor: `${typeColor}20` }]}>
             <Text style={[styles.typeText, { color: typeColor }]}>{signal.type}</Text>
           </View>
+          <View style={styles.strategyBadge}>
+            <Text style={styles.strategyText}>{signal.strategy || "AutoSignals"}</Text>
+          </View>
         </View>
+
         <View style={styles.headerRight}>
-          <View style={[styles.statusDot, { backgroundColor: statusColors[signal.status] }]} />
-          <Text style={[styles.timeAgo, { color: colors.mutedForeground }]}>
-            {formatTimeAgo(signal.timestamp)}
+          <Text style={styles.lotText}>
+            {Number(signal?.lot ?? 0.01).toFixed(2)} lot
           </Text>
         </View>
       </View>
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
+      {/* Parameters Metric Grid */}
       <View style={styles.dataGrid}>
         <DataRow
           label="Entry"
-          value={Number(signal?.entry ?? 0).toFixed((signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5)}
+          value={Number(signal?.entry ?? 0).toFixed(
+            (signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5
+          )}
         />
         <DataRow
           label="TP"
-          value={Number(signal?.takeProfit ?? 0).toFixed((signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5)}
-          color={colors.profit}
+          value={Number(signal?.takeProfit ?? 0).toFixed(
+            (signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5
+          )}
+          color="#10B981"
         />
         <DataRow
           label="SL"
-          value={Number(signal?.stopLoss ?? 0).toFixed((signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5)}
-          color={colors.loss}
+          value={Number(signal?.stopLoss ?? 0).toFixed(
+            (signal?.symbol || "").includes("JPY") || (signal?.symbol || "").includes("XAU") ? 3 : 5
+          )}
+          color="#EF4444"
         />
         <DataRow label="R:R" value={`1:${Number(signal?.rrRatio ?? 1).toFixed(2)}`} />
-        <DataRow label="Lot" value={Number(signal?.lot ?? 0.01).toFixed(2)} />
       </View>
 
+      {/* Action Buttons for Pending Signals */}
       {isPending && (
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.rejectBtn, { borderColor: colors.loss }]}
+            style={[styles.actionBtn, styles.rejectBtn]}
             onPress={handleReject}
-            disabled={rejecting}
+            disabled={rejecting || isExpired}
             activeOpacity={0.75}
           >
             {rejecting ? (
-              <ActivityIndicator size="small" color={colors.loss} />
+              <ActivityIndicator size="small" color="#EF4444" />
             ) : (
               <>
-                <Feather name="x" size={18} color={colors.loss} />
-                <Text style={[styles.rejectText, { color: colors.loss }]}>RECHAZAR</Text>
+                <Feather name="x-circle" size={17} color="#EF4444" />
+                <Text style={styles.rejectText}>❌ Descartar</Text>
               </>
             )}
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={[styles.actionBtn, styles.acceptBtn, { backgroundColor: colors.profit }]}
+            style={[styles.actionBtn, styles.acceptBtn]}
             onPress={handleAccept}
-            disabled={accepting}
+            disabled={accepting || isExpired}
             activeOpacity={0.75}
           >
             {accepting ? (
-              <ActivityIndicator size="small" color={colors.primaryForeground} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Feather name="check" size={18} color={colors.primaryForeground} />
-                <Text style={[styles.acceptText, { color: colors.primaryForeground }]}>
-                  ACEPTAR
-                </Text>
+                <Feather name="check-circle" size={17} color="#FFFFFF" />
+                <Text style={styles.acceptText}>✅ Aprobar y Ejecutar</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
       )}
 
+      {/* State Badges for Closed / Active / Rejected */}
       {isActive && (
-        <View style={[styles.statusBar, { backgroundColor: `${colors.profit}15` }]}>
-          <Feather name="activity" size={12} color={colors.profit} />
-          <Text style={[styles.statusBarText, { color: colors.profit }]}>ORDEN ACTIVA</Text>
+        <View style={[styles.statusBar, styles.statusActive]}>
+          <Feather name="check" size={12} color="#10B981" />
+          <Text style={[styles.statusBarText, { color: "#34D399" }]}>
+            EJECUTADA EN MT5
+          </Text>
         </View>
       )}
 
       {isRejected && (
-        <View style={[styles.statusBar, { backgroundColor: `${colors.loss}15` }]}>
-          <Feather name="slash" size={12} color={colors.loss} />
-          <Text style={[styles.statusBarText, { color: colors.loss }]}>RECHAZADA</Text>
+        <View style={[styles.statusBar, styles.statusRejected]}>
+          <Feather name="slash" size={12} color="#EF4444" />
+          <Text style={[styles.statusBarText, { color: "#F87171" }]}>
+            DESCARTADA POR USUARIO
+          </Text>
         </View>
       )}
     </View>
@@ -174,145 +231,223 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
 }
 
 function DataRow({ label, value, color }: { label: string; value: string; color?: string }) {
-  const colors = useColors();
   return (
     <View style={styles.dataRow}>
-      <Text style={[styles.dataLabel, { color: colors.mutedForeground }]}>{label}</Text>
-      <Text style={[styles.dataValue, { color: color ?? colors.foreground }]}>{value}</Text>
+      <Text style={styles.dataLabel}>{label}</Text>
+      <Text style={[styles.dataValue, color ? { color } : {}]}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
-    overflow: "hidden",
-    marginBottom: 8,
+    backgroundColor: "#0B0F17",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    padding: 14,
+    marginBottom: 12,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  pendingBadge: {
+  cardPending: {
+    borderColor: "rgba(59, 130, 246, 0.4)",
+    borderWidth: 1.5,
+  },
+  cardExpired: {
+    opacity: 0.75,
+    borderColor: "rgba(245, 158, 11, 0.3)",
+  },
+  pendingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.06)",
+  },
+  pulseRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
   },
   pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: "#3B82F6",
   },
-  pendingText: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.8,
+  pendingTitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#60A5FA",
+    letterSpacing: 0.4,
+  },
+  ttlBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.25)",
+  },
+  ttlText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FBBF24",
+    fontVariant: ["tabular-nums"],
+  },
+  expiredBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.3)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  expiredText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FBBF24",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 8,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
   symbol: {
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.4,
+    fontWeight: "800",
+    color: "#F8FAFC",
   },
   typeBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   typeText: {
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
+    fontWeight: "800",
+    letterSpacing: 0.4,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  strategyBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
-  timeAgo: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
+  strategyText: {
+    fontSize: 10,
+    color: "#94A3B8",
+    fontWeight: "500",
   },
-  divider: {
-    height: 1,
-    marginHorizontal: 12,
+  headerRight: {
+    alignItems: "flex-end",
+  },
+  lotText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#E2E8F0",
+    fontVariant: ["tabular-nums"],
   },
   dataGrid: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  dataRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.04)",
+  },
+  dataRow: {
     alignItems: "center",
+    gap: 2,
   },
   dataLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    color: "#64748B",
+    fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
   },
   dataValue: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "700",
+    color: "#F8FAFC",
     fontVariant: ["tabular-nums"],
   },
   actions: {
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    paddingTop: 4,
+    gap: 10,
+    marginTop: 4,
   },
   actionBtn: {
     flex: 1,
-    height: 40,
-    borderRadius: 6,
+    height: 44,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
   rejectBtn: {
-    borderWidth: 1,
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderWidth: 1.5,
+    borderColor: "rgba(239, 68, 68, 0.4)",
   },
-  acceptBtn: {},
   rejectText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#EF4444",
+  },
+  acceptBtn: {
+    backgroundColor: "#10B981",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   acceptText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
   statusBar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  statusActive: {
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderColor: "rgba(16, 185, 129, 0.3)",
+  },
+  statusRejected: {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderColor: "rgba(239, 68, 68, 0.3)",
   },
   statusBarText: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.6,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 });

@@ -1995,4 +1995,388 @@
     30%, 60%, 90% { transform: translateX(8px); }
 }
 
+/* ==========================================================================
+   LastEdge — 6 Pillars Pedagogical Scientific Suite Styles
+   Dark Obsidian Bento aesthetic (#0b0f17), pedagogical formula,
+   collapsible tooltips, market regimes grid & institutional promotion hero
+   ========================================================================== */
+
+.pedagogical-suite {
+    margin-top: 24px;
+    margin-bottom: 24px;
+    background: #0b0f17;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.suite-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+}
+
+.suite-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.suite-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #10B981;
+    font-size: 20px;
+}
+
+.suite-heading {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+}
+
+.suite-subheading {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.pillar-bento-card {
+    background: #0d121d;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 18px;
+    padding: 20px;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.pillar-bento-card:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.pillar-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    gap: 10px;
+}
+
+.pillar-badge {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pillar-badge.passed {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.pillar-badge.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.pillar-badge.danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.pillar-title-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.pillar-title-area i {
+    font-size: 15px;
+    color: #10B981;
+}
+
+.pillar-dato-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.pillar-dato-value {
+    font-size: 26px;
+    font-weight: 800;
+    font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+
+.pillar-benchmark-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pillar-stats-chips {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.pillar-chip {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.pillar-chip-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+}
+
+.pillar-chip-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 2px;
+}
+
+.pillar-explanation {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 6px;
+    margin-bottom: 12px;
+}
+
+.pillar-accordion-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #38BDF8;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.pillar-accordion-toggle:hover {
+    background: rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.pillar-accordion-toggle i {
+    transition: transform 0.25s ease;
+}
+
+.pillar-accordion-toggle.active i {
+    transform: rotate(180deg);
+}
+
+.pillar-accordion-content {
+    display: none;
+    padding: 10px 12px;
+    margin-top: 6px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pillar-accordion-content.open {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Pillar 5 Regimes Grid */
+.regimes-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.regime-item {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 9px 10px;
+}
+
+.regime-item-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.regime-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.regime-badge.passed { background: rgba(16, 185, 129, 0.2); color: #10B981; }
+.regime-badge.warning { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
+
+.regime-metrics {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.4;
+}
+
+/* Pillar 6 Verdict Banner */
+.pillar-verdict-banner {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(11, 15, 23, 0.95) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+}
+
+.verdict-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.score-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.15);
+    border: 2px solid #10B981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Geist Mono', monospace;
+    flex-shrink: 0;
+}
+
+.score-number {
+    font-size: 22px;
+    font-weight: 900;
+    color: #10B981;
+    line-height: 1;
+}
+
+.score-max {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-top: 2px;
+}
+
+.verdict-info h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.verdict-info p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 650px;
+}
+
+.btn-promote-production {
+    padding: 13px 24px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+    transition: all 0.2s ease;
+}
+
+.btn-promote-production:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+}
+
+.btn-promote-production:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+
 

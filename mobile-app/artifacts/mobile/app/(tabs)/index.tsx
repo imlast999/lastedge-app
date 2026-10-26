@@ -212,17 +212,109 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* MT5 Account Margin Telemetry */}
-      <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.accountTitle, { color: colors.foreground }]}>{t("mt5Account")}</Text>
-        <AccountRow label={t("marginUsed")} value={`${safeStatus.margin.toFixed(2)}€`} colors={colors} />
-        <AccountRow label={t("freeMargin")} value={`${safeStatus.freeMargin.toFixed(2)}€`} colors={colors} />
-        <AccountRow
-          label={t("marginLevel")}
-          value={safeStatus.margin > 0 ? `${((safeStatus.equity / safeStatus.margin) * 100).toFixed(0)}%` : "–"}
-          colors={colors}
-          highlight={safeStatus.margin > 0 && safeStatus.equity / safeStatus.margin > 10}
-        />
+      {/* ── Web3 Bento Margin & Capital Safeguards Telemetry ── */}
+      <View style={styles.bentoMarginCard}>
+        <View style={styles.bentoHeaderRow}>
+          <View style={styles.bentoTitleGroup}>
+            <View style={styles.bentoIconPill}>
+              <Feather name="pie-chart" size={14} color="#3B82F6" />
+            </View>
+            <View>
+              <Text style={styles.bentoCardTitle}>TELEMETRÍA DE MARGEN & CAPITAL</Text>
+              <Text style={styles.bentoCardSub}>Controles de Liquidez y Solvencia MT5</Text>
+            </View>
+          </View>
+          <View style={styles.bentoBadge}>
+            <Text style={styles.bentoBadgeText}>INSTITUTIONAL</Text>
+          </View>
+        </View>
+
+        {/* 1. Margen Libre Indicator */}
+        <View style={styles.indicatorBlock}>
+          <View style={styles.indicatorHeader}>
+            <Text style={styles.indicatorLabel}>Margen Libre Disponible</Text>
+            <Text style={styles.indicatorValue}>
+              {safeStatus.freeMargin.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€{" "}
+              <Text style={styles.indicatorSub}>
+                ({safeStatus.equity > 0 ? ((safeStatus.freeMargin / safeStatus.equity) * 100).toFixed(1) : "100.0"}%)
+              </Text>
+            </Text>
+          </View>
+          <View style={styles.hdProgressTrack}>
+            <View
+              style={[
+                styles.hdProgressFill,
+                {
+                  width: `${safeStatus.equity > 0 ? Math.min(100, Math.max(0, (safeStatus.freeMargin / safeStatus.equity) * 100)) : 100}%`,
+                  backgroundColor: "#10B981",
+                  shadowColor: "#10B981",
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* 2. Equidad vs Balance Indicator */}
+        <View style={styles.indicatorBlock}>
+          <View style={styles.indicatorHeader}>
+            <Text style={styles.indicatorLabel}>Equidad vs Balance</Text>
+            <Text style={styles.indicatorValue}>
+              {safeStatus.equity.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€{" "}
+              <Text style={{ color: floatingPnL >= 0 ? "#34D399" : "#F87171", fontSize: 11, fontWeight: "700" }}>
+                ({floatingPnL >= 0 ? "+" : ""}{floatingPnL.toFixed(2)}€ Float)
+              </Text>
+            </Text>
+          </View>
+          <View style={styles.hdProgressTrack}>
+            <View
+              style={[
+                styles.hdProgressFill,
+                {
+                  width: `${safeStatus.balance > 0 ? Math.min(100, Math.max(0, (safeStatus.equity / safeStatus.balance) * 100)) : 100}%`,
+                  backgroundColor: floatingPnL >= 0 ? "#10B981" : "#EF4444",
+                  shadowColor: floatingPnL >= 0 ? "#10B981" : "#EF4444",
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* 3. Nivel de Margen Indicator */}
+        {(() => {
+          const marginLvl = safeStatus.margin > 0 ? (safeStatus.equity / safeStatus.margin) * 100 : 9999;
+          const isLvlHealthy = marginLvl >= 500;
+          const isLvlWarning = marginLvl < 500 && marginLvl >= 200;
+          const lvlColor = isLvlHealthy ? "#10B981" : isLvlWarning ? "#F59E0B" : "#EF4444";
+          const clampedBar = Math.min(100, Math.max(0, (marginLvl / 1000) * 100));
+
+          return (
+            <View style={styles.indicatorBlock}>
+              <View style={styles.indicatorHeader}>
+                <Text style={styles.indicatorLabel}>Nivel de Margen (Margin Level)</Text>
+                <Text style={[styles.indicatorValue, { color: lvlColor }]}>
+                  {safeStatus.margin > 0 ? `${marginLvl.toFixed(0)}%` : "Infinito (Sin margen usado)"}
+                </Text>
+              </View>
+              <View style={styles.hdProgressTrack}>
+                <View
+                  style={[
+                    styles.hdProgressFill,
+                    {
+                      width: `${clampedBar}%`,
+                      backgroundColor: lvlColor,
+                      shadowColor: lvlColor,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.indicatorScaleRow}>
+                <Text style={styles.indicatorScaleText}>Crítico: &lt;200%</Text>
+                <Text style={styles.indicatorScaleText}>Precaución: 500%</Text>
+                <Text style={styles.indicatorScaleText}>Excelente: &gt;1000%</Text>
+              </View>
+            </View>
+          );
+        })()}
       </View>
     </ScrollView>
   );
@@ -307,9 +399,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   equityCard: {
-    borderRadius: 10,
+    backgroundColor: "#0B0F17",
+    borderRadius: 18,
     borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
   },
   equityHeader: {
     flexDirection: "row",
@@ -391,9 +490,109 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  accountCard: {
-    borderRadius: 8,
+  bentoMarginCard: {
+    backgroundColor: "#0B0F17",
+    borderRadius: 18,
     borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    padding: 16,
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  bentoHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 4,
+  },
+  bentoTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bentoIconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgba(59, 130, 246, 0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bentoCardTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#F8FAFC",
+    letterSpacing: 0.5,
+  },
+  bentoCardSub: {
+    fontSize: 10,
+    color: "#64748B",
+  },
+  bentoBadge: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.2)",
+  },
+  bentoBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#60A5FA",
+  },
+  indicatorBlock: {
+    gap: 6,
+  },
+  indicatorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  indicatorLabel: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  indicatorValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#F8FAFC",
+    fontVariant: ["tabular-nums"],
+  },
+  indicatorSub: {
+    color: "#64748B",
+    fontSize: 10,
+  },
+  hdProgressTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    overflow: "hidden",
+  },
+  hdProgressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  indicatorScaleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  indicatorScaleText: {
+    fontSize: 9,
+    color: "#475569",
+    fontVariant: ["tabular-nums"],
+  },
+  accountCard: {
+    backgroundColor: "#0B0F17",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
     padding: 14,
     gap: 10,
   },

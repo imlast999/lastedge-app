@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { resolveApiConfig } from "@/lib/apiConfig";
 import { useSettings } from "@/context/SettingsContext";
@@ -25,7 +25,16 @@ interface SymbolEstimation {
   reason: string;
 }
 
+interface CircuitBreakerStatus {
+  can_trade?: boolean;
+  status?: string;
+  is_tripped?: boolean;
+  reason?: string;
+}
+
 interface RiskDashboardData {
+  can_trade?: boolean;
+  circuit_breaker?: CircuitBreakerStatus;
   balance: number;
   equity: number;
   free_margin: number;
@@ -37,7 +46,6 @@ interface RiskDashboardData {
   open_positions: OpenPositionRisk[];
   estimations: Record<string, SymbolEstimation>;
   timestamp: string;
-  error?: string;
 }
 
 export default function RiskWidget() {
@@ -73,128 +81,169 @@ export default function RiskWidget() {
 
   useEffect(() => {
     fetchRiskData();
-    const interval = setInterval(fetchRiskData, 10000); // refresh every 10s
+    const interval = setInterval(fetchRiskData, 8000);
     return () => clearInterval(interval);
   }, [fetchRiskData]);
 
   if (loading && !data) {
     return (
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, justifyContent: "center" }]}>
-        <ActivityIndicator size="small" color={colors.primary} />
+      <View style={[styles.card, { justifyContent: "center", minHeight: 120 }]}>
+        <ActivityIndicator size="small" color="#3B82F6" />
       </View>
     );
   }
 
   const safeData = {
+    can_trade: data?.can_trade ?? data?.circuit_breaker?.can_trade ?? true,
+    circuit_breaker: data?.circuit_breaker ?? { can_trade: true, reason: "" },
     balance: Number(data?.balance ?? 0),
-    equity: Number(data?.equity ?? (data as any)?.account_equity ?? 0),
-    free_margin: Number(data?.free_margin ?? (data as any)?.account_equity ?? 0),
+    equity: Number(data?.equity ?? 0),
+    free_margin: Number(data?.free_margin ?? 0),
     margin: Number(data?.margin ?? 0),
-    margin_level: Number(data?.margin_level ?? (data as any)?.margin_level_pct ?? 0),
+    margin_level: Number(data?.margin_level ?? 0),
     portfolio_risk_pct: Number(data?.portfolio_risk_pct ?? 0),
     max_portfolio_risk_pct: Number(data?.max_portfolio_risk_pct ?? 3.0) || 3.0,
     remaining_capacity_pct: Number(data?.remaining_capacity_pct ?? 3.0),
     open_positions: Array.isArray(data?.open_positions) ? data.open_positions : [],
-    estimations: (typeof data?.estimations === "object" && data?.estimations !== null) ? data.estimations : {},
-    timestamp: data?.timestamp || new Date().toISOString()
+    estimations: typeof data?.estimations === "object" && data?.estimations !== null ? data.estimations : {},
+    timestamp: data?.timestamp || new Date().toISOString(),
   };
 
-  const riskPct = typeof safeData.portfolio_risk_pct === "number" && !isNaN(safeData.portfolio_risk_pct) ? safeData.portfolio_risk_pct : 0;
-  const maxRisk = typeof safeData.max_portfolio_risk_pct === "number" && safeData.max_portfolio_risk_pct > 0 ? safeData.max_portfolio_risk_pct : 3.0;
-  const progress = maxRisk > 0 ? Math.min(1.0, Math.max(0, riskPct / maxRisk)) : 0;
+  const riskPct = safeData.portfolio_risk_pct;
+  const maxRisk = safeData.max_portfolio_risk_pct;
+  const progress = Math.min(1.0, Math.max(0, riskPct / maxRisk));
+  const remaining = Math.max(0, maxRisk - riskPct);
+
+  const isCbActive = safeData.can_trade !== false && !safeData.circuit_breaker.is_tripped;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {/* Institutional Header */}
+    <View style={styles.card}>
+      {/* Institutional Bento Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Feather name="shield" size={14} color={colors.primary} />
-          <Text style={[styles.title, { color: colors.foreground }]}>RISK ENGINE V2</Text>
+          <View style={styles.shieldIconWrap}>
+            <MaterialCommunityIcons name="shield-check" size={16} color="#3B82F6" />
+          </View>
+          <View>
+            <Text style={styles.title}>RISK ENGINE V2</Text>
+            <Text style={styles.subtitle}>Enforced Portfolio Allocation</Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-          <Text style={[styles.statusBadgeText, { color: colors.mutedForeground }]}>ENFORCED</Text>
-        </View>
-      </View>
 
-      {/* Barra de progreso de riesgo */}
-      <View style={styles.section}>
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>Portfolio Exposure</Text>
-          <Text style={[styles.value, { color: riskPct > maxRisk * 0.8 ? colors.loss : colors.foreground }]}>
-            {riskPct.toFixed(2)}% <Text style={{ fontSize: 11, color: colors.mutedForeground }}>/ {maxRisk.toFixed(1)}% max</Text>
+        {/* Circuit Breaker Status Badge (Verde = Activo, Ámbar/Rojo = Pausa de Seguridad) */}
+        <View
+          style={[
+            styles.cbBadge,
+            isCbActive ? styles.cbBadgeActive : styles.cbBadgePaused,
+          ]}
+        >
+          <View
+            style={[
+              styles.cbDot,
+              { backgroundColor: isCbActive ? "#10B981" : "#EF4444" },
+            ]}
+          />
+          <Text
+            style={[
+              styles.cbText,
+              { color: isCbActive ? "#34D399" : "#F87171" },
+            ]}
+          >
+            {isCbActive ? "CIRCUIT BREAKER: ACTIVO" : "CIRCUIT BREAKER: PAUSA"}
           </Text>
         </View>
-        <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
-          <View style={[styles.progressBarFill, { 
-            width: `${progress * 100}%`, 
-            backgroundColor: riskPct > maxRisk * 0.8 ? colors.loss : colors.profit 
-          }]} />
+      </View>
+
+      {/* Portfolio Risk Exposure HD Progress Bar */}
+      <View style={styles.section}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Exposición de Portafolio</Text>
+          <Text style={styles.value}>
+            <Text
+              style={{
+                color: riskPct > maxRisk * 0.8 ? "#EF4444" : "#10B981",
+                fontWeight: "800",
+                fontSize: 16,
+              }}
+            >
+              {riskPct.toFixed(2)}%
+            </Text>{" "}
+            <Text style={{ fontSize: 11, color: "#64748B" }}>/ {maxRisk.toFixed(1)}% máx</Text>
+          </Text>
+        </View>
+
+        <View style={styles.progressBarTrack}>
+          <View
+            style={[
+              styles.progressBarFill,
+              {
+                width: `${progress * 100}%`,
+                backgroundColor: riskPct > maxRisk * 0.8 ? "#EF4444" : "#10B981",
+              },
+            ]}
+          />
+        </View>
+
+        <View style={styles.scaleRow}>
+          <Text style={styles.scaleText}>0.0%</Text>
+          <Text style={styles.scaleText}>
+            Capacidad restante: <Text style={{ color: "#38BDF8", fontWeight: "700" }}>{remaining.toFixed(2)}%</Text>
+          </Text>
+          <Text style={styles.scaleText}>3.0%</Text>
         </View>
       </View>
 
-      {/* Posiciones abiertas y su riesgo */}
-      <View style={[styles.section, styles.borderTop, { borderTopColor: colors.border }]}>
-        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Open Risk Allocation</Text>
-        {safeData.open_positions.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No open positions with active risk exposure</Text>
-        ) : (
-          safeData.open_positions.map((pos, idx) => (
-            <View key={idx} style={styles.positionRow}>
-              <View>
-                <Text style={[styles.positionSym, { color: colors.foreground }]}>{pos?.symbol || "–"}</Text>
-                <Text style={[styles.positionTicket, { color: colors.mutedForeground }]}>
-                  Ticket #{pos?.ticket ?? 0} · Lot {Number(pos?.volume ?? 0).toFixed(2)}
-                </Text>
-              </View>
-              <Text style={[styles.positionRisk, { color: colors.foreground }]}>
-                {Number(pos?.risk_pct ?? 0).toFixed(2)}%{" "}
-                <Text style={{ fontSize: 10, color: colors.mutedForeground }}>
-                  ({Number(pos?.risk_amount ?? 0).toFixed(0)}€)
-                </Text>
-              </Text>
-            </View>
-          ))
-        )}
-      </View>
-
-      {/* Capacidad Restante */}
-      <View style={[styles.section, styles.borderTop, { borderTopColor: colors.border }]}>
-        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Capacity Telemetry</Text>
+      {/* Capacity & Margin Telemetry */}
+      <View style={[styles.section, styles.borderTop]}>
         <View style={styles.rowGrid}>
           <View style={styles.gridCol}>
-            <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>Remaining Risk</Text>
-            <Text style={[styles.gridValue, { color: colors.foreground }]}>
-              {Math.max(0, maxRisk - riskPct).toFixed(2)}%
+            <Text style={styles.gridLabel}>Capacidad Restante</Text>
+            <Text style={[styles.gridValue, { color: "#38BDF8" }]}>
+              {remaining.toFixed(2)}%
             </Text>
           </View>
           <View style={styles.gridCol}>
-            <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>Free Margin</Text>
-            <Text style={[styles.gridValue, { color: colors.foreground }]}>
-              {safeData.free_margin.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}€
+            <Text style={styles.gridLabel}>Margen Libre</Text>
+            <Text style={styles.gridValue}>
+              {safeData.free_margin.toLocaleString("en", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}€
+            </Text>
+          </View>
+          <View style={styles.gridCol}>
+            <Text style={styles.gridLabel}>Nivel de Margen</Text>
+            <Text
+              style={[
+                styles.gridValue,
+                { color: safeData.margin_level >= 500 ? "#10B981" : "#F59E0B" },
+              ]}
+            >
+              {safeData.margin_level > 0 ? `${safeData.margin_level.toFixed(0)}%` : "Inf"}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Estimaciones próximas señales */}
-      <View style={[styles.section, styles.borderTop, { borderTopColor: colors.border }]}>
-        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Next Signal Sizing Estimate</Text>
+      {/* Sizing Estimation per Symbol */}
+      <View style={[styles.section, styles.borderTop]}>
+        <Text style={styles.subTitle}>Dimensionamiento de Lote por Símbolo</Text>
         <View style={styles.rowGrid}>
-          {['EURUSD', 'XAUUSD', 'BTCEUR'].map((sym) => {
+          {["EURUSD", "XAUUSD", "BTCEUR"].map((sym) => {
             const est = safeData.estimations?.[sym];
             const isApproved = est?.approved ?? true;
             const lotStr = Number(est?.lot ?? (sym === "EURUSD" ? 0.01 : 0.02)).toFixed(2);
-            const rawReason = String(est?.reason || "Blocked");
-            const displayReason = rawReason.includes("]") ? (rawReason.split("]")[1] || rawReason) : rawReason;
             return (
-              <View key={sym} style={styles.gridCol}>
-                <Text style={[styles.gridLabel, { color: colors.mutedForeground }]}>{sym}</Text>
-                <Text style={[styles.gridValue, { color: isApproved ? colors.profit : colors.mutedForeground }]}>
-                  {isApproved ? `${lotStr} lot` : "BLOCKED"}
+              <View key={sym} style={styles.symbolCard}>
+                <Text style={styles.symbolName}>{sym}</Text>
+                <Text
+                  style={[
+                    styles.symbolLot,
+                    { color: isApproved ? "#34D399" : "#94A3B8" },
+                  ]}
+                >
+                  {isApproved ? `${lotStr} lot` : "PAUSADO"}
                 </Text>
-                {!isApproved && (
-                  <Text style={[styles.blockedReason, { color: colors.loss }]}>{displayReason}</Text>
-                )}
               </View>
             );
           })}
@@ -202,66 +251,129 @@ export default function RiskWidget() {
       </View>
     </View>
   );
-
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
+    backgroundColor: "#0B0F17",
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 14,
-    gap: 12,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    padding: 16,
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 4,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 2,
+    flexWrap: "wrap",
+    gap: 8,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 10,
+  },
+  shieldIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "rgba(59, 130, 246, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 12,
-    fontFamily: "Inter_700Bold",
+    fontWeight: "800",
+    color: "#F8FAFC",
     letterSpacing: 0.6,
   },
-  statusBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  subtitle: {
+    fontSize: 10,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  cbBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
-  statusBadgeText: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
+  cbBadgeActive: {
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderColor: "rgba(16, 185, 129, 0.3)",
   },
-  subTitle: {
+  cbBadgePaused: {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  cbDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cbText: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 4,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
   section: {
     gap: 8,
   },
   borderTop: {
     borderTopWidth: 1,
-    paddingTop: 10,
+    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    paddingTop: 12,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  rowGrid: {
+  label: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  value: {
+    fontSize: 13,
+    color: "#F8FAFC",
+    fontVariant: ["tabular-nums"],
+  },
+  progressBarTrack: {
+    width: "100%",
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  scaleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 8,
+    alignItems: "center",
+  },
+  scaleText: {
+    fontSize: 10,
+    color: "#64748B",
+    fontVariant: ["tabular-nums"],
+  },
+  rowGrid: {
+    flexDirection: "row",
+    gap: 10,
   },
   gridCol: {
     flex: 1,
@@ -269,58 +381,40 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    color: "#64748B",
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
   gridValue: {
     fontSize: 14,
-    fontFamily: "Inter_700Bold",
+    fontWeight: "800",
+    color: "#F8FAFC",
     fontVariant: ["tabular-nums"],
   },
-  label: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  value: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    fontVariant: ["tabular-nums"],
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-    width: "100%",
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  emptyText: {
+  subTitle: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    color: "#94A3B8",
+    fontWeight: "600",
+    marginBottom: 4,
   },
-  positionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  symbolCard: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.05)",
     alignItems: "center",
-    paddingVertical: 3,
+    gap: 2,
   },
-  positionSym: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+  symbolName: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#E2E8F0",
   },
-  positionTicket: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-  },
-  positionRisk: {
+  symbolLot: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "800",
     fontVariant: ["tabular-nums"],
   },
-  blockedReason: {
-    fontSize: 8,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
-  }
 });

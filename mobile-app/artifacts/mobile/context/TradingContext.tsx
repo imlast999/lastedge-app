@@ -37,6 +37,7 @@ export interface Signal {
   rrRatio: number;
   timestamp: string;
   lot: number;
+  strategy?: string;
 }
 
 export interface Trade {

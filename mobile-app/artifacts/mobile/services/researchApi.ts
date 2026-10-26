@@ -490,3 +490,156 @@ export async function fetchAvailableStrategies(
     overrides
   );
 }
+
+// ── 6 Quantitative Pillars Scientific Types ────────────────────────────────────
+
+export interface MonteCarloPillar {
+  title: string;
+  iterations: number;
+  ruin_probability_pct: number;
+  drawdown_95_pct: number;
+  drawdown_99_pct: number;
+  median_profit_pips: number;
+  worst_case_profit_pips: number;
+  badge: "PASSED" | "WARNING" | "DANGER";
+  threshold: string;
+  explanation: string;
+  why_it_matters: string;
+}
+
+export interface WalkForwardWindow {
+  window: string;
+  status: string;
+  badge: "PASSED" | "WARNING" | "DANGER";
+  train_pf: number;
+  test_pf: number;
+  consistency: number;
+}
+
+export interface WalkForwardPillar {
+  title: string;
+  wfe_ratio: number;
+  is_robust: boolean;
+  badge: "PASSED" | "WARNING" | "DANGER";
+  threshold: string;
+  windows: WalkForwardWindow[];
+  explanation: string;
+  why_it_matters: string;
+}
+
+export interface OverfittingPillar {
+  title: string;
+  traditional_sharpe: number;
+  deflated_sharpe_ratio: number;
+  sortino_ratio: number;
+  p_value: number;
+  badge: "PASSED" | "WARNING" | "DANGER";
+  threshold: string;
+  explanation: string;
+  why_it_matters: string;
+}
+
+export interface PayoffPillar {
+  title: string;
+  profit_factor: number;
+  win_rate_pct: number;
+  expectancy_usd: number;
+  expectancy_pips: number;
+  risk_reward_ratio: number;
+  max_consecutive_losses: number;
+  circuit_breaker_limit: number;
+  badge: "PASSED" | "WARNING" | "DANGER";
+  threshold: string;
+  explanation: string;
+  why_it_matters: string;
+}
+
+export interface RegimeItem {
+  id: string;
+  name: string;
+  trades: number;
+  win_rate: number;
+  profit_factor: number;
+  pnl_usd: number;
+  badge: "PASSED" | "WARNING" | "DANGER";
+}
+
+export interface RegimesPillar {
+  title: string;
+  regimes: RegimeItem[];
+  badge: "PASSED" | "WARNING" | "DANGER";
+  threshold: string;
+  explanation: string;
+  why_it_matters: string;
+}
+
+export interface VerdictPillar {
+  title: string;
+  score: number;
+  status: "INSTITUTIONAL GRADE" | "CONDITIONAL PASSED" | "REJECTED (OVERFITTED)";
+  badge_color: "emerald" | "amber" | "rose";
+  verdict_title: string;
+  verdict_description: string;
+  can_promote: boolean;
+  strategy_id: string;
+  symbol: string;
+  candidate_id: string;
+  recommendation: string;
+}
+
+export interface QuantitativePillars {
+  pillar_1_monte_carlo: MonteCarloPillar;
+  pillar_2_walk_forward: WalkForwardPillar;
+  pillar_3_overfitting_sharpe: OverfittingPillar;
+  pillar_4_payoff_execution: PayoffPillar;
+  pillar_5_regimes: RegimesPillar;
+  pillar_6_verdict: VerdictPillar;
+}
+
+export interface PillarsAnalysisResponse {
+  ok: boolean;
+  symbol: string;
+  strategy: string;
+  bars_count: number;
+  metrics: BacktestRunMetrics & {
+    deflated_sharpe_ratio?: number;
+    wfe_ratio?: number;
+    ruin_probability_pct?: number;
+  };
+  pillars: QuantitativePillars;
+  verdict: BacktestVerdict & { score?: number };
+}
+
+export async function fetchPillarsAnalysis(
+  symbol: string,
+  strategy: string,
+  overrides?: { url?: string; token?: string }
+): Promise<PillarsAnalysisResponse> {
+  const params = new URLSearchParams({ symbol, strategy });
+  return await apiFetch<PillarsAnalysisResponse>(
+    `/api/research/pillars?${params}`,
+    overrides
+  );
+}
+
+export async function promoteCandidateStrategy(
+  candidateId: string,
+  approver = "Architect",
+  overrides?: { url?: string; token?: string }
+): Promise<{ ok: boolean; promoted: boolean; candidate_id: string; message: string }> {
+  const { url, token } = resolveApiConfig(overrides);
+  const res = await fetch(`${url}/api/research/promote`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify({ candidate_id: candidateId, approver }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.message ?? `HTTP ${res.status}`);
+  }
+  return data;
+}
+

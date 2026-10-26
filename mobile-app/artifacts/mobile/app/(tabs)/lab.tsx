@@ -36,11 +36,14 @@ import {
   runExitResearch,
   runBacktest,
   fetchAvailableStrategies,
+  fetchPillarsAnalysis,
   type ResearchExperiment,
   type BacktestRunResult,
   type VerdictTier,
   type StrategyMetaItem,
+  type PillarsAnalysisResponse,
 } from "@/services/researchApi";
+import { PedagogicalPillarsSuite } from "@/components/PedagogicalPillarsSuite";
 
 export default function LabScreen() {
   const colors = useColors();
@@ -146,9 +149,21 @@ export default function LabScreen() {
   const [btBars, setBtBars] = useState<number>(1000);
   const [btLoading, setBtLoading] = useState(false);
   const [btResult, setBtResult] = useState<BacktestRunResult | null>(null);
+  const [pillarAnalysis, setPillarAnalysis] = useState<PillarsAnalysisResponse | null>(null);
   const [btRunnerExpanded, setBtRunnerExpanded] = useState(true);
 
-  // Fetch catalog on mount
+  const loadPillars = useCallback(async (sym: string, strat: string) => {
+    try {
+      const pRes = await fetchPillarsAnalysis(sym, strat, apiOverrides);
+      if (pRes && pRes.pillars) {
+        setPillarAnalysis(pRes);
+      }
+    } catch {
+      // Fallback
+    }
+  }, [apiOverrides]);
+
+  // Fetch catalog and initial pillar analysis on mount
   useEffect(() => {
     async function loadCatalog() {
       try {
@@ -165,7 +180,8 @@ export default function LabScreen() {
       }
     }
     loadCatalog();
-  }, [apiOverrides]);
+    loadPillars(btSymbol, btStrategy);
+  }, [apiOverrides, loadPillars, btSymbol, btStrategy]);
 
   const handleSelectBtSymbol = (sym: string) => {
     setBtSymbol(sym);
@@ -175,6 +191,9 @@ export default function LabScreen() {
       setBtStrategy(firstStrat.id);
       const allowedTfs = firstStrat.allowed_timeframes || ["H1"];
       setBtTimeframe(firstStrat.default_timeframe || allowedTfs[0]);
+      loadPillars(sym, firstStrat.id);
+    } else {
+      loadPillars(sym, btStrategy);
     }
   };
 
@@ -188,24 +207,31 @@ export default function LabScreen() {
         setBtTimeframe(meta.default_timeframe || allowed[0]);
       }
     }
+    loadPillars(btSymbol, stratId);
   };
 
   const handleRunBacktestAction = async () => {
     setBtLoading(true);
     setError(null);
     try {
-      const res = await runBacktest(
-        {
-          symbol: btSymbol,
-          strategy: btStrategy,
-          timeframe: btTimeframe,
-          bars_count: btBars,
-          initial_balance: 10000,
-          risk_per_trade_pct: 1.0,
-        },
-        apiOverrides
-      );
+      const [res, pRes] = await Promise.all([
+        runBacktest(
+          {
+            symbol: btSymbol,
+            strategy: btStrategy,
+            timeframe: btTimeframe,
+            bars_count: btBars,
+            initial_balance: 10000,
+            risk_per_trade_pct: 1.0,
+          },
+          apiOverrides
+        ),
+        fetchPillarsAnalysis(btSymbol, btStrategy, apiOverrides).catch(() => null),
+      ]);
       setBtResult(res);
+      if (pRes && pRes.pillars) {
+        setPillarAnalysis(pRes);
+      }
       await loadExperiments();
     } catch (e) {
       Alert.alert("Backtest Failed", e instanceof Error ? e.message : String(e));
@@ -616,8 +642,16 @@ export default function LabScreen() {
         )}
       </View>
 
+      {/* ── 6 Quantitative Scientific Pedagogical Pillars Suite ── */}
+      {pillarAnalysis && (
+        <PedagogicalPillarsSuite
+          data={pillarAnalysis}
+          onPromoted={loadExperiments}
+        />
+      )}
+
       {/* ── Verbose Verdict Diagnostic Card ── */}
-      {btResult && (
+      {btResult && !pillarAnalysis && (
         <View
           style={[
             styles.verdictCard,

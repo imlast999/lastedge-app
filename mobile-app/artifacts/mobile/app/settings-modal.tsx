@@ -40,6 +40,7 @@ import {
   registerForPushNotificationsAsync,
   sendLocalNotification,
 } from "@/services/notifications";
+import { lockApp } from "@/components/PinAuthModal";
 
 function formatLastSync(d: Date | null): string {
   if (!d) return "Nunca";
@@ -137,6 +138,27 @@ export default function SettingsScreen() {
       ]
     );
   }, [resetSettings]);
+
+  const handleLockApp = useCallback(async () => {
+    await lockApp();
+    if (settings.hapticsEnabled) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    }
+    Alert.alert(
+      "Aplicación Bloqueada",
+      "La aplicación ha sido bloqueada. Deberá introducir el PIN de seguridad (1623) para volver a entrar.",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            router.back();
+            router.replace("/(tabs)");
+          },
+        },
+      ]
+    );
+  }, [settings.hapticsEnabled, router]);
+
 
   return (
     <ScrollView
@@ -419,6 +441,17 @@ export default function SettingsScreen() {
           description={settings.language === 'es' ? "Feedback al pulsar botones de prueba" : "Feedback when pressing test buttons"}
           value={settings.hapticsEnabled}
           onValueChange={(v) => updateSetting("hapticsEnabled", v)}
+          isLast
+        />
+      </SettingsSection>
+
+      {/* ── Seguridad ── */}
+      <SettingsSection title="Seguridad">
+        <SettingsRow
+          icon="lock"
+          label="Bloquear aplicación con PIN ahora"
+          value="PIN 1623"
+          onPress={handleLockApp}
           isLast
         />
       </SettingsSection>
