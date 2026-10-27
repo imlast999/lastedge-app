@@ -458,13 +458,23 @@
                 </div>
 
                 <!-- Strategy Lab Dual Sub-Navigation -->
-                <div style="display: flex; gap: 10px; margin-bottom: 22px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; flex-wrap: wrap;">
                     <button class="nav-item active" id="lab-subtab-btn-backtest" onclick="switchLabSubTab('backtest')" style="padding: 9px 18px; border-radius: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <i class="fa-solid fa-chart-simple"></i> 1. Backtests Cuantitativos & Auditoría
+                        <i class="fa-solid fa-chart-simple"></i> 1. Backtest Operativo (Vela a Vela)
                     </button>
                     <button class="nav-item" id="lab-subtab-btn-research" onclick="switchLabSubTab('research')" style="padding: 9px 18px; border-radius: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <i class="fa-solid fa-vial-circle-check"></i> 2. Research Científico (WFA & Monte Carlo)
+                        <i class="fa-solid fa-vial-circle-check"></i> 2. Research Científico (Estrés & Monte Carlo)
                     </button>
+                </div>
+
+                <!-- Callout explicativo amigable según el modo -->
+                <div id="lab-subtab-banner-backtest" style="margin-bottom: 18px; padding: 10px 14px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-circle-info" style="color: #60A5FA; font-size: 14px;"></i>
+                    <span><strong>Modo Backtest Operativo:</strong> Simulación histórica vela a vela con cálculo realista de spread, deslizamiento y comprobación de Circuit Breaker. Ideal para entender cómo abre y cierra las operaciones la estrategia.</span>
+                </div>
+                <div id="lab-subtab-banner-research" class="wip-hidden" style="margin-bottom: 18px; padding: 10px 14px; border-radius: 8px; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-flask" style="color: #C084FC; font-size: 14px;"></i>
+                    <span><strong>Modo Research Científico:</strong> Auditoría matemática avanzada con 1,000 permutaciones Monte Carlo y ventanas Walk-Forward. Certifica matemáticamente si la estrategia es robusta antes de arriesgar dinero real.</span>
                 </div>
 
                 <!-- ============================================================ -->
@@ -588,76 +598,76 @@
                         <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.15);">
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
                                 <!-- Trades Totales & Win/Loss Breakdown -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green);">
-                                    <span class="stat-label" style="font-size: 10px;">Trades (W / L)</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green); cursor: help;" title="Total de operaciones completadas en el periodo histórico simulado (Ganadas vs Perdidas).">
+                                    <span class="stat-label" style="font-size: 10px;">Trades (W / L) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-trades" style="font-size: 17px; margin: 4px 0;">0 trades</div>
                                     <span id="bt-metric-trades-wl" style="font-size: 10px; font-weight: 700; color: var(--accent-green);">0W / 0L</span>
                                 </div>
                                 <!-- Profit Factor -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Profit Factor</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Ratio Ganancia / Pérdida: Cuántos dólares gana la estrategia por cada $1 que pierde. Si es superior a 1.30, la estrategia es rentable.">
+                                    <span class="stat-label" style="font-size: 10px;">Ratio Ganancia/Pérdida (PF) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-pf" style="font-size: 18px; margin: 4px 0;">0.00</div>
-                                    <span style="font-size: 10px; color: var(--text-muted);">Umbral: ≥ 1.25</span>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Umbral: ≥ 1.30</span>
                                 </div>
                                 <!-- Win Rate -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Win Rate</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Tasa de Acierto: Porcentaje de operaciones cerradas en beneficio sobre el total ejecutado.">
+                                    <span class="stat-label" style="font-size: 10px;">Tasa de Acierto (Win Rate) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-wr" style="font-size: 18px; margin: 4px 0;">0.0%</div>
                                     <span id="bt-metric-wr-sub" style="font-size: 10px; color: var(--text-muted);">0.0% pérdidas</span>
                                 </div>
                                 <!-- Net Profit (Pips & USD) -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green);">
-                                    <span class="stat-label" style="font-size: 10px;">Net Profit (Pips / $)</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green); cursor: help;" title="Beneficio Neto Total: Ganancia monetaria acumulada tras descontar spread y comisiones reales.">
+                                    <span class="stat-label" style="font-size: 10px;">Beneficio Neto (Pips / $) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-pips" style="font-size: 17px; margin: 4px 0;">+0.0 pips</div>
                                     <span id="bt-metric-usd" style="font-size: 10px; font-weight: 700; color: var(--accent-green);">$0.00 USD</span>
                                 </div>
                                 <!-- Max Drawdown (% and USD) -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Max Drawdown</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Mayor Caída Temporal: El peor bache que sufrió la cuenta desde su punto más alto antes de recuperarse.">
+                                    <span class="stat-label" style="font-size: 10px;">Caída Máxima (Drawdown) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-dd" style="font-size: 18px; margin: 4px 0;">0.0%</div>
                                     <span id="bt-metric-dd-usd" style="font-size: 10px; color: var(--text-muted);">$0.00 USD</span>
                                 </div>
                                 <!-- Circuit Breaker Telemetry -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid #06B6D4;">
-                                    <span class="stat-label" style="font-size: 10px;"><i class="fa-solid fa-shield"></i> Circuit Breaker</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid #06B6D4; cursor: help;" title="Parada de Emergencia Automática: Cortafuegos que apaga el bot si detecta 4 pérdidas seguidas para proteger el capital.">
+                                    <span class="stat-label" style="font-size: 10px;"><i class="fa-solid fa-shield"></i> Circuit Breaker <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-cb" style="font-size: 15px; margin: 4px 0; color: #06B6D4;">0 Disparos</div>
                                     <span id="bt-metric-cb-sub" style="font-size: 10px; color: var(--text-muted);">0 velas pausadas</span>
                                 </div>
                                 <!-- Long vs Short Signals -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Dirección (BUY/SELL)</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Equilibrio de Mercado: Distribución de operaciones de compra (BUY) y venta (SELL).">
+                                    <span class="stat-label" style="font-size: 10px;">Dirección (BUY/SELL) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-direction" style="font-size: 15px; margin: 4px 0;">0 BUY / 0 SELL</div>
                                     <span id="bt-metric-setups" style="font-size: 10px; color: var(--text-muted);">0 setups evaluados</span>
                                 </div>
                                 <!-- Consecutive Losses -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Racha Máx Pérdidas</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Racha Máxima de Pérdidas: El peor encadenamiento de operaciones fallidas consecutivas soportado.">
+                                    <span class="stat-label" style="font-size: 10px;">Racha Máx Pérdidas <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-consec-losses" style="font-size: 18px; margin: 4px 0;">0</div>
                                     <span style="font-size: 10px; color: var(--text-muted);">Límite CB: 4</span>
                                 </div>
                                 <!-- Sharpe / Sortino -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Sharpe / Sortino</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Calidad del Crecimiento: Mide si los beneficios crecen con suavidad y consistencia, penalizando caídas violentas.">
+                                    <span class="stat-label" style="font-size: 10px;">Sharpe / Sortino <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-sharpe" style="font-size: 17px; margin: 4px 0;">0.00 / 0.00</div>
-                                    <span style="font-size: 10px; color: var(--text-muted);">Anualizado</span>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Consistencia anualizada</span>
                                 </div>
                                 <!-- Expectancy -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Expectancy / Trade</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Beneficio Promedio por Trade: La cantidad matemática neta que ganas en promedio en cada operación.">
+                                    <span class="stat-label" style="font-size: 10px;">Esperanza / Trade <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-expectancy" style="font-size: 18px; margin: 4px 0;">0.0 pips</div>
                                     <span style="font-size: 10px; color: var(--text-muted);">Payoff matemático</span>
                                 </div>
                                 <!-- Monte Carlo Ruin -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Monte Carlo Ruin</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Riesgo de Ruina por Mala Racha: Probabilidad estadística de que una mala racha desordenada dañe tu cuenta (debe ser < 1.0%).">
+                                    <span class="stat-label" style="font-size: 10px;">Riesgo Ruina Monte Carlo <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-ruin" style="font-size: 18px; margin: 4px 0;">0.0%</div>
-                                    <span style="font-size: 10px; color: var(--text-muted);">Umbral 20% DD</span>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Umbral &lt; 1.0%</span>
                                 </div>
                                 <!-- Risk/Reward -->
-                                <div class="stat-card" style="padding: 12px; margin: 0;">
-                                    <span class="stat-label" style="font-size: 10px;">Avg Risk:Reward</span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Ratio Riesgo / Recompensa: Cuánto dinero se busca ganar en relación al riesgo asumido en el Stop Loss.">
+                                    <span class="stat-label" style="font-size: 10px;">Riesgo / Recompensa (R:R) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-rr" style="font-size: 18px; margin: 4px 0;">0.00</div>
-                                    <span style="font-size: 10px; color: var(--text-muted);">Avg Win / Avg Loss</span>
+                                    <span style="font-size: 10px; color: var(--text-muted);">Target: ≥ 1:1.5</span>
                                 </div>
                             </div>
                         </div>

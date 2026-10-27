@@ -742,17 +742,23 @@ function switchLabSubTab(tabName) {
     const btnRs = document.getElementById('lab-subtab-btn-research');
     const viewBt = document.getElementById('lab-subview-backtest');
     const viewRs = document.getElementById('lab-subview-research');
+    const bannerBt = document.getElementById('lab-subtab-banner-backtest');
+    const bannerRs = document.getElementById('lab-subtab-banner-research');
 
     if (tabName === 'backtest') {
         if (btnBt) btnBt.classList.add('active');
         if (btnRs) btnRs.classList.remove('active');
         if (viewBt) viewBt.classList.remove('wip-hidden');
         if (viewRs) viewRs.classList.add('wip-hidden');
+        if (bannerBt) bannerBt.classList.remove('wip-hidden');
+        if (bannerRs) bannerRs.classList.add('wip-hidden');
     } else {
         if (btnBt) btnBt.classList.remove('active');
         if (btnRs) btnRs.classList.add('active');
         if (viewBt) viewBt.classList.add('wip-hidden');
         if (viewRs) viewRs.classList.remove('wip-hidden');
+        if (bannerBt) bannerBt.classList.add('wip-hidden');
+        if (bannerRs) bannerRs.classList.remove('wip-hidden');
     }
 }
 

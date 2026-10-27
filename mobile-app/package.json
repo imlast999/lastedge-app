@@ -1,6 +1,6 @@
 {
   "name": "workspace",
-  "version": "1.1.38",
+  "version": "1.1.40",
   "license": "MIT",
   "scripts": {
     "preinstall": "node -e \"if (process.env.npm_config_user_agent && !process.env.npm_config_user_agent.includes('pnpm')) { console.error('Use pnpm instead'); process.exit(1); }\"",
