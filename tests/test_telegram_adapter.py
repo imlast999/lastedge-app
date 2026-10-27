@@ -145,7 +145,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(json_sent["reply_markup"].get("remove_keyboard"))
 
     async def test_cmd_start_inline_menu(self):
-        """Verifica que /start despliega el menú interactivo con botones inline y selector de idioma."""
+        """Verifica que /start despliega el menú interactivo con botones inline, selector de idioma y sin Live Chart."""
         mock_session, mock_post = self._create_mock_session()
         await self.adapter._cmd_start(mock_session, 12345)
 
@@ -158,6 +158,50 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertIn("nav_positions", all_cb)
         self.assertIn("nav_status", all_cb)
         self.assertIn("toggle_language", all_cb)
+        self.assertNotIn("nav_chart", all_cb)
+
+    async def test_start_deep_link_chart(self):
+        """Verifica que /start chart_11769678 invoca la generación de gráfico."""
+        mock_session, mock_post = self._create_mock_session()
+        update = {
+            "message": {
+                "chat": {"id": 12345},
+                "from": {"id": "12345"},
+                "text": "/start chart_11769678"
+            }
+        }
+        with patch.object(self.adapter, "_cmd_chart", new_callable=AsyncMock) as mock_chart:
+            await self.adapter._process_update(mock_session, update)
+            mock_chart.assert_called_once()
+            args = mock_chart.call_args[0]
+            self.assertEqual(args[2], ["11769678"])
+
+    async def test_chart_underscore_command(self):
+        """Verifica que /chart_11769678 invoca la generación de gráfico para el ticket."""
+        mock_session, mock_post = self._create_mock_session()
+        update = {
+            "message": {
+                "chat": {"id": 12345},
+                "from": {"id": "12345"},
+                "text": "/chart_11769678"
+            }
+        }
+        with patch.object(self.adapter, "_cmd_chart", new_callable=AsyncMock) as mock_chart:
+            await self.adapter._process_update(mock_session, update)
+            mock_chart.assert_called_once()
+            args = mock_chart.call_args[0]
+            self.assertEqual(args[2], ["11769678"])
+
+    async def test_positions_renders_deep_link(self):
+        """Verifica que _render_positions genera enlaces profundos de gráfico en vez de botones inline."""
+        self.bot_service.get_open_positions.return_value = [
+            {"ticket": 11769678, "symbol": "EURUSD", "type": "SELL", "volume": 0.05, "open_price": 1.115, "profit": 12.0}
+        ]
+        text, markup = await self.adapter._render_positions("en")
+        self.assertIn("t.me/LastEdgeBot?start=chart_11769678", text)
+        self.assertIn("/chart_11769678", text)
+        all_cb = [btn.get("callback_data") for row in markup["inline_keyboard"] for btn in row]
+        self.assertFalse(any(cb.startswith("chart_") for cb in all_cb if cb))
 
     async def test_language_toggle(self):
         """Verifica alternancia entre inglés y español y persistencia."""

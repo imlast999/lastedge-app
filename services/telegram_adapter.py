@@ -325,6 +325,7 @@ class TelegramAdapter:
         self.bot_service = bot_service
         self.trading_client = trading_client or get_trading_client()
         self.research_client = research_client or get_research_client()
+        self.bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "LastEdgeBot")
         self.last_update_id = 0
         self.is_running = False
 
@@ -532,22 +533,21 @@ class TelegramAdapter:
             "inline_keyboard": [
                 [
                     {"text": t["btn_positions"], "callback_data": "nav_positions"},
-                    {"text": t["btn_chart"], "callback_data": "nav_chart"}
+                    {"text": t["btn_status"], "callback_data": "nav_status"}
                 ],
                 [
-                    {"text": t["btn_status"], "callback_data": "nav_status"},
-                    {"text": t["btn_equity"], "callback_data": "nav_equity"}
+                    {"text": t["btn_equity"], "callback_data": "nav_equity"},
+                    {"text": t["btn_risk"], "callback_data": "nav_risk"}
                 ],
                 [
-                    {"text": t["btn_risk"], "callback_data": "nav_risk"},
-                    {"text": t["btn_journal"], "callback_data": "nav_journal"}
+                    {"text": t["btn_journal"], "callback_data": "nav_journal"},
+                    {"text": t["btn_research"], "callback_data": "nav_research"}
                 ],
                 [
-                    {"text": t["btn_research"], "callback_data": "nav_research"},
-                    {"text": t["btn_health"], "callback_data": "nav_health"}
+                    {"text": t["btn_health"], "callback_data": "nav_health"},
+                    {"text": t["btn_autosignals"], "callback_data": "nav_autosignals"}
                 ],
                 [
-                    {"text": t["btn_autosignals"], "callback_data": "nav_autosignals"},
                     {"text": t["btn_toggle_lang"], "callback_data": "toggle_language"}
                 ],
                 [
@@ -631,21 +631,12 @@ class TelegramAdapter:
             positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
 
         now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
-        chart_buttons = []
-        for p in positions:
-            ticket = p.get("ticket")
-            sym = p.get("symbol", "OP")
-            if ticket:
-                chart_buttons.append({"text": f"{t['btn_chart_prefix']} #{ticket} ({sym})", "callback_data": f"chart_{ticket}"})
-
-        keyboard_rows = [
-            [{"text": t["btn_refresh_positions"], "callback_data": "refresh_positions"}]
-        ]
-        for i in range(0, len(chart_buttons), 2):
-            keyboard_rows.append(chart_buttons[i:i+2])
-        keyboard_rows.append([{"text": t["btn_back_menu"], "callback_data": "nav_start"}])
-
-        markup = {"inline_keyboard": keyboard_rows}
+        markup = {
+            "inline_keyboard": [
+                [{"text": t["btn_refresh_positions"], "callback_data": "refresh_positions"}],
+                [{"text": t["btn_back_menu"], "callback_data": "nav_start"}]
+            ]
+        }
 
         if not positions:
             text = (
@@ -681,6 +672,8 @@ class TelegramAdapter:
             sl = float(p.get("sl", 0.0))
             tp = float(p.get("tp", 0.0))
 
+            chart_link_label = "View Chart" if lang == "en" else "Ver Gráfico"
+            chart_deep_link = f"https://t.me/{self.bot_username}?start=chart_{ticket}"
             text += (
                 f"• *#{ticket} — {symbol} ({ptype})*\n"
                 f"  {t['lots_label']}: `{vol:.2f}` | {t['entry']}: `{open_p:.5f}`\n"
@@ -688,7 +681,7 @@ class TelegramAdapter:
             )
             if sl > 0 or tp > 0:
                 text += f"  SL: `{sl:.5f}` | TP: `{tp:.5f}`\n"
-            text += "\n"
+            text += f"  📊 [{chart_link_label}]({chart_deep_link}) • `/chart_{ticket}`\n\n"
 
         text += f"{CARD_LINE}\n⏰ _{t['updated']}: {now_str}_"
         return text, markup
@@ -1172,7 +1165,14 @@ class TelegramAdapter:
                 args = words[1:]
 
         if command in ("/start", "/inicio"):
-            await self._cmd_start(session, chat_id, lang=lang)
+            if args and (args[0].startswith("chart_") or args[0].startswith("c_") or args[0].isdigit()):
+                target_ticket = args[0].replace("chart_", "").replace("c_", "")
+                await self._cmd_chart(session, chat_id, [target_ticket], lang=lang)
+            else:
+                await self._cmd_start(session, chat_id, lang=lang)
+        elif command.startswith("/chart_") or command.startswith("/c_"):
+            target_ticket = command.split("_", 1)[1]
+            await self._cmd_chart(session, chat_id, [target_ticket], lang=lang)
         elif command in ("/help", "/ayuda"):
             await self._cmd_help(session, chat_id, lang=lang)
         elif command in ("/language", "/idioma", "/lang"):
