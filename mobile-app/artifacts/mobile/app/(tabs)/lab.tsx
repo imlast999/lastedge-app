@@ -465,7 +465,7 @@ export default function LabScreen() {
                 <View style={styles.inlineChips}>
                   {catalogSymbols.map((s) => {
                     const isSel = btSymbol === s;
-                    const friendlySym = s === "EURUSD" ? "EUR/USD (Divisas)" : s === "XAUUSD" ? "ORO (XAU/USD)" : "BITCOIN (BTC/EUR)";
+                    const friendlySym = s === "EURUSD" ? "EUR/USD (Divisas)" : s === "XAUUSD" ? "ORO (XAU/USD)" : s === "BTCEUR" ? "BITCOIN (BTC/EUR)" : s;
                     return (
                       <TouchableOpacity
                         key={s}
