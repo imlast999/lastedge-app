@@ -122,8 +122,8 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(discord_received), 1)
         self.assertIn("Alerta de Riesgo", discord_received[0])
 
-    async def test_persistent_reply_keyboard(self):
-        """Verifica que el teclado persistente se incluye en la respuesta de ayuda enviada a Telegram."""
+    async def test_reply_keyboard_removed_in_favor_of_inline_menu(self):
+        """Verifica que el bot no usa teclado inferior y que /help y /start despliegan el menu inline en el mensaje."""
         mock_session, mock_post = self._create_mock_session()
         await self.adapter._cmd_help(mock_session, 12345)
 
@@ -131,16 +131,18 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         json_sent = mock_session.post.call_args[1]["json"]
         self.assertIn("reply_markup", json_sent)
         markup = json_sent["reply_markup"]
-        self.assertTrue(markup.get("resize_keyboard"))
-        self.assertTrue(markup.get("is_persistent"))
-        self.assertIn("keyboard", markup)
+        self.assertIn("inline_keyboard", markup)
+        self.assertNotIn("keyboard", markup)
 
-        # Verificar que contiene los botones principales
-        flat_buttons = [btn["text"] for row in markup["keyboard"] for btn in row]
-        self.assertIn("⚡ /status", flat_buttons)
-        self.assertIn("📊 /positions", flat_buttons)
-        self.assertIn("💰 /equity", flat_buttons)
-        self.assertIn("🛡️ /risk", flat_buttons)
+    async def test_remove_keyboard_when_no_markup(self):
+        """Verifica que si no hay markup inline se envía remove_keyboard para limpiar teclados inferiores."""
+        mock_session, mock_post = self._create_mock_session()
+        await self.adapter._send_response(mock_session, 12345, "Test Message")
+
+        self.assertTrue(mock_session.post.called)
+        json_sent = mock_session.post.call_args[1]["json"]
+        self.assertIn("reply_markup", json_sent)
+        self.assertTrue(json_sent["reply_markup"].get("remove_keyboard"))
 
     async def test_cmd_start_inline_menu(self):
         """Verifica que /start despliega el menú interactivo con botones inline y selector de idioma."""
