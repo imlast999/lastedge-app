@@ -53,7 +53,7 @@ export default function TradesScreen() {
   const pendingSignals = useMemo(
     () =>
       [...signals]
-        .filter((s) => s.status === "pending" || s.status === "active")
+        .filter((s) => s.status === "pending" || s.status === "active" || s.status === "executed")
         .sort((a, b) => {
           // Primero "pending" (requieren acción), luego "active"
           if (a.status === "pending" && b.status !== "pending") return -1;
@@ -121,7 +121,7 @@ export default function TradesScreen() {
         />
         <SubTabButton
           label={t("closedTrades")}
-          badge={0}
+          badge={closedTrades.length}
           active={activeTab === "closed"}
           onPress={() => setActiveTab("closed")}
           colors={colors}

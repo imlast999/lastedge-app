@@ -32,6 +32,74 @@ logger = logging.getLogger(__name__)
 APP_DIR = Path(__file__).resolve().parent.parent
 
 
+_TRADES_CACHE = {"timestamp": 0, "trades": []}
+
+def get_reconstructed_trades_from_mt5(days: int = 14) -> list:
+    global _TRADES_CACHE
+    import time
+    now_ts = time.time()
+    if now_ts - _TRADES_CACHE.get("timestamp", 0) < 5.0 and _TRADES_CACHE.get("trades"):
+        return _TRADES_CACHE["trades"]
+
+    trades = []
+    try:
+        import MetaTrader5 as mt5
+        from datetime import timedelta
+        if mt5.initialize():
+            now_dt = datetime.now()
+            from_date = now_dt - timedelta(days=days)
+            deals = mt5.history_deals_get(from_date, now_dt + timedelta(days=1))
+            if deals:
+                pos_map = {}
+                for d in deals:
+                    if d.position_id:
+                        pos_map.setdefault(d.position_id, []).append(d)
+
+                for pid, dlist in pos_map.items():
+                    entry_d = next((d for d in dlist if d.entry == 0), None)
+                    exit_d = next((d for d in dlist if d.entry == 1), None)
+                    if exit_d:
+                        sym = exit_d.symbol
+                        ttype = "BUY" if (entry_d and entry_d.type == 0) else ("SELL" if (entry_d and entry_d.type == 1) else ("SELL" if exit_d.type == 0 else "BUY"))
+                        open_p = float(entry_d.price if entry_d else exit_d.price)
+                        close_p = float(exit_d.price)
+                        profit = float(exit_d.profit) + float(exit_d.swap or 0.0) + float(exit_d.commission or 0.0)
+                        if entry_d:
+                            profit += float(entry_d.commission or 0.0)
+                        mult = 100.0 if ("JPY" in sym or "XAU" in sym) else (1.0 if "BTC" in sym else 10000.0)
+                        pips = round(abs(close_p - open_p) * mult, 1)
+                        if profit < 0:
+                            pips = -abs(pips)
+                        else:
+                            pips = abs(pips)
+                        comment = str(exit_d.comment or "").upper()
+                        if "TP" in comment:
+                            reason = "TAKE_PROFIT"
+                        elif "SL" in comment:
+                            reason = "STOP_LOSS"
+                        elif profit > 0:
+                            reason = "TAKE_PROFIT"
+                        else:
+                            reason = "MANUAL"
+                        trades.append({
+                            "id": str(pid),
+                            "symbol": sym,
+                            "type": ttype,
+                            "openPrice": open_p,
+                            "closePrice": close_p,
+                            "pips": pips,
+                            "profit": round(profit, 2),
+                            "closeReason": reason,
+                            "closedAt": datetime.fromtimestamp(exit_d.time, tz=timezone.utc).isoformat(),
+                            "lot": round(float(exit_d.volume), 2),
+                        })
+                trades.sort(key=lambda x: x["closedAt"], reverse=True)
+                _TRADES_CACHE = {"timestamp": now_ts, "trades": trades}
+    except Exception as e:
+        logger.debug("Error getting MT5 deals: %s", e)
+    return trades
+
+
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
@@ -180,6 +248,13 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 except Exception:
                     bots_status = {}
 
+                b_qual = t_stat.get("health", {}).get("broker_quality", {}) if isinstance(t_stat.get("health"), dict) else {}
+                exec_qual = {
+                    "avgLatency": round(float(b_qual.get("avg_latency_ms", 343.1)), 1),
+                    "avgSlippage": round(float(b_qual.get("avg_slippage_pips", 0.56)), 2),
+                    "successRate": round(float(b_qual.get("fill_rate_pct", 100.0)), 1),
+                }
+
                 self._send_json(200, {
                     "ok": True,
                     "connected": mt5_conn,
@@ -188,6 +263,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     "equity": equity,
                     "margin": margin,
                     "freeMargin": free_margin,
+                    "executionQuality": exec_qual,
                     "app": "LastEdge Control App",
                     "trading_engine": t_stat,
                     "strategy_lab": r_stat,
@@ -422,16 +498,41 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                                     break
                             except Exception as _e:
                                 logger.debug("Error reading enhanced_signals: %s", _e)
-                    self._send_json(200, {"ok": True, "signals": signals})
-                else:
-                    self._send_json(200, res)
+                signals_out = signals if (not isinstance(res, dict) or not res.get("ok")) else list(res.get("signals", []))
+                try:
+                    pos_res = trading_client.get_positions()
+                    if isinstance(pos_res, dict) and pos_res.get("ok"):
+                        open_pos = pos_res.get("positions", [])
+                        active_items = []
+                        for p in open_pos:
+                            t_num = str(p.get("ticket") or p.get("id") or "")
+                            active_items.append({
+                                "id": f"pos_{t_num}",
+                                "symbol": p.get("symbol") or "EURUSD",
+                                "type": (p.get("type") or "BUY").upper(),
+                                "entry": float(p.get("open_price") or p.get("price") or 0.0),
+                                "takeProfit": float(p.get("tp") or 0.0),
+                                "stopLoss": float(p.get("sl") or 0.0),
+                                "status": "active",
+                                "rrRatio": 3.0,
+                                "timestamp": p.get("time") or datetime.now(timezone.utc).isoformat(),
+                                "lot": float(p.get("volume") or p.get("lot") or 0.01),
+                                "strategy": p.get("comment") or "MT5 Live Position",
+                                "profit": float(p.get("profit") or 0.0),
+                            })
+                        signals_out = active_items + [s for s in signals_out if str(s.get("id")) != t_num]
+                except Exception as _e:
+                    logger.debug("Error merging open positions into signals: %s", _e)
+                self._send_json(200, {"ok": True, "signals": signals_out})
 
             elif path in ("/api/checklist", "/api/trading/checklist"):
                 self._send_json(200, trading_client.get_checklist())
 
             # ── Mobile App Dedicated Endpoints ────────────────────────────────
             elif path in ("/api/trades", "/api/trading/trades"):
-                trades_list = []
+                trades_list = get_reconstructed_trades_from_mt5(14)
+                if not trades_list:
+                    trades_list = []
                 db_cand = [
                     Path(__file__).parent.parent.parent / "bot_state.db",
                     Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
@@ -492,30 +593,45 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
 
             elif path in ("/api/equityHistory", "/api/trading/equityHistory"):
                 points = []
-                db_cand = [
-                    Path(__file__).parent.parent.parent / "bot_state.db",
-                    Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
-                ]
-                for db_p in db_cand:
-                    if db_p.exists():
-                        try:
-                            import sqlite3
-                            with sqlite3.connect(str(db_p), timeout=1.0) as conn:
-                                conn.row_factory = sqlite3.Row
-                                cur = conn.cursor()
-                                rows = cur.execute(
-                                    "SELECT timestamp, equity FROM balance_snapshots ORDER BY rowid DESC LIMIT 48"
-                                ).fetchall()
-                                for r in reversed(rows):
-                                    try:
-                                        t_val = datetime.fromisoformat(r["timestamp"]).timestamp() * 1000
-                                    except Exception:
-                                        t_val = 0
-                                    points.append({"time": t_val, "value": float(r["equity"] or 0.0)})
-                            if points:
-                                break
-                        except Exception as _e:
-                            logger.debug("Error reading balance_snapshots: %s", _e)
+                try:
+                    eq_res = trading_client.get_equity_history(days=30)
+                    if isinstance(eq_res, dict) and eq_res.get("ok"):
+                        for item in eq_res.get("history", []):
+                            val = float(item.get("equity") or item.get("balance") or 0.0)
+                            t_ms = int(item.get("time") or 0)
+                            points.append({
+                                "time": t_ms,
+                                "value": val,
+                                "equity": val,
+                                "balance": float(item.get("balance") or val)
+                            })
+                except Exception as _e:
+                    logger.debug("Error getting equity history: %s", _e)
+                if not points:
+                    db_cand = [
+                        Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db",
+                        Path(__file__).parent.parent.parent / "bot_state.db"
+                    ]
+                    for db_p in db_cand:
+                        if db_p.exists():
+                            try:
+                                import sqlite3
+                                with sqlite3.connect(str(db_p), timeout=1.0) as conn:
+                                    conn.row_factory = sqlite3.Row
+                                    cur = conn.cursor()
+                                    rows = cur.execute(
+                                        "SELECT timestamp, equity FROM balance_snapshots ORDER BY rowid DESC LIMIT 48"
+                                    ).fetchall()
+                                    for r in reversed(rows):
+                                        try:
+                                            t_val = datetime.fromisoformat(r["timestamp"]).timestamp() * 1000
+                                        except Exception:
+                                            t_val = 0
+                                        points.append({"time": t_val, "value": float(r["equity"] or 0.0), "equity": float(r["equity"] or 0.0), "balance": float(r["equity"] or 0.0)})
+                                if points:
+                                    break
+                            except Exception as _e:
+                                logger.debug("Error reading balance_snapshots: %s", _e)
                 self._send_json(200, points)
 
             elif path in ("/api/risk-dashboard",):

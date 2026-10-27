@@ -111,7 +111,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const totalTrades = trades.length;
   const winningTrades = trades.filter((t) => t.profit > 0).length;
   const winrate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
-  const openPositions = signals.filter((s) => s.status === "active").length;
+  const openPositions = signals.filter((s) => s.status === "active" || s.status === "executed").length;
   const pendingSignals = signals.filter((s) => s.status === "pending").length;
 
   // ── Fetch helpers ───────────────────────────────────────────────────────────
