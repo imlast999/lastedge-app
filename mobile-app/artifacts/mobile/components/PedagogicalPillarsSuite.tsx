@@ -17,7 +17,7 @@ import type {
 import { promoteCandidateStrategy } from "@/services/researchApi";
 
 interface Props {
-  data: PillarsAnalysisResponse;
+  data?: PillarsAnalysisResponse | null;
   onPromoted?: () => void;
 }
 
@@ -26,13 +26,21 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
   const [promoting, setPromoting] = useState(false);
   const [promotedSuccess, setPromotedSuccess] = useState(false);
 
+  if (!data?.pillars) {
+    return null;
+  }
+
   const pillars = data.pillars;
-  const p1 = pillars.pillar_1_monte_carlo;
-  const p2 = pillars.pillar_2_walk_forward;
-  const p3 = pillars.pillar_3_overfitting_sharpe;
-  const p4 = pillars.pillar_4_payoff_execution;
-  const p5 = pillars.pillar_5_regimes;
-  const p6 = pillars.pillar_6_verdict;
+  const p1 = pillars?.pillar_1_monte_carlo;
+  const p2 = pillars?.pillar_2_walk_forward;
+  const p3 = pillars?.pillar_3_overfitting_sharpe;
+  const p4 = pillars?.pillar_4_payoff_execution;
+  const p5 = pillars?.pillar_5_regimes;
+  const p6 = pillars?.pillar_6_verdict;
+
+  if (!p1 || !p2 || !p3 || !p4 || !p5 || !p6) {
+    return null;
+  }
 
   const toggleTooltip = (pillarKey: string) => {
     setExpandedTooltip((prev) => (prev === pillarKey ? null : pillarKey));
@@ -87,7 +95,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Probabilidad de Ruina</Text>
             <Text style={[styles.metricBigValue, { color: p1.ruin_probability_pct < 1 ? "#10B981" : "#F59E0B" }]}>
-              {p1.ruin_probability_pct.toFixed(1)}%
+              {(p1.ruin_probability_pct ?? 0).toFixed(1)}%
             </Text>
             <Text style={styles.metricBenchmark}>{p1.threshold}</Text>
           </View>
@@ -95,7 +103,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>P95 / P99 Max Drawdown</Text>
             <Text style={styles.metricValue}>
-              {p1.drawdown_95_pct.toFixed(1)}% / {p1.drawdown_99_pct.toFixed(1)}%
+              {(p1.drawdown_95_pct ?? 0).toFixed(1)}% / {(p1.drawdown_99_pct ?? 0).toFixed(1)}%
             </Text>
             <Text style={styles.metricBenchmark}>1,000 permutaciones</Text>
           </View>
@@ -104,7 +112,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
         <View style={styles.metricRowSub}>
           <Text style={styles.subLabel}>Beneficio Mediano vs Peor Caso:</Text>
           <Text style={styles.subValue}>
-            +{p1.median_profit_pips.toFixed(1)} pips vs +{p1.worst_case_profit_pips.toFixed(1)} pips
+            +{(p1.median_profit_pips ?? 0).toFixed(1)} pips vs +{(p1.worst_case_profit_pips ?? 0).toFixed(1)} pips
           </Text>
         </View>
 
@@ -151,7 +159,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Eficiencia Walk-Forward (WFE)</Text>
             <Text style={[styles.metricBigValue, { color: p2.wfe_ratio >= 60 ? "#10B981" : "#EF4444" }]}>
-              {p2.wfe_ratio.toFixed(1)}%
+              {(p2.wfe_ratio ?? 0).toFixed(1)}%
             </Text>
             <Text style={styles.metricBenchmark}>{p2.threshold}</Text>
           </View>
@@ -166,7 +174,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
 
         {/* Ventanas Móviles Traffic Light */}
         <View style={styles.windowsRow}>
-          {p2.windows.map((w, idx) => (
+          {(p2.windows || []).map((w, idx) => (
             <View key={idx} style={styles.windowChip}>
               <View
                 style={[
@@ -175,7 +183,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
                 ]}
               />
               <Text style={styles.windowName}>{w.window}</Text>
-              <Text style={styles.windowPf}>PF {w.test_pf.toFixed(2)}</Text>
+              <Text style={styles.windowPf}>PF {(w.test_pf ?? 0).toFixed(2)}</Text>
             </View>
           ))}
         </View>
@@ -222,14 +230,14 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Sharpe Deflactado (DSR)</Text>
             <Text style={[styles.metricBigValue, { color: p3.deflated_sharpe_ratio >= 1.0 ? "#10B981" : "#F59E0B" }]}>
-              {p3.deflated_sharpe_ratio.toFixed(2)}
+              {(p3.deflated_sharpe_ratio ?? 0).toFixed(2)}
             </Text>
             <Text style={styles.metricBenchmark}>{p3.threshold}</Text>
           </View>
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Sharpe Base vs Sortino</Text>
             <Text style={styles.metricValue}>
-              {p3.traditional_sharpe.toFixed(2)} / {p3.sortino_ratio.toFixed(2)}
+              {(p3.traditional_sharpe ?? 0).toFixed(2)} / {(p3.sortino_ratio ?? 0).toFixed(2)}
             </Text>
             <Text style={styles.metricBenchmark}>Penaliza sólo caídas</Text>
           </View>
@@ -277,7 +285,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Profit Factor (PF)</Text>
             <Text style={[styles.metricBigValue, { color: p4.profit_factor >= 1.3 ? "#10B981" : "#EF4444" }]}>
-              {p4.profit_factor.toFixed(2)}
+              {(p4.profit_factor ?? 0).toFixed(2)}
             </Text>
             <Text style={styles.metricBenchmark}>{p4.threshold}</Text>
           </View>
@@ -286,7 +294,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={[styles.metricValue, { color: "#34D399" }]}>
               +{p4.expectancy_pips.toFixed(1)} pips (${p4.expectancy_usd.toFixed(2)})
             </Text>
-            <Text style={styles.metricBenchmark}>R:R Promedio: 1:{p4.risk_reward_ratio.toFixed(1)}</Text>
+            <Text style={styles.metricBenchmark}>R:R Promedio: 1:{(p4.risk_reward_ratio ?? 0).toFixed(1)}</Text>
           </View>
         </View>
 
@@ -337,7 +345,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
 
         {/* 4 Macro Regimes Breakdown */}
         <View style={styles.regimesGrid}>
-          {p5.regimes.map((reg) => (
+          {(p5.regimes || []).map((reg) => (
             <View key={reg.id} style={styles.regimeItem}>
               <View style={styles.regimeHeader}>
                 <Text style={styles.regimeName} numberOfLines={1}>{reg.name}</Text>
@@ -357,12 +365,12 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
                       color: reg.badge === "PASSED" ? "#34D399" : "#FBBF24",
                     }}
                   >
-                    PF {reg.profit_factor.toFixed(2)}
+                    PF {(reg.profit_factor ?? 0).toFixed(2)}
                   </Text>
                 </View>
               </View>
               <Text style={styles.regimeMeta}>
-                {reg.trades} trades · {reg.win_rate.toFixed(0)}% WR · +${reg.pnl_usd.toFixed(0)}
+                {reg.trades} trades · {(reg.win_rate ?? 0).toFixed(0)}% WR · +${reg.pnl_usd.toFixed(0)}
               </Text>
             </View>
           ))}
