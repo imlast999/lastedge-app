@@ -52,6 +52,8 @@ interface RiskDashboardData {
 export default function RiskWidget() {
   const colors = useColors();
   const { currencySymbol } = useTrading();
+  const { settings } = useSettings();
+  const isEs = settings.language === "es";
   const { apiOverrides } = useSettings();
   const [data, setData] = useState<RiskDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,7 +153,7 @@ export default function RiskWidget() {
               { color: isCbActive ? "#34D399" : "#F87171" },
             ]}
           >
-            {isCbActive ? "CIRCUIT BREAKER: ACTIVO" : "CIRCUIT BREAKER: PAUSA"}
+            {isCbActive ? (isEs ? "CIRCUIT BREAKER: ACTIVO" : "CIRCUIT BREAKER: ACTIVE") : (isEs ? "CIRCUIT BREAKER: PAUSA" : "CIRCUIT BREAKER: PAUSED")}
           </Text>
         </View>
       </View>
@@ -159,7 +161,7 @@ export default function RiskWidget() {
       {/* Portfolio Risk Exposure HD Progress Bar */}
       <View style={styles.section}>
         <View style={styles.row}>
-          <Text style={styles.label}>Exposición de Portafolio</Text>
+          <Text style={styles.label}>{isEs ? "Exposición de Portafolio" : "Portfolio Exposure"}</Text>
           <Text style={styles.value}>
             <Text
               style={{
@@ -170,7 +172,7 @@ export default function RiskWidget() {
             >
               {riskPct.toFixed(2)}%
             </Text>{" "}
-            <Text style={{ fontSize: 11, color: "#64748B" }}>/ {maxRisk.toFixed(1)}% máx</Text>
+            <Text style={{ fontSize: 11, color: "#64748B" }}>/ {maxRisk.toFixed(1)}% {isEs ? "máx" : "max"}</Text>
           </Text>
         </View>
 
@@ -189,7 +191,7 @@ export default function RiskWidget() {
         <View style={styles.scaleRow}>
           <Text style={styles.scaleText}>0.0%</Text>
           <Text style={styles.scaleText}>
-            Capacidad restante: <Text style={{ color: "#38BDF8", fontWeight: "700" }}>{remaining.toFixed(2)}%</Text>
+            {isEs ? "Capacidad restante:" : "Remaining capacity:"} <Text style={{ color: "#38BDF8", fontWeight: "700" }}>{remaining.toFixed(2)}%</Text>
           </Text>
           <Text style={styles.scaleText}>3.0%</Text>
         </View>
@@ -199,13 +201,13 @@ export default function RiskWidget() {
       <View style={[styles.section, styles.borderTop]}>
         <View style={styles.rowGrid}>
           <View style={styles.gridCol}>
-            <Text style={styles.gridLabel}>Capacidad Restante</Text>
+            <Text style={styles.gridLabel}>{isEs ? "Capacidad Restante" : "Remaining Cap"}</Text>
             <Text style={[styles.gridValue, { color: "#38BDF8" }]}>
               {remaining.toFixed(2)}%
             </Text>
           </View>
           <View style={styles.gridCol}>
-            <Text style={styles.gridLabel}>Margen Libre</Text>
+            <Text style={styles.gridLabel}>{isEs ? "Margen Libre" : "Free Margin"}</Text>
             <Text style={styles.gridValue}>
               {currencySymbol}{safeData.free_margin.toLocaleString("en", {
                 minimumFractionDigits: 0,
@@ -214,7 +216,7 @@ export default function RiskWidget() {
             </Text>
           </View>
           <View style={styles.gridCol}>
-            <Text style={styles.gridLabel}>Nivel de Margen</Text>
+            <Text style={styles.gridLabel}>{isEs ? "Nivel de Margen" : "Margin Level"}</Text>
             <Text
               style={[
                 styles.gridValue,
@@ -229,7 +231,7 @@ export default function RiskWidget() {
 
       {/* Sizing Estimation per Symbol */}
       <View style={[styles.section, styles.borderTop]}>
-        <Text style={styles.subTitle}>Dimensionamiento de Lote por Símbolo</Text>
+        <Text style={styles.subTitle}>{isEs ? "Dimensionamiento de Lote por Símbolo" : "Lot Sizing per Symbol"}</Text>
         <View style={styles.rowGrid}>
           {["EURUSD", "XAUUSD", "BTCEUR"].map((sym) => {
             const est = safeData.estimations?.[sym];
@@ -244,7 +246,7 @@ export default function RiskWidget() {
                     { color: isApproved ? "#34D399" : "#94A3B8" },
                   ]}
                 >
-                  {isApproved ? `${lotStr} lot` : "PAUSADO"}
+                  {isApproved ? `${lotStr} lot` : (isEs ? "PAUSADO" : "PAUSED")}
                 </Text>
               </View>
             );

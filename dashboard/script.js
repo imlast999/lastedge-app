@@ -1350,7 +1350,7 @@ async function runBacktestFromUI() {
         fillBar.style.background = 'linear-gradient(90deg, #10B981 0%, #06B6D4 100%)';
     }
     if (percentLabel) percentLabel.textContent = '5%';
-    if (phaseTitle) phaseTitle.textContent = `1/5: Conectando con Strategy Lab y descargando velas de ${symbol}...`;
+    if (phaseTitle) phaseTitle.textContent = `1/5: Connecting to Strategy Lab and fetching ${symbol} bars...`;
 
     // Progress animation ticker
     const progressInterval = setInterval(() => {
@@ -1761,7 +1761,7 @@ async function runResearchFromUI() {
     } finally {
         if (btn) btn.disabled = false;
         if (icon) icon.className = 'fa-solid fa-flask';
-        if (text) text.textContent = 'Ejecutar Research Científico';
+        if (text) text.textContent = 'Run Quantitative Research';
     }
 }
 
@@ -2195,22 +2195,22 @@ async function promoteCurrentStrategy() {
 
         const res = await resp.json();
         if (res.ok) {
-            if (btnText) btnText.innerHTML = '<i class="fa-solid fa-check-double"></i> ¡Promocionada a Producción MT5!';
+            if (btnText) btnText.innerHTML = '<i class="fa-solid fa-check-double"></i> Promoted to MT5 Production!';
             if (btn) {
                 btn.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
             }
-            alert(`✅ ESTRATEGIA APROBADA:\n${candidate.strategy} (${candidate.symbol}) ha sido promocionada exitosamente al motor de trading institucional MT5.`);
+            alert(`✅ STRATEGY APPROVED:\n${candidate.strategy} (${candidate.symbol}) has been successfully promoted to the MT5 institutional trading engine.`);
             if (typeof fetchLiveDashboardData === 'function') {
                 fetchLiveDashboardData();
             }
         } else {
             alert(`Error de promoción: ${res.error || 'No se pudo autorizar'}`);
-            if (btnText) btnText.textContent = 'Reintentar Promoción a MT5';
+            if (btnText) btnText.textContent = 'Retry MT5 Promotion';
             if (btn) btn.disabled = false;
         }
     } catch (err) {
-        alert(`Error comunicando con Trading Engine: ${err}`);
-        if (btnText) btnText.textContent = 'Reintentar Promoción';
+        alert(`Error communicating with Trading Engine: ${err}`);
+        if (btnText) btnText.textContent = 'Retry Promotion';
         if (btn) btn.disabled = false;
     }
 }

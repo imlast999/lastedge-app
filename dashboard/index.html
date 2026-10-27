@@ -470,11 +470,11 @@
                 <!-- Callout explicativo amigable según el modo -->
                 <div id="lab-subtab-banner-backtest" style="margin-bottom: 18px; padding: 10px 14px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px;">
                     <i class="fa-solid fa-circle-info" style="color: #60A5FA; font-size: 14px;"></i>
-                    <span><strong>Modo Backtest Operativo:</strong> Simulación histórica vela a vela con cálculo realista de spread, deslizamiento y comprobación de Circuit Breaker. Ideal para entender cómo abre y cierra las operaciones la estrategia.</span>
+                    <span><strong>Operational Backtest Mode:</strong> Bar-by-bar historical simulation with realistic spread, slippage, and Circuit Breaker validation. Understand exactly how and when positions execute.</span>
                 </div>
                 <div id="lab-subtab-banner-research" class="wip-hidden" style="margin-bottom: 18px; padding: 10px 14px; border-radius: 8px; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px;">
                     <i class="fa-solid fa-flask" style="color: #C084FC; font-size: 14px;"></i>
-                    <span><strong>Modo Research Científico:</strong> Auditoría matemática avanzada con 1,000 permutaciones Monte Carlo y ventanas Walk-Forward. Certifica matemáticamente si la estrategia es robusta antes de arriesgar dinero real.</span>
+                    <span><strong>Scientific Research Mode:</strong> Advanced quantitative audit with 1,000 Monte Carlo permutations and Walk-Forward windows. Certifies statistical robustness before deploying real capital.</span>
                 </div>
 
                 <!-- ============================================================ -->
@@ -564,7 +564,7 @@
 
                         <!-- Stage Indicators -->
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; gap: 8px;">
-                            <span id="bt-stage-1" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-database"></i> 1. Velas OHLC</span>
+                            <span id="bt-stage-1" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-database"></i> 1. OHLC Bars</span>
                             <span id="bt-stage-2" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-chart-line"></i> 2. Indicadores</span>
                             <span id="bt-stage-3" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-bolt"></i> 3. Replay TP/SL</span>
                             <span id="bt-stage-4" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-dice"></i> 4. Monte Carlo</span>
@@ -582,7 +582,7 @@
                                 </div>
                                 <div>
                                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
-                                        <h3 id="bt-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ESTRATEGIA ALTAMENTE FIABLE</h3>
+                                        <h3 id="bt-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">HIGHLY RELIABLE STRATEGY</h3>
                                         <span id="bt-verdict-badge" class="trend-badge trend-up" style="font-size: 11px; padding: 3px 8px;">RELIABLE</span>
                                     </div>
                                     <p id="bt-verdict-summary" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5; max-width: 820px;"></p>
@@ -598,26 +598,26 @@
                         <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.15);">
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
                                 <!-- Trades Totales & Win/Loss Breakdown -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green); cursor: help;" title="Total de operaciones completadas en el periodo histórico simulado (Ganadas vs Perdidas).">
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green); cursor: help;" title="Total trades executed over simulated period (Wins vs Losses).">
                                     <span class="stat-label" style="font-size: 10px;">Trades (W / L) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-trades" style="font-size: 17px; margin: 4px 0;">0 trades</div>
                                     <span id="bt-metric-trades-wl" style="font-size: 10px; font-weight: 700; color: var(--accent-green);">0W / 0L</span>
                                 </div>
                                 <!-- Profit Factor -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Ratio Ganancia / Pérdida: Cuántos dólares gana la estrategia por cada $1 que pierde. Si es superior a 1.30, la estrategia es rentable.">
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Profit Factor: Dollars won per $1 lost. Values above 1.30 indicate solid positive expectancy.">
                                     <span class="stat-label" style="font-size: 10px;">Ratio Ganancia/Pérdida (PF) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-pf" style="font-size: 18px; margin: 4px 0;">0.00</div>
                                     <span style="font-size: 10px; color: var(--text-muted);">Umbral: ≥ 1.30</span>
                                 </div>
                                 <!-- Win Rate -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Tasa de Acierto: Porcentaje de operaciones cerradas en beneficio sobre el total ejecutado.">
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Win Rate: Percentage of profitable trades out of total executed trades.">
                                     <span class="stat-label" style="font-size: 10px;">Tasa de Acierto (Win Rate) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-wr" style="font-size: 18px; margin: 4px 0;">0.0%</div>
                                     <span id="bt-metric-wr-sub" style="font-size: 10px; color: var(--text-muted);">0.0% pérdidas</span>
                                 </div>
                                 <!-- Net Profit (Pips & USD) -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green); cursor: help;" title="Beneficio Neto Total: Ganancia monetaria acumulada tras descontar spread y comisiones reales.">
-                                    <span class="stat-label" style="font-size: 10px;">Beneficio Neto (Pips / $) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
+                                <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid var(--accent-green); cursor: help;" title="Total Net Profit: Cumulative monetary gain after subtracting real spreads and broker commissions.">
+                                    <span class="stat-label" style="font-size: 10px;">Net Profit (Pips / $) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-pips" style="font-size: 17px; margin: 4px 0;">+0.0 pips</div>
                                     <span id="bt-metric-usd" style="font-size: 10px; font-weight: 700; color: var(--accent-green);">$0.00 USD</span>
                                 </div>
@@ -631,28 +631,28 @@
                                 <div class="stat-card" style="padding: 12px; margin: 0; border-left: 3px solid #06B6D4; cursor: help;" title="Parada de Emergencia Automática: Cortafuegos que apaga el bot si detecta 4 pérdidas seguidas para proteger el capital.">
                                     <span class="stat-label" style="font-size: 10px;"><i class="fa-solid fa-shield"></i> Circuit Breaker <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-cb" style="font-size: 15px; margin: 4px 0; color: #06B6D4;">0 Disparos</div>
-                                    <span id="bt-metric-cb-sub" style="font-size: 10px; color: var(--text-muted);">0 velas pausadas</span>
+                                    <span id="bt-metric-cb-sub" style="font-size: 10px; color: var(--text-muted);">0 paused bars</span>
                                 </div>
                                 <!-- Long vs Short Signals -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Equilibrio de Mercado: Distribución de operaciones de compra (BUY) y venta (SELL).">
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Market Balance: Long (BUY) vs Short (SELL) trade distribution.">
                                     <span class="stat-label" style="font-size: 10px;">Dirección (BUY/SELL) <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-direction" style="font-size: 15px; margin: 4px 0;">0 BUY / 0 SELL</div>
                                     <span id="bt-metric-setups" style="font-size: 10px; color: var(--text-muted);">0 setups evaluados</span>
                                 </div>
                                 <!-- Consecutive Losses -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Racha Máxima de Pérdidas: El peor encadenamiento de operaciones fallidas consecutivas soportado.">
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Max Consecutive Losses: The longest consecutive losing streak endured.">
                                     <span class="stat-label" style="font-size: 10px;">Racha Máx Pérdidas <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-consec-losses" style="font-size: 18px; margin: 4px 0;">0</div>
                                     <span style="font-size: 10px; color: var(--text-muted);">Límite CB: 4</span>
                                 </div>
                                 <!-- Sharpe / Sortino -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Calidad del Crecimiento: Mide si los beneficios crecen con suavidad y consistencia, penalizando caídas violentas.">
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Growth Quality: Measures smoothness and consistency of equity growth, penalizing sharp drawdowns.">
                                     <span class="stat-label" style="font-size: 10px;">Sharpe / Sortino <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-sharpe" style="font-size: 17px; margin: 4px 0;">0.00 / 0.00</div>
                                     <span style="font-size: 10px; color: var(--text-muted);">Consistencia anualizada</span>
                                 </div>
                                 <!-- Expectancy -->
-                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Beneficio Promedio por Trade: La cantidad matemática neta que ganas en promedio en cada operación.">
+                                <div class="stat-card" style="padding: 12px; margin: 0; cursor: help;" title="Avg Trade Net Profit: Mathematical average net profit per trade.">
                                     <span class="stat-label" style="font-size: 10px;">Esperanza / Trade <i class="fa-regular fa-circle-question" style="opacity:0.6;"></i></span>
                                     <div class="stat-value" id="bt-metric-expectancy" style="font-size: 18px; margin: 4px 0;">0.0 pips</div>
                                     <span style="font-size: 10px; color: var(--text-muted);">Payoff matemático</span>
@@ -717,7 +717,7 @@
                                                 <div class="pillar-chip-value" id="p1-dd99">8.8%</div>
                                             </div>
                                             <div class="pillar-chip">
-                                                <div class="pillar-chip-label">Beneficio Mediano</div>
+                                                <div class="pillar-chip-label">Median Profit</div>
                                                 <div class="pillar-chip-value" id="p1-median-profit">+653 pips</div>
                                             </div>
                                             <div class="pillar-chip">
@@ -726,7 +726,7 @@
                                             </div>
                                         </div>
                                         <p class="pillar-explanation" id="p1-explanation">
-                                            Simulamos 1,000 permutaciones estocásticas desordenando aleatoriamente tus operaciones. Un riesgo de ruina inferior al 1% demuestra matemáticamente que la estrategia no depende de rachas fortuitas.
+                                            We simulate 1,000 stochastic permutations randomly shuffling your trades. A risk of ruin below 1% mathematically proves the strategy does not rely on lucky streaks.
                                         </p>
                                     </div>
                                     <div>
@@ -867,7 +867,7 @@
                                             </div>
                                         </div>
                                         <p class="pillar-explanation" id="p4-explanation">
-                                            Esperanza matemática altamente positiva por operación con holgura frente a spread y comisiones. La peor racha de pérdidas jamás alcanzó el corte forzoso del Circuit Breaker (4 operaciones consecutivas).
+                                            Strong positive mathematical expectancy per trade with solid margin over spread and commissions. Worst loss streak remained well within Circuit Breaker limits.
                                         </p>
                                     </div>
                                     <div>
@@ -938,7 +938,7 @@
                                             </div>
                                         </div>
                                         <p class="pillar-explanation" id="p5-explanation">
-                                            La estrategia extrae el grueso de su alfa en tendencias y expansión de volatilidad. En fases de compresión o chop lateral, el sistema se mantiene neutro sin sangrado de capital, validando los filtros de consolidación.
+                                            The strategy captures the bulk of its alpha in trending and volatility expansion regimes. In compression or chop phases, it remains neutral without capital bleed, validating consolidation filters.
                                         </p>
                                     </div>
                                     <div>
@@ -947,7 +947,7 @@
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </div>
                                         <div id="p5-acc" class="pillar-accordion-content">
-                                            <strong>Por qué mueren los algoritmos:</strong> El 80% de los bots fallan porque están calibrados para un solo régimen de mercado. Este desglose audita la estrategia en 4 escenarios macroeconómicos independientes para garantizar que no sufra quiebre cuando el mercado cambie de ciclo.
+                                            <strong>Why trading algorithms fail:</strong> 80% of bots fail because they are fitted to a single market regime. This breakdown audits the strategy across 4 independent macroeconomic regimes to ensure survival when cycles shift.
                                         </div>
                                     </div>
                                 </div>
@@ -980,7 +980,7 @@
                         <!-- Scientific Guidance & Actionable Recommendations -->
                         <div style="padding: 20px 24px;">
                             <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
-                                <i class="fa-solid fa-list-check" style="margin-right: 6px; color: var(--accent-green);"></i> Recomendaciones Cuantitativas & Siguientes Pasos
+                                <i class="fa-solid fa-list-check" style="margin-right: 6px; color: var(--accent-green);"></i> Quantitative Recommendations & Next Steps
                             </div>
                             <ul id="bt-recommendations-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.5;">
                             </ul>
@@ -1008,9 +1008,9 @@
                                 <tr>
                                     <th>ID Backtest</th>
                                     <th>Símbolo</th>
-                                    <th>Estrategia</th>
+                                    <th>Strategy</th>
                                     <th>Timeframe</th>
-                                    <th>Velas</th>
+                                    <th>Bars</th>
                                     <th>Trades (W / L)</th>
                                     <th>Win Rate</th>
                                     <th>Profit Factor</th>
@@ -1033,7 +1033,7 @@
                 </div>
 
                 <!-- ============================================================ -->
-                <!-- SUB-VIEW 2: RESEARCH DE ESTRATEGIAS (WFA & MONTE CARLO) -->
+                <!-- SUB-VIEW 2: STRATEGY RESEARCH (WFA & MONTE CARLO) -->
                 <!-- ============================================================ -->
                 <div id="lab-subview-research" class="wip-hidden">
                     <!-- Research Launcher Configuration Card -->
@@ -1145,7 +1145,7 @@
                                 </div>
                                 <div>
                                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
-                                        <h3 id="rs-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ESTRATEGIA ROBUSTA FUERA DE MUESTRA</h3>
+                                        <h3 id="rs-verdict-title" style="font-size: 16px; font-weight: 800; margin: 0; letter-spacing: 0.02em;">ROBUST OUT-OF-SAMPLE STRATEGY</h3>
                                         <span id="rs-verdict-badge" class="trend-badge trend-up" style="font-size: 11px; padding: 3px 8px;">PROMOTED</span>
                                     </div>
                                     <p id="rs-verdict-summary" style="font-size: 13px; color: var(--text-main); margin: 0; line-height: 1.5; max-width: 820px;"></p>
@@ -1302,7 +1302,7 @@
                                     <th>Exp ID</th>
                                     <th>Título / Hipótesis</th>
                                     <th>Símbolo</th>
-                                    <th>Estrategia</th>
+                                    <th>Strategy</th>
                                     <th>Stability Score</th>
                                     <th>WFA Rating</th>
                                     <th>Consistencia</th>

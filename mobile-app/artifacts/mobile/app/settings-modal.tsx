@@ -43,7 +43,13 @@ import {
 } from "@/services/notifications";
 import { lockApp } from "@/components/PinAuthModal";
 
-function formatLastSync(d: Date | null): string {
+function formatLastSync(d: Date | null, isEs: boolean): string {
+  if (!d) return isEs ? "Nunca" : "Never";
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return isEs ? `Hace ${diff}s` : `${diff}s ago`;
+  if (diff < 3600) return isEs ? `Hace ${Math.floor(diff / 60)} min` : `${Math.floor(diff / 60)}m ago`;
+  return d.toLocaleTimeString(isEs ? "es-ES" : "en-US", { hour: "2-digit", minute: "2-digit" });
+}
   if (!d) return "Nunca";
   const diff = Math.floor((Date.now() - d.getTime()) / 1000);
   if (diff < 60) return `Hace ${diff}s`;
@@ -57,6 +63,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { status, loading, refresh, lastSyncAt, usingMockData } = useTrading();
   const { settings, updateSetting, resetSettings, apiOverrides } = useSettings();
+  const isEs = settings.language === "es";
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -91,7 +98,7 @@ export default function SettingsScreen() {
   const saveConnection = useCallback(() => {
     updateSetting("serverUrl", urlDraft.trim());
     updateSetting("serverToken", tokenDraft.trim());
-    Alert.alert("Guardado", "Conexión actualizada. La app recargará datos automáticamente.");
+    Alert.alert(isEs ? "Guardado" : "Saved", isEs ? "Conexión actualizada. La app recargará datos automáticamente." : "Connection updated. App will reload data automatically.");
   }, [urlDraft, tokenDraft, updateSetting]);
 
   const handleRequestPermissions = useCallback(async () => {
@@ -146,8 +153,8 @@ export default function SettingsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     }
     Alert.alert(
-      "Aplicación Bloqueada",
-      "La aplicación ha sido bloqueada. Deberá introducir el PIN de seguridad (1623) para volver a entrar.",
+      isEs ? "Aplicación Bloqueada" : "Application Locked",
+      isEs ? "La aplicación ha sido bloqueada. Deberá introducir el PIN de seguridad (1623) para volver a entrar." : "The app has been locked. Please enter your 4-digit PIN (1623) to unlock.",
       [
         {
           text: "OK",
@@ -175,9 +182,9 @@ export default function SettingsScreen() {
       {/* Modal Header with Close Button */}
       <View style={[styles.modalHeader, { paddingTop: insets.top }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Ajustes</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{isEs ? "Ajustes" : "Settings"}</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Configuración de LastEdge
+            {isEs ? "Configuración de LastEdge" : "LastEdge Configuration"}
           </Text>
         </View>
         <TouchableOpacity
@@ -189,10 +196,10 @@ export default function SettingsScreen() {
       </View>
 
       {/* ── Servidor ── */}
-      <SettingsSection title="Servidor">
+      <SettingsSection title={isEs ? "Servidor" : "Server & Connection"}>
         <View style={[styles.connEdit, { borderBottomColor: colors.border }]}>
           <Text style={[styles.connLabel, { color: colors.mutedForeground }]}>
-            URL personalizada (vacío = APK)
+            {isEs ? "URL personalizada (vacío = APK)" : "Custom Server URL (empty = default)"}
           </Text>
           <TextInput
             value={urlDraft}
@@ -205,7 +212,7 @@ export default function SettingsScreen() {
             ]}
           />
           <Text style={[styles.connLabel, { color: colors.mutedForeground }]}>
-            Token API personalizado
+            {isEs ? "Token API personalizado" : "Custom API Token"}
           </Text>
           <TextInput
             value={tokenDraft}
@@ -222,40 +229,40 @@ export default function SettingsScreen() {
             style={[styles.saveConnBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
           >
             <Feather name="save" size={15} color={colors.primary} />
-            <Text style={[styles.saveConnText, { color: colors.primary }]}>Guardar conexión</Text>
+            <Text style={[styles.saveConnText, { color: colors.primary }]}>{isEs ? "Guardar conexión" : "Save connection"}</Text>
           </TouchableOpacity>
         </View>
         <SettingsRow
           icon="activity"
-          label="Estado MT5"
-          value={connected ? `Conectado · uptime ${status?.uptime ?? "—"}` : "Desconectado"}
+          label={isEs ? "Estado MT5" : "MT5 Status"}
+          value={connected ? (isEs ? `Conectado · uptime ${status?.uptime ?? "—"}` : `Connected · uptime ${status?.uptime ?? "—"}`) : (isEs ? "Desconectado" : "Disconnected")}
           valueColor={connected ? colors.connected : colors.disconnected}
         />
         <SettingsRow
           icon="globe"
-          label="URL efectiva"
-          value={effective.url || "No configurada"}
+          label={isEs ? "URL efectiva" : "Effective URL"}
+          value={effective.url || (isEs ? "No configurada" : "Not configured")}
         />
         <SettingsRow
           icon="key"
-          label="Token API"
+          label={isEs ? "Token API" : "API Token"}
           value={
             effective.token
-              ? `Configurado · ${maskSecret(effective.token)}`
-              : "No configurado"
+              ? (isEs ? `Configurado · ${maskSecret(effective.token)}` : `Configured · ${maskSecret(effective.token)}`)
+              : (isEs ? "No configurado" : "Not configured")
           }
           valueColor={effective.token ? colors.connected : colors.pending}
         />
         <SettingsRow
           icon="clock"
-          label="Última sincronización"
-          value={formatLastSync(lastSyncAt)}
+          label={isEs ? "Última sincronización" : "Last sync"}
+          value={formatLastSync(lastSyncAt, isEs)}
           isLast={!testResult}
         />
         {testResult ? (
           <SettingsRow
             icon={testResult.startsWith("OK") ? "check-circle" : "alert-circle"}
-            label="Resultado de prueba"
+            label={isEs ? "Resultado de prueba" : "Test result"}
             value={testResult}
             valueColor={testResult.startsWith("OK") ? colors.connected : colors.destructive}
             isLast
@@ -263,14 +270,14 @@ export default function SettingsScreen() {
         ) : null}
         <View style={[styles.actions, { borderTopColor: colors.border }]}>
           <ActionButton
-            label="Probar conexión"
+            label={isEs ? "Probar conexión" : "Test connection"}
             icon="wifi"
             onPress={handleTestConnection}
             loading={testing}
             colors={colors}
           />
           <ActionButton
-            label="Sincronizar"
+            label={isEs ? "Sincronizar" : "Sync"}
             icon="refresh-cw"
             onPress={refresh}
             loading={loading}
@@ -281,17 +288,17 @@ export default function SettingsScreen() {
       </SettingsSection>
 
       {/* ── Actualización ── */}
-      <SettingsSection title="Actualización automática">
+      <SettingsSection title={isEs ? "Actualización automática" : "Auto Refresh"}>
         <SettingsToggle
           icon="repeat"
-          label="Actualización en segundo plano"
-          description="Consulta el servidor periódicamente"
+          label={isEs ? "Actualización en segundo plano" : "Background refresh"}
+          description={isEs ? "Consulta el servidor periódicamente" : "Queries server periodically"}
           value={settings.autoRefresh}
           onValueChange={(v) => updateSetting("autoRefresh", v)}
         />
         <View style={[styles.intervalBlock, { borderTopColor: colors.border }]}>
           <Text style={[styles.intervalLabel, { color: colors.mutedForeground }]}>
-            Intervalo de consulta
+            {isEs ? "Intervalo de consulta" : "Query interval"}
           </Text>
           <View style={styles.intervalRow}>
             {POLL_INTERVAL_OPTIONS.map((opt) => {
@@ -326,50 +333,50 @@ export default function SettingsScreen() {
       </SettingsSection>
 
       {/* ── Notificaciones ── */}
-      <SettingsSection title="Notificaciones">
+      <SettingsSection title={isEs ? "Notificaciones" : "Notifications"}>
         <SettingsToggle
           icon="bell"
           label="Notificaciones"
-          description="Alertas locales en el dispositivo"
+          description={isEs ? "Alertas locales en el dispositivo" : "Local alerts on device"}
           value={settings.notificationsEnabled}
           onValueChange={(v) => updateSetting("notificationsEnabled", v)}
         />
         <SettingsToggle
           icon="target"
-          label="Nuevas señales"
+          label={isEs ? "Nuevas señales" : "New signals"}
           value={settings.notifyNewSignals}
           onValueChange={(v) => updateSetting("notifyNewSignals", v)}
           disabled={!settings.notificationsEnabled}
         />
         <SettingsToggle
           icon="check-circle"
-          label="Cierre de operaciones"
+          label={isEs ? "Cierre de operaciones" : "Trade close"}
           value={settings.notifyTradeClose}
           onValueChange={(v) => updateSetting("notifyTradeClose", v)}
           disabled={!settings.notificationsEnabled}
         />
         <SettingsToggle
           icon="alert-triangle"
-          label="Desconexión MT5"
-          description="Alerta crítica si el bot pierde conexión"
+          label={isEs ? "Desconexión MT5" : "MT5 disconnect"}
+          description={isEs ? "Alerta crítica si el bot pierde conexión" : "Critical alert if bot disconnects"}
           value={settings.notifyDisconnect}
           onValueChange={(v) => updateSetting("notifyDisconnect", v)}
           disabled={!settings.notificationsEnabled}
           isLast={!permStatus}
         />
         {permStatus ? (
-          <SettingsRow icon="info" label="Permisos" value={permStatus} isLast />
+          <SettingsRow icon="info" label={isEs ? "Permisos" : "Permissions"} value={permStatus} isLast />
         ) : null}
         <View style={[styles.actions, { borderTopColor: colors.border }]}>
           <ActionButton
-            label="Permisos"
+            label={isEs ? "Permisos" : "Permissions"}
             icon="shield"
             onPress={handleRequestPermissions}
             colors={colors}
             outline
           />
           <ActionButton
-            label="Probar alerta"
+            label={isEs ? "Probar alerta" : "Test alert"}
             icon="bell"
             onPress={handleTestNotification}
             colors={colors}
@@ -447,10 +454,10 @@ export default function SettingsScreen() {
       </SettingsSection>
 
       {/* ── Seguridad ── */}
-      <SettingsSection title="Seguridad">
+      <SettingsSection title={isEs ? "Seguridad" : "Security"}>
         <SettingsRow
           icon="lock"
-          label="Bloquear aplicación con PIN ahora"
+          label={isEs ? "Bloquear aplicación con PIN ahora" : "Lock application with PIN now"}
           value="PIN 1623"
           onPress={handleLockApp}
           isLast
@@ -458,15 +465,15 @@ export default function SettingsScreen() {
       </SettingsSection>
 
       {/* ── Datos ── */}
-      <SettingsSection title="Datos">
+      <SettingsSection title={isEs ? "Datos" : "Data"}>
         <SettingsRow
           icon="trash-2"
-          label="Limpiar badge de notificaciones"
+          label={isEs ? "Limpiar badge de notificaciones" : "Clear notification badge"}
           onPress={handleClearBadge}
         />
         <SettingsRow
           icon="rotate-ccw"
-          label="Restablecer ajustes"
+          label={isEs ? "Restablecer ajustes" : "Reset settings"}
           onPress={handleResetSettings}
           destructive
           isLast
@@ -474,8 +481,8 @@ export default function SettingsScreen() {
       </SettingsSection>
 
       {/* ── Acerca de ── */}
-      <SettingsSection title="Acerca de">
-        <SettingsRow icon="box" label="Versión" value={getAppFullVersion()} />
+      <SettingsSection title={isEs ? "Acerca de" : "About"}>
+        <SettingsRow icon="box" label={isEs ? "Versión" : "Version"} value={getAppFullVersion()} />
         <SettingsRow
           icon="cpu"
           label="Expo SDK"
@@ -483,21 +490,21 @@ export default function SettingsScreen() {
         />
         <SettingsRow
           icon="smartphone"
-          label="Plataforma"
+          label={isEs ? "Plataforma" : "Platform"}
           value={`${Platform.OS} ${Platform.Version}`}
         />
         <SettingsRow
           icon="database"
-          label="Modo datos"
-          value={usingMockData ? "Datos de ejemplo (dev)" : "Servidor en vivo"}
+          label={isEs ? "Modo datos" : "Data mode"}
+          value={usingMockData ? (isEs ? "Datos de ejemplo (dev)" : "Sample data (dev)") : (isEs ? "Servidor en vivo" : "Live server")}
           valueColor={usingMockData ? colors.pending : colors.connected}
           isLast
         />
       </SettingsSection>
 
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-        LastEdge · cuenta demo MT5{"\n"}
-        Intervalo predeterminado: {DEFAULT_SETTINGS.pollIntervalMs / 1000}s
+        {isEs ? "LastEdge · cuenta demo MT5" : "LastEdge · MT5 live/demo account"}{"\n"}
+        {isEs ? "Intervalo predeterminado:" : "Default interval:"} {DEFAULT_SETTINGS.pollIntervalMs / 1000}s
       </Text>
     </ScrollView>
   );

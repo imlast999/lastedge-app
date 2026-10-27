@@ -11,6 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import type { Signal } from "@/context/TradingContext";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Props {
   signal: Signal;
@@ -38,7 +39,16 @@ function parseSignalDate(raw?: string | number | null): Date {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
-function formatRelativeTime(secondsAgo: number): string {
+function formatRelativeTime(secondsAgo: number, isEs = true): string {
+  if (secondsAgo < 5) return isEs ? "justo ahora" : "just now";
+  if (secondsAgo < 60) return isEs ? `hace ${secondsAgo}s` : `${secondsAgo}s ago`;
+  const mins = Math.floor(secondsAgo / 60);
+  if (mins < 60) return isEs ? `hace ${mins} min` : `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return isEs ? `hace ${hours} h` : `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return isEs ? `hace ${days} d` : `${days}d ago`;
+}
   if (secondsAgo < 5) return "justo ahora";
   if (secondsAgo < 60) return `hace ${secondsAgo}s`;
   const mins = Math.floor(secondsAgo / 60);
@@ -51,6 +61,8 @@ function formatRelativeTime(secondsAgo: number): string {
 
 export function SignalCard({ signal, onAccept, onReject }: Props) {
   const colors = useColors();
+  const { settings } = useSettings();
+  const isEs = settings.language === "es";
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
@@ -110,7 +122,7 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
     minute: "2-digit",
     second: "2-digit",
   });
-  const relativeStr = formatRelativeTime(elapsedSeconds);
+  const relativeStr = formatRelativeTime(elapsedSeconds, isEs);
 
   const handleAccept = async () => {
     if (!onAccept || accepting || isExpired) return;
@@ -157,7 +169,7 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
         <View style={styles.pendingHeader}>
           <View style={styles.pulseRow}>
             <View style={styles.pulseDot} />
-            <Text style={styles.pendingTitle}>SEÑAL PENDIENTE · REQUIERE ACCIÓN</Text>
+            <Text style={styles.pendingTitle}>{isEs ? "SEÑAL PENDIENTE · REQUIERE ACCIÓN" : "PENDING SIGNAL · REQUIRES ACTION"}</Text>
           </View>
           <View style={styles.ttlBadge}>
             <Feather name="clock" size={11} color="#F59E0B" />
@@ -172,65 +184,119 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
         <View style={styles.expiredBadge}>
           <Feather name="clock" size={12} color="#F59E0B" />
           <Text style={styles.expiredText}>
-            ⏳ SEÑAL EXPIRADA (Sin confirmación tras 10 min)
+            {isEs ? "⏳ SEÑAL EXPIRADA (Sin confirmación tras 10 min)" : "⏳ EXPIRED SIGNAL (No confirmation after 10 min)"}
           </Text>
         </View>
       )}
 
-      {/* Sent Time & Elapsed Counter Row */}
-      <View style={styles.timingRow}>
-        <View style={styles.timingLeft}>
-          <Feather
-            name="clock"
-            size={12}
-            color={isPending ? "#60A5FA" : isActive ? "#34D399" : "#94A3B8"}
-          />
-          <Text style={styles.exactTimeText}>
-            {isPending ? "Enviada:" : "Hora:"} {exactTimeStr}
-          </Text>
-          <View
-            style={[
-              styles.relativeChip,
-              isActive && { backgroundColor: "rgba(16, 185, 129, 0.15)" },
-              isExpired && { backgroundColor: "rgba(255, 255, 255, 0.05)" },
-            ]}
-          >
-            <Text
-              style={[
-                styles.relativeText,
-                isActive && { color: "#34D399" },
-                isExpired && { color: "#94A3B8" },
-              ]}
-            >
-              {relativeStr}
-            </Text>
-          </View>
-        </View>
-
-        {isPending && (
-          <View
-            style={[
-              styles.countdownPill,
-              secondsRemaining < 180 && styles.countdownPillUrgent,
-            ]}
-          >
-            <Feather
-              name="hourglass"
-              size={11}
-              color={secondsRemaining < 180 ? "#EF4444" : "#F59E0B"}
-            />
-            <Text
-              style={[
-                styles.countdownPillText,
-                secondsRemaining < 180 && styles.countdownPillTextUrgent,
-              ]}
-            >
-              {formatCountdown(secondsRemaining)}
-            </Text>
-          </View>
-        )}
-      </View>
-
+      {/* Sent Time & Elapsed Counter Row */}
+
+      <View style={styles.timingRow}>
+
+        <View style={styles.timingLeft}>
+
+          <Feather
+
+            name="clock"
+
+            size={12}
+
+            color={isPending ? "#60A5FA" : isActive ? "#34D399" : "#94A3B8"}
+
+          />
+
+          <Text style={styles.exactTimeText}>
+
+            {isPending ? (isEs ? "Enviada:" : "Sent:") : (isEs ? "Hora:" : "Time:")} {exactTimeStr}
+
+          </Text>
+
+          <View
+
+            style={[
+
+              styles.relativeChip,
+
+              isActive && { backgroundColor: "rgba(16, 185, 129, 0.15)" },
+
+              isExpired && { backgroundColor: "rgba(255, 255, 255, 0.05)" },
+
+            ]}
+
+          >
+
+            <Text
+
+              style={[
+
+                styles.relativeText,
+
+                isActive && { color: "#34D399" },
+
+                isExpired && { color: "#94A3B8" },
+
+              ]}
+
+            >
+
+              {relativeStr}
+
+            </Text>
+
+          </View>
+
+        </View>
+
+
+
+        {isPending && (
+
+          <View
+
+            style={[
+
+              styles.countdownPill,
+
+              secondsRemaining < 180 && styles.countdownPillUrgent,
+
+            ]}
+
+          >
+
+            <Feather
+
+              name="hourglass"
+
+              size={11}
+
+              color={secondsRemaining < 180 ? "#EF4444" : "#F59E0B"}
+
+            />
+
+            <Text
+
+              style={[
+
+                styles.countdownPillText,
+
+                secondsRemaining < 180 && styles.countdownPillTextUrgent,
+
+              ]}
+
+            >
+
+              {formatCountdown(secondsRemaining)}
+
+            </Text>
+
+          </View>
+
+        )}
+
+      </View>
+
+
+
       {/* Main Signal Identification Row */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -289,7 +355,7 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
             ) : (
               <>
                 <Feather name="x-circle" size={17} color="#EF4444" />
-                <Text style={styles.rejectText}>❌ Descartar</Text>
+                <Text style={styles.rejectText}>{isEs ? "❌ Descartar" : "❌ Dismiss"}</Text>
               </>
             )}
           </TouchableOpacity>

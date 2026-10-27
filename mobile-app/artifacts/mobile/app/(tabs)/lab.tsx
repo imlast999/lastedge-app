@@ -2,7 +2,7 @@
  * Lab Screen — LastEdge Research Database & Strategy Laboratory
  * 
  * Reestructuración Pedagógica & User-Friendly:
- * 1. Sub-pestañas: [🧪 Simulador de Tests] y [📚 Historial Guardado]
+ * 1. Sub-pestañas: [🧪 {isEs ? "Simulador de Tests" : "Test Simulator"}] y [📚 Historial Guardado]
  * 2. Lenguaje 100% amigable y traducido (sin mezcla inglés/español)
  * 3. Tarjeta Hero con Puntuación Global (0-100) y Semáforo de Riesgo
  * 4. Métricas clave explicadas en cristiano (Ratio Ganancia/Pérdida, Caída Máxima, etc.)
@@ -75,7 +75,8 @@ export default function LabScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const isEs = language === "es";
   const { settings, apiOverrides } = useSettings();
   const { currencySymbol } = useTrading();
 
@@ -416,7 +417,7 @@ export default function LabScreen() {
         >
           <Feather name="play-circle" size={15} color={labSubTab === "runner" ? colors.primary : colors.mutedForeground} />
           <Text style={[styles.subTabText, { color: labSubTab === "runner" ? colors.foreground : colors.mutedForeground }, labSubTab === "runner" && styles.subTabTextActive]}>
-            Simulador de Tests
+            {isEs ? "Simulador de Tests" : "Test Simulator"}
           </Text>
         </TouchableOpacity>
 
@@ -430,7 +431,7 @@ export default function LabScreen() {
         >
           <Feather name="database" size={15} color={labSubTab === "history" ? colors.primary : colors.mutedForeground} />
           <Text style={[styles.subTabText, { color: labSubTab === "history" ? colors.foreground : colors.mutedForeground }, labSubTab === "history" && styles.subTabTextActive]}>
-            Historial Guardado ({experiments.length})
+            {isEs ? `Historial Guardado (${experiments.length})` : `Saved Experiments (${experiments.length})`}
           </Text>
         </TouchableOpacity>
       </View>
@@ -449,10 +450,10 @@ export default function LabScreen() {
                 </View>
                 <View>
                   <Text style={[styles.cardSectionTitle, { color: colors.foreground }]}>
-                    Parámetros del Test
+                    {isEs ? "Parámetros del Test" : "Test Parameters"}
                   </Text>
                   <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
-                    Elige el activo y modelo de estrategia para simular
+                    {isEs ? "Elige el activo y modelo de estrategia para simular" : "Choose asset and strategy model to simulate"}
                   </Text>
                 </View>
               </View>
@@ -461,7 +462,7 @@ export default function LabScreen() {
             <View style={{ gap: 12, marginTop: 6 }}>
               {/* Selector de Activo / Símbolo */}
               <View>
-                <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>1. ACTIVO A EVALUAR</Text>
+                <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>{isEs ? "1. ACTIVO A EVALUAR" : "1. ASSET TO EVALUATE"}</Text>
                 <View style={styles.inlineChips}>
                   {catalogSymbols.map((s) => {
                     const isSel = btSymbol === s;
@@ -498,7 +499,7 @@ export default function LabScreen() {
               {/* Selector de Estrategia */}
               <View>
                 <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>
-                  2. MODELO DE ESTRATEGIA ({strategyCatalog[btSymbol]?.length || 0} disponibles)
+                  {isEs ? `2. MODELO DE ESTRATEGIA (${strategyCatalog[btSymbol]?.length || 0} disponibles)` : `2. STRATEGY MODEL (${strategyCatalog[btSymbol]?.length || 0} available)`}
                 </Text>
                 <View style={{ gap: 6 }}>
                   {(strategyCatalog[btSymbol] || []).map((strat) => {
@@ -541,7 +542,7 @@ export default function LabScreen() {
                 style={styles.advancedToggle}
               >
                 <Text style={[styles.advancedToggleText, { color: colors.mutedForeground }]}>
-                  {showAdvancedSettings ? "▲ Ocultar Ajustes de Temporalidad y Velas" : "▼ Ajustes de Temporalidad y Muestra Histórica"}
+                  {showAdvancedSettings ? (isEs ? "▲ Ocultar Ajustes de Temporalidad y Velas" : "▲ Hide Timeframe & Candle Settings") : (isEs ? "▼ Ajustes de Temporalidad y Muestra Histórica" : "▼ Timeframe & Historical Sample Settings")}
                 </Text>
               </TouchableOpacity>
 
@@ -549,7 +550,7 @@ export default function LabScreen() {
                 <View style={[styles.advancedBox, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                   <View style={{ flexDirection: "row", gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>TEMPORALIDAD</Text>
+                      <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>{isEs ? "TEMPORALIDAD" : "TIMEFRAME"}</Text>
                       <View style={styles.inlineChips}>
                         {(() => {
                           const currentMeta = (strategyCatalog[btSymbol] || []).find((s) => s.id === btStrategy);
@@ -583,12 +584,12 @@ export default function LabScreen() {
                     </View>
 
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>MUESTRA DE VELAS</Text>
+                      <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>{isEs ? "MUESTRA DE VELAS" : "CANDLE SAMPLE"}</Text>
                       <View style={styles.inlineChips}>
                         {[
-                          { b: 500, label: "500 (Rápido)" },
-                          { b: 1000, label: "1,000 (Estándar)" },
-                          { b: 2000, label: "2,000 (Ciclo)" },
+                          { b: 500, label: isEs ? "500 (Rápido)" : "500 (Fast)" },
+                          { b: 1000, label: isEs ? "1.000 (Estándar)" : "1,000 (Standard)" },
+                          { b: 2000, label: isEs ? "2.000 (Ciclo)" : "2,000 (Cycle)" },
                         ].map((item) => (
                           <TouchableOpacity
                             key={item.b}
@@ -632,14 +633,14 @@ export default function LabScreen() {
                   <>
                     <ActivityIndicator size="small" color="#FFFFFF" />
                     <Text style={[styles.runBacktestBtnText, { color: "#FFFFFF" }]}>
-                      Simulando y Auditando Monte Carlo...
+                      {isEs ? "Simulando y Auditando Monte Carlo..." : "Simulating & Auditing Monte Carlo..."}
                     </Text>
                   </>
                 ) : (
                   <>
                     <Feather name="play" size={16} color="#FFFFFF" />
                     <Text style={[styles.runBacktestBtnText, { color: "#FFFFFF" }]}>
-                      Simular Estrategia & Auditoría Científica
+                      {isEs ? "Simular Estrategia & Auditoría Científica" : "Simulate Strategy & Scientific Audit"}
                     </Text>
                   </>
                 )}
@@ -660,7 +661,7 @@ export default function LabScreen() {
                   <View style={[styles.verdictBadgeHero, { backgroundColor: `${scoreColor}18`, borderColor: scoreColor }]}>
                     <Feather name={scoreVal >= 75 ? "check-circle" : "alert-triangle"} size={12} color={scoreColor} />
                     <Text style={[styles.verdictBadgeHeroText, { color: scoreColor }]}>
-                      {scoreVal >= 75 ? "ESTRATEGIA ALTAMENTE FIABLE" : scoreVal >= 50 ? "REQUIERE OPTIMIZACIÓN" : "DESCARTADA POR RIESGO"}
+                      {scoreVal >= 75 ? (isEs ? "ESTRATEGIA ALTAMENTE FIABLE" : "HIGHLY RELIABLE STRATEGY") : scoreVal >= 50 ? (isEs ? "REQUIERE OPTIMIZACIÓN" : "REQUIRES OPTIMIZATION") : (isEs ? "DESCARTADA POR RIESGO" : "DISCARDED DUE TO RISK")}
                     </Text>
                   </View>
                   <Text style={[styles.scoreHeroSummary, { color: colors.foreground }]}>
@@ -674,27 +675,27 @@ export default function LabScreen() {
               {/* 4 Métricas Clave con Explicación en Cristiano */}
               <View style={styles.qmGrid}>
                 <View style={[styles.qmCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>Ratio Ganancia / Pérdida</Text>
+                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>{isEs ? "Ratio Ganancia / Pérdida" : "Profit / Loss Ratio"}</Text>
                   <Text style={[styles.qmVal, { color: pfVal >= 1.3 ? "#10B981" : "#EF4444" }]}>PF {(pfVal ?? 2.0).toFixed(2)}</Text>
-                  <Text style={styles.qmSubText}>Gana {(pfVal ?? 2.0).toFixed(1)}x lo que pierde</Text>
+                  <Text style={styles.qmSubText}>{isEs ? `Gana ${(pfVal ?? 2.0).toFixed(1)}x lo que pierde` : `Wins ${(pfVal ?? 2.0).toFixed(1)}x losses`}</Text>
                 </View>
 
                 <View style={[styles.qmCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>Mayor Caída Temporal</Text>
+                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>{isEs ? "Mayor Caída Temporal" : "Max Temporary Drawdown"}</Text>
                   <Text style={[styles.qmVal, { color: ddVal <= 15 ? "#10B981" : "#EF4444" }]}>{(ddVal ?? 6.4).toFixed(1)}%</Text>
-                  <Text style={styles.qmSubText}>Bache máximo soportado</Text>
+                  <Text style={styles.qmSubText}>{isEs ? "Bache máximo soportado" : "Max drawdown endured"}</Text>
                 </View>
 
                 <View style={[styles.qmCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>Tasa de Acierto</Text>
+                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>{isEs ? "Tasa de Acierto" : "Win Rate"}</Text>
                   <Text style={[styles.qmVal, { color: colors.foreground }]}>{(wrVal ?? 64.3).toFixed(1)}%</Text>
-                  <Text style={styles.qmSubText}>{Math.round(wrVal)} aciertos de cada 100</Text>
+                  <Text style={styles.qmSubText}>{isEs ? `${Math.round(wrVal)} aciertos de cada 100` : `${Math.round(wrVal)} wins out of 100`}</Text>
                 </View>
 
                 <View style={[styles.qmCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>Riesgo de Ruina</Text>
+                  <Text style={[styles.qmLabel, { color: colors.mutedForeground }]}>{isEs ? "Riesgo de Ruina" : "Risk of Ruin"}</Text>
                   <Text style={[styles.qmVal, { color: ruinVal <= 1.0 ? "#10B981" : "#EF4444" }]}>{(ruinVal ?? 0.2).toFixed(1)}%</Text>
-                  <Text style={styles.qmSubText}>{ruinVal <= 1.0 ? "Supervivencia > 99%" : "Racha peligrosa"}</Text>
+                  <Text style={styles.qmSubText}>{ruinVal <= 1.0 ? (isEs ? "Supervivencia > 99%" : "Survival > 99%") : (isEs ? "Racha peligrosa" : "Dangerous loss streak")}</Text>
                 </View>
               </View>
             </View>
@@ -879,7 +880,7 @@ export default function LabScreen() {
 
                 <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
                   <View style={styles.detailBlock}>
-                    <StatRow label="Activo y Estrategia" value={`${selectedExp.symbol} · ${FRIENDLY_STRATEGY_NAMES[selectedExp.strategy] || selectedExp.strategy}`} colors={colors} />
+                    <StatRow label={isEs ? "Activo y Estrategia" : "Asset & Strategy"} value={`${selectedExp.symbol} · ${FRIENDLY_STRATEGY_NAMES[selectedExp.strategy] || selectedExp.strategy}`} colors={colors} />
                     <StatRow label="Fecha de Registro" value={new Date(selectedExp.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} colors={colors} />
                   </View>
 
@@ -892,10 +893,10 @@ export default function LabScreen() {
 
                   {/* Métricas clave pedagógicas */}
                   <View style={styles.metricsGrid}>
-                    <MetricCard label="Ratio Ganancia / Pérdida" value={`PF ${selectedExp.best_profit_factor?.toFixed(2) ?? "—"}`} colors={colors} />
-                    <MetricCard label="Tasa de Acierto" value={`${selectedExp.best_winrate?.toFixed(1) ?? "—"}%`} colors={colors} />
+                    <MetricCard label="{isEs ? "Ratio Ganancia / Pérdida" : "Profit / Loss Ratio"}" value={`PF ${selectedExp.best_profit_factor?.toFixed(2) ?? "—"}`} colors={colors} />
+                    <MetricCard label="{isEs ? "Tasa de Acierto" : "Win Rate"}" value={`${selectedExp.best_winrate?.toFixed(1) ?? "—"}%`} colors={colors} />
                     <MetricCard label="Puntuación de Estabilidad" value={`${selectedExp.best_stability_score?.toFixed(1) ?? "—"} / 100`} colors={colors} />
-                    <MetricCard label="Mayor Caída Temporal" value={`${selectedExp.best_max_drawdown?.toFixed(0) ?? "—"} pips`} colors={colors} />
+                    <MetricCard label="{isEs ? "Mayor Caída Temporal" : "Max Temporary Drawdown"}" value={`${selectedExp.best_max_drawdown?.toFixed(0) ?? "—"} pips`} colors={colors} />
                   </View>
 
                   {/* Dictamen Científico Amigable */}
@@ -976,7 +977,7 @@ export default function LabScreen() {
       <Modal visible={editModalVisible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Actualizar Dictamen de la Estrategia</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{isEs ? "Actualizar Dictamen de la Estrategia" : "Update Strategy Verdict"}</Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>Ref: {selectedExp?.experiment_id}</Text>
 
             <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 8 }]}>Nuevo Estado:</Text>

@@ -15,6 +15,7 @@ import type {
   PillarsAnalysisResponse,
 } from "@/services/researchApi";
 import { promoteCandidateStrategy } from "@/services/researchApi";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Props {
   data?: PillarsAnalysisResponse | null;
@@ -22,6 +23,8 @@ interface Props {
 }
 
 export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
+  const { settings } = useSettings();
+  const isEs = settings.language === "es";
   const [expandedTooltip, setExpandedTooltip] = useState<string | null>("p1");
   const [promoting, setPromoting] = useState(false);
   const [promotedSuccess, setPromotedSuccess] = useState(false);
@@ -85,7 +88,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.pillarTag}>PILAR 1</Text>
-            <Text style={styles.pillarTitle}>Robustez & Simulación Monte Carlo</Text>
+            <Text style={styles.pillarTitle}>{isEs ? "Robustez & Simulación Monte Carlo" : "Monte Carlo Robustness & Ruin"}</Text>
           </View>
           <Badge badge={p1.badge} />
         </View>
@@ -93,7 +96,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
         {/* Dato + Comparativa Institucional */}
         <View style={styles.metricRow}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Probabilidad de Ruina</Text>
+            <Text style={styles.metricLabel}>{isEs ? "Probabilidad de Ruina" : "Ruin Probability"}</Text>
             <Text style={[styles.metricBigValue, { color: p1.ruin_probability_pct < 1 ? "#10B981" : "#F59E0B" }]}>
               {(p1.ruin_probability_pct ?? 0).toFixed(1)}%
             </Text>
@@ -105,12 +108,12 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={styles.metricValue}>
               {(p1.drawdown_95_pct ?? 0).toFixed(1)}% / {(p1.drawdown_99_pct ?? 0).toFixed(1)}%
             </Text>
-            <Text style={styles.metricBenchmark}>1,000 permutaciones</Text>
+            <Text style={styles.metricBenchmark}>{isEs ? "1.000 permutaciones" : "1,000 permutations"}</Text>
           </View>
         </View>
 
         <View style={styles.metricRowSub}>
-          <Text style={styles.subLabel}>Beneficio Mediano vs Peor Caso:</Text>
+          <Text style={styles.subLabel}>{isEs ? "Beneficio Mediano vs Peor Caso:" : "Median vs Worst-Case Profit:"}</Text>
           <Text style={styles.subValue}>
             +{(p1.median_profit_pips ?? 0).toFixed(1)} pips vs +{(p1.worst_case_profit_pips ?? 0).toFixed(1)} pips
           </Text>
@@ -123,7 +126,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           activeOpacity={0.7}
         >
           <Feather name="help-circle" size={13} color="#38BDF8" />
-          <Text style={styles.accordionTitle}>¿Qué significa este dato?</Text>
+          <Text style={styles.accordionTitle}>{isEs ? "¿Qué significa este dato?" : "What does this mean?"}</Text>
           <Feather
             name={expandedTooltip === "p1" ? "chevron-up" : "chevron-down"}
             size={14}
@@ -135,7 +138,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.explanationBox}>
             <Text style={styles.explanationText}>{p1.explanation}</Text>
             <Text style={styles.whyMattersText}>
-              <Text style={{ fontWeight: "700", color: "#38BDF8" }}>Impacto en capital: </Text>
+              <Text style={{ fontWeight: "700", color: "#38BDF8" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
               {p1.why_it_matters}
             </Text>
           </View>
@@ -150,25 +153,25 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.pillarTag, { color: "#C084FC" }]}>PILAR 2</Text>
-            <Text style={styles.pillarTitle}>Walk-Forward Analysis & Generalización</Text>
+            <Text style={styles.pillarTitle}>{isEs ? "Walk-Forward Analysis & Generalización" : "Walk-Forward Analysis & Generalization"}</Text>
           </View>
           <Badge badge={p2.badge} />
         </View>
 
         <View style={styles.metricRow}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Eficiencia Walk-Forward (WFE)</Text>
+            <Text style={styles.metricLabel}>{isEs ? "Eficiencia Walk-Forward (WFE)" : "Walk-Forward Efficiency (WFE)"}</Text>
             <Text style={[styles.metricBigValue, { color: p2.wfe_ratio >= 60 ? "#10B981" : "#EF4444" }]}>
               {(p2.wfe_ratio ?? 0).toFixed(1)}%
             </Text>
             <Text style={styles.metricBenchmark}>{p2.threshold}</Text>
           </View>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Estabilidad Parámetros</Text>
+            <Text style={styles.metricLabel}>{isEs ? "Estabilidad Parámetros" : "Parameter Stability"}</Text>
             <Text style={[styles.metricValue, { color: p2.is_robust ? "#10B981" : "#F59E0B" }]}>
-              {p2.is_robust ? "ROBUSTA" : "DEGRADACIÓN"}
+              {p2.is_robust ? (isEs ? "ROBUSTA" : "ROBUST") : (isEs ? "DEGRADACIÓN" : "DEGRADATION")}
             </Text>
-            <Text style={styles.metricBenchmark}>4 Ventanas Móviles</Text>
+            <Text style={styles.metricBenchmark}>{isEs ? "4 Ventanas Móviles" : "4 Rolling Windows"}</Text>
           </View>
         </View>
 
@@ -194,7 +197,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           activeOpacity={0.7}
         >
           <Feather name="help-circle" size={13} color="#A855F7" />
-          <Text style={[styles.accordionTitle, { color: "#C084FC" }]}>¿Qué significa este dato?</Text>
+          <Text style={[styles.accordionTitle, { color: "#C084FC" }]}>{isEs ? "¿Qué significa este dato?" : "What does this mean?"}</Text>
           <Feather
             name={expandedTooltip === "p2" ? "chevron-up" : "chevron-down"}
             size={14}
@@ -206,7 +209,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.explanationBox}>
             <Text style={styles.explanationText}>{p2.explanation}</Text>
             <Text style={styles.whyMattersText}>
-              <Text style={{ fontWeight: "700", color: "#C084FC" }}>Impacto en capital: </Text>
+              <Text style={{ fontWeight: "700", color: "#C084FC" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
               {p2.why_it_matters}
             </Text>
           </View>
@@ -221,25 +224,25 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.pillarTag, { color: "#FBBF24" }]}>PILAR 3</Text>
-            <Text style={styles.pillarTitle}>Test de Sobreajuste & Deflated Sharpe</Text>
+            <Text style={styles.pillarTitle}>{isEs ? "Test de Sobreajuste & Deflated Sharpe" : "Overfitting Test & Deflated Sharpe"}</Text>
           </View>
           <Badge badge={p3.badge} />
         </View>
 
         <View style={styles.metricRow}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Sharpe Deflactado (DSR)</Text>
+            <Text style={styles.metricLabel}>{isEs ? "Sharpe Deflactado (DSR)" : "Deflated Sharpe Ratio (DSR)"}</Text>
             <Text style={[styles.metricBigValue, { color: p3.deflated_sharpe_ratio >= 1.0 ? "#10B981" : "#F59E0B" }]}>
               {(p3.deflated_sharpe_ratio ?? 0).toFixed(2)}
             </Text>
             <Text style={styles.metricBenchmark}>{p3.threshold}</Text>
           </View>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>Sharpe Base vs Sortino</Text>
+            <Text style={styles.metricLabel}>{isEs ? "Sharpe Base vs Sortino" : "Base Sharpe vs Sortino"}</Text>
             <Text style={styles.metricValue}>
               {(p3.traditional_sharpe ?? 0).toFixed(2)} / {(p3.sortino_ratio ?? 0).toFixed(2)}
             </Text>
-            <Text style={styles.metricBenchmark}>Penaliza sólo caídas</Text>
+            <Text style={styles.metricBenchmark}>{isEs ? "Penaliza sólo caídas" : "Penalizes downside only"}</Text>
           </View>
         </View>
 
@@ -249,7 +252,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           activeOpacity={0.7}
         >
           <Feather name="help-circle" size={13} color="#F59E0B" />
-          <Text style={[styles.accordionTitle, { color: "#FBBF24" }]}>¿Qué significa este dato?</Text>
+          <Text style={[styles.accordionTitle, { color: "#FBBF24" }]}>{isEs ? "¿Qué significa este dato?" : "What does this mean?"}</Text>
           <Feather
             name={expandedTooltip === "p3" ? "chevron-up" : "chevron-down"}
             size={14}
@@ -261,7 +264,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.explanationBox}>
             <Text style={styles.explanationText}>{p3.explanation}</Text>
             <Text style={styles.whyMattersText}>
-              <Text style={{ fontWeight: "700", color: "#FBBF24" }}>Impacto en capital: </Text>
+              <Text style={{ fontWeight: "700", color: "#FBBF24" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
               {p3.why_it_matters}
             </Text>
           </View>
@@ -276,7 +279,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.pillarTag, { color: "#34D399" }]}>PILAR 4</Text>
-            <Text style={styles.pillarTitle}>Payoff Matemático & Calidad de Ejecución</Text>
+            <Text style={styles.pillarTitle}>{isEs ? "Payoff Matemático & Calidad de Ejecución" : "Mathematical Payoff & Execution Quality"}</Text>
           </View>
           <Badge badge={p4.badge} />
         </View>
@@ -299,9 +302,9 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
         </View>
 
         <View style={styles.metricRowSub}>
-          <Text style={styles.subLabel}>Racha Máx Pérdidas Consecutivas:</Text>
+          <Text style={styles.subLabel}>{isEs ? "Racha Máx Pérdidas Consecutivas:" : "Max Consecutive Loss Streak:"}</Text>
           <Text style={[styles.subValue, { color: p4.max_consecutive_losses < p4.circuit_breaker_limit ? "#10B981" : "#EF4444" }]}>
-            {p4.max_consecutive_losses} pérdidas (Límite Circuit Breaker: {p4.circuit_breaker_limit})
+            {p4.max_consecutive_losses} {isEs ? "pérdidas (Límite Circuit Breaker:" : "losses (Circuit Breaker Limit:"} {p4.circuit_breaker_limit})
           </Text>
         </View>
 
@@ -311,7 +314,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           activeOpacity={0.7}
         >
           <Feather name="help-circle" size={13} color="#10B981" />
-          <Text style={[styles.accordionTitle, { color: "#34D399" }]}>¿Qué significa este dato?</Text>
+          <Text style={[styles.accordionTitle, { color: "#34D399" }]}>{isEs ? "¿Qué significa este dato?" : "What does this mean?"}</Text>
           <Feather
             name={expandedTooltip === "p4" ? "chevron-up" : "chevron-down"}
             size={14}
@@ -323,7 +326,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.explanationBox}>
             <Text style={styles.explanationText}>{p4.explanation}</Text>
             <Text style={styles.whyMattersText}>
-              <Text style={{ fontWeight: "700", color: "#10B981" }}>Impacto en capital: </Text>
+              <Text style={{ fontWeight: "700", color: "#10B981" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
               {p4.why_it_matters}
             </Text>
           </View>
@@ -338,7 +341,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.pillarTag, { color: "#60A5FA" }]}>PILAR 5</Text>
-            <Text style={styles.pillarTitle}>Stress Test por Regímenes de Mercado</Text>
+            <Text style={styles.pillarTitle}>{isEs ? "Stress Test por Regímenes de Mercado" : "Macro Regime Stress Testing"}</Text>
           </View>
           <Badge badge={p5.badge} />
         </View>
@@ -382,7 +385,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           activeOpacity={0.7}
         >
           <Feather name="help-circle" size={13} color="#3B82F6" />
-          <Text style={[styles.accordionTitle, { color: "#60A5FA" }]}>¿Qué significa este dato?</Text>
+          <Text style={[styles.accordionTitle, { color: "#60A5FA" }]}>{isEs ? "¿Qué significa este dato?" : "What does this mean?"}</Text>
           <Feather
             name={expandedTooltip === "p5" ? "chevron-up" : "chevron-down"}
             size={14}
@@ -394,7 +397,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           <View style={styles.explanationBox}>
             <Text style={styles.explanationText}>{p5.explanation}</Text>
             <Text style={styles.whyMattersText}>
-              <Text style={{ fontWeight: "700", color: "#3B82F6" }}>Impacto en capital: </Text>
+              <Text style={{ fontWeight: "700", color: "#3B82F6" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
               {p5.why_it_matters}
             </Text>
           </View>
@@ -456,12 +459,12 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
           ) : promotedSuccess ? (
             <>
               <MaterialCommunityIcons name="shield-check" size={18} color="#FFFFFF" />
-              <Text style={styles.promoteBtnText}>PROMOCIONADA A MT5</Text>
+              <Text style={styles.promoteBtnText}>{isEs ? "PROMOCIONADA A MT5" : "PROMOTED TO MT5"}</Text>
             </>
           ) : (
             <>
               <Feather name="arrow-up-right" size={18} color="#FFFFFF" />
-              <Text style={styles.promoteBtnText}>PROMOCIONAR A PRODUCCIÓN EN MT5</Text>
+              <Text style={styles.promoteBtnText}>{isEs ? "PROMOCIONAR A PRODUCCIÓN EN MT5" : "PROMOTE TO MT5 PRODUCTION"}</Text>
             </>
           )}
         </TouchableOpacity>

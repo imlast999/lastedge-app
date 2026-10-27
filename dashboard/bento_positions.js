@@ -57,7 +57,7 @@
                             <div class="top-left">
                                 <h1 style="display: flex; align-items: center; gap: 10px;">
                                     <span class="pulse-indicator" id="pos-pulse-dot"></span>
-                                    <span>Posiciones &amp; Flujo Operativo</span>
+                                    <span>Positions &amp; Trade Flow</span>
                                     <span id="pos-header-asof" style="font-weight: 500; color: rgba(255,255,255,0.4); font-size: 13px; margin-left: 8px;">
                                         Sincronizado con MT5
                                     </span>
@@ -83,7 +83,7 @@
                                 <div class="pos-card-header">
                                     <div class="ttl">
                                         <i class="fa-solid fa-layer-group" style="color: var(--acc); font-size: 15px;"></i>
-                                        <span>Operaciones Abiertas</span>
+                                        <span>Open Positions</span>
                                         <span class="chip" id="chip-open-count" style="margin-left: 6px;">0</span>
                                     </div>
                                     <div id="open-total-pnl-chip" class="chip" style="background: rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace;">
@@ -93,8 +93,8 @@
                                 <div class="pos-card-body" id="bento-open-positions-list">
                                     <div class="pos-empty-state">
                                         <div class="pos-empty-icon"><i class="fa-solid fa-shield-check"></i></div>
-                                        <div class="pos-empty-title">0 posiciones activas &middot; Margen 100% libre</div>
-                                        <div class="pos-empty-desc">Risk Engine v2 en guardia activa &middot; Sin exposición flotante</div>
+                                        <div class="pos-empty-title">0 active positions &middot; 100% free margin</div>
+                                        <div class="pos-empty-desc">Risk Engine v2 active guard &middot; No floating exposure</div>
                                     </div>
                                 </div>
                             </div>
@@ -105,7 +105,7 @@
                                 <div class="pos-card-header">
                                     <div class="ttl">
                                         <i class="fa-solid fa-clock-rotate-left" style="color: #FFA500; font-size: 15px;"></i>
-                                        <span>Señales Pendientes</span>
+                                        <span>Pending Signals</span>
                                         <span class="chip" id="chip-pending-count" style="margin-left: 6px; background: rgba(255, 165, 0, 0.15); color: #FFA500; border: 1px solid rgba(255, 165, 0, 0.35);">
                                             0
                                         </span>
@@ -115,8 +115,8 @@
                                 <div class="pos-card-body" id="bento-pending-signals-list">
                                     <div class="pos-empty-state">
                                         <div class="pos-empty-icon" style="color: rgba(255, 255, 255, 0.25);"><i class="fa-solid fa-bell-slash"></i></div>
-                                        <div class="pos-empty-title">Sin señales pendientes</div>
-                                        <div class="pos-empty-desc">Las señales que requieran validación humana aparecerán aquí para ejecución instantánea.</div>
+                                        <div class="pos-empty-title">No pending signals</div>
+                                        <div class="pos-empty-desc">Signals requiring manual validation will appear here for 1-click execution.</div>
                                     </div>
                                 </div>
                             </div>
@@ -127,7 +127,7 @@
                                 <div class="pos-card-header" style="flex-wrap: wrap; gap: 14px;">
                                     <div class="ttl">
                                         <i class="fa-solid fa-book-bookmark" style="color: #A9B2FF; font-size: 15px;"></i>
-                                        <span>Diario Cuantitativo de Operaciones (Trade Journal)</span>
+                                        <span>Quantitative Trade Journal</span>
                                     </div>
                                     <!-- Top KPI Chips Row -->
                                     <div class="journal-kpi-row" id="journal-kpi-chips">
@@ -136,7 +136,7 @@
                                             <span class="kpi-val" id="kpi-winrate" style="color: #10B981;">0.0%</span>
                                         </div>
                                         <div class="journal-kpi-chip">
-                                            <span class="kpi-label">PnL Cerrado</span>
+                                            <span class="kpi-label">Closed PnL</span>
                                             <span class="kpi-val" id="kpi-total-pnl">$0.00</span>
                                         </div>
                                         <div class="journal-kpi-chip">
@@ -144,7 +144,7 @@
                                             <span class="kpi-val" id="kpi-total-trades">0</span>
                                         </div>
                                         <div class="journal-kpi-chip">
-                                            <span class="kpi-label">Prom. Pips</span>
+                                            <span class="kpi-label">Avg Pips</span>
                                             <span class="kpi-val" id="kpi-avg-pips">0.0</span>
                                         </div>
                                     </div>
@@ -154,19 +154,19 @@
                                     <table class="bento-trading-table">
                                         <thead>
                                             <tr>
-                                                <th>Cierre</th>
-                                                <th>Par &amp; Dirección</th>
-                                                <th>Lotes</th>
-                                                <th>Entrada &rarr; Salida</th>
+                                                <th>Closed At</th>
+                                                <th>Pair &amp; Direction</th>
+                                                <th>Lots</th>
+                                                <th>Entry &rarr; Exit</th>
                                                 <th>Pips</th>
-                                                <th>Motivo de Salida</th>
-                                                <th style="text-align: right;">Beneficio Neto</th>
+                                                <th>Exit Reason</th>
+                                                <th style="text-align: right;">Net Profit</th>
                                             </tr>
                                         </thead>
                                         <tbody id="bento-journal-tbody">
                                             <tr>
                                                 <td colspan="7" style="text-align: center; color: rgba(255,255,255,0.4); padding: 36px;">
-                                                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Cargando historial de operaciones...
+                                                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading trade journal...
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -176,14 +176,14 @@
                                 <!-- Pagination Controls -->
                                 <div class="journal-pagination" id="journal-pagination-ctrls">
                                     <span id="journal-page-info" style="font-size: 12px; color: rgba(255,255,255,0.5); font-family: 'Geist Mono', monospace;">
-                                        Página 1 de 1
+                                        Page 1 of 1
                                     </span>
                                     <div style="display: flex; gap: 8px;">
                                         <button class="btn-action" id="btn-prev-page" onclick="LastEdgeBentoPositions.instance.prevPage()" style="height: 28px; padding: 0 10px; font-size: 11px;">
-                                            <i class="fa-solid fa-chevron-left"></i> Anterior
+                                            <i class="fa-solid fa-chevron-left"></i> Previous
                                         </button>
                                         <button class="btn-action" id="btn-next-page" onclick="LastEdgeBentoPositions.instance.nextPage()" style="height: 28px; padding: 0 10px; font-size: 11px;">
-                                            Siguiente <i class="fa-solid fa-chevron-right"></i>
+                                            Next <i class="fa-solid fa-chevron-right"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -288,8 +288,8 @@
                 container.innerHTML = `
                     <div class="pos-empty-state">
                         <div class="pos-empty-icon"><i class="fa-solid fa-shield-check"></i></div>
-                        <div class="pos-empty-title">0 posiciones activas &middot; Margen 100% libre</div>
-                        <div class="pos-empty-desc">Risk Engine v2 en guardia activa &middot; Sin exposición flotante</div>
+                        <div class="pos-empty-title">0 active positions &middot; 100% free margin</div>
+                        <div class="pos-empty-desc">Risk Engine v2 active guard &middot; No floating exposure</div>
                     </div>
                 `;
                 return;
@@ -315,7 +315,7 @@
 
                 // Visual Trailing Stop Calculation
                 let trailingPct = 0;
-                let trailingText = 'Breakeven Pendiente';
+                let trailingText = 'Breakeven Pending';
                 let beSecured = false;
 
                 if (openP > 0 && curP > 0) {
@@ -402,7 +402,7 @@
                         <!-- Action Row -->
                         <div class="pos-item-actions">
                             <button class="btn-close-pos" onclick="LastEdgeBentoPositions.instance.closePosition(${ticket}, this)" ${isClosing ? 'disabled' : ''}>
-                                ${isClosing ? '<i class="fa-solid fa-spinner fa-spin"></i> Cerrando...' : '<i class="fa-solid fa-xmark"></i> Cerrar Posición'}
+                                ${isClosing ? '<i class="fa-solid fa-spinner fa-spin"></i> Closing...' : '<i class="fa-solid fa-xmark"></i> Close Position'}
                             </button>
                         </div>
                     </div>
@@ -466,8 +466,8 @@
                 container.innerHTML = `
                     <div class="pos-empty-state">
                         <div class="pos-empty-icon" style="color: rgba(255, 255, 255, 0.25);"><i class="fa-solid fa-bell-slash"></i></div>
-                        <div class="pos-empty-title">Sin señales pendientes</div>
-                        <div class="pos-empty-desc">Las señales que requieran validación humana aparecerán aquí para ejecución instantánea en 1 click.</div>
+                        <div class="pos-empty-title">No pending signals</div>
+                        <div class="pos-empty-desc">Signals requiring manual validation will appear here for instant 1-click execution.</div>
                     </div>
                 `;
                 return;
@@ -541,10 +541,10 @@
                         <div class="pending-actions-row">
                             <button class="btn-reject-signal" onclick="LastEdgeBentoPositions.instance.rejectSignal('${sigId}', this)">
                                 <i class="fa-solid fa-xmark"></i>
-                                <span>Descartar</span>
+                                <span>Dismiss</span>
                             </button>
                             <button class="btn-approve-1click" onclick="LastEdgeBentoPositions.instance.approveSignal('${sigId}', this)" ${isApproving ? 'disabled' : ''}>
-                                ${isApproving ? '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando en MT5...' : '<i class="fa-solid fa-bolt"></i> Aprobar y Ejecutar'}
+                                ${isApproving ? '<i class="fa-solid fa-spinner fa-spin"></i> Executing on MT5...' : '<i class="fa-solid fa-bolt"></i> Approve & Execute'}
                             </button>
                         </div>
                     </div>
@@ -599,7 +599,7 @@
                     <tr>
                         <td colspan="7" style="text-align: center; color: rgba(255,255,255,0.4); padding: 36px;">
                             <i class="fa-solid fa-check-circle" style="color: #10B981; margin-right: 6px;"></i>
-                            Diario institucional listo &middot; Sin operaciones cerradas registradas en el período.
+                            Institutional journal ready &middot; No closed trades recorded in this period.
                         </td>
                     </tr>
                 `;
@@ -616,7 +616,7 @@
             const paginated = this.trades.slice(startIdx, endIdx);
 
             const pageInfo = document.getElementById('journal-page-info');
-            if (pageInfo) pageInfo.textContent = `Página ${this.currentPage} de ${totalPages} (${totalTrades} trades)`;
+            if (pageInfo) pageInfo.textContent = `Page ${this.currentPage} of ${totalPages} (${totalTrades} trades)`;
 
             const btnPrev = document.getElementById('btn-prev-page');
             const btnNext = document.getElementById('btn-next-page');
@@ -705,7 +705,7 @@
             this.loadingApproveId = String(signalId);
             if (btnElement) {
                 btnElement.disabled = true;
-                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando en MT5...';
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Executing on MT5...';
             }
 
             try {
@@ -721,7 +721,7 @@
                 if (result.error === 'PRICE_DRIFT' || (!result.ok && result.error === 'PRICE_DRIFT')) {
                     if (btnElement) {
                         btnElement.disabled = false;
-                        btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Aprobar y Ejecutar';
+                        btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Approve & Execute';
                     }
                     this.showPriceDriftDialog(result, () => {
                         this.approveSignal(signalId, btnElement, true);
@@ -735,7 +735,7 @@
                 if (result.ok) {
                     // Feedback visual inmediato
                     if (btnElement) {
-                        btnElement.innerHTML = '<i class="fa-solid fa-check"></i> ¡Ejecutado!';
+                        btnElement.innerHTML = '<i class="fa-solid fa-check"></i> Executed!';
                         btnElement.style.background = '#10B981';
                         btnElement.style.color = '#FFFFFF';
                     }
@@ -746,18 +746,18 @@
                     // Refrescar inmediatamente datos de MT5
                     await this.syncFreshPositions();
                 } else {
-                    alert('Error aprobando señal: ' + (result.error || result.message || 'Fallo desconocido en MT5'));
+                    alert('Error approving signal: ' + (result.error || result.message || 'Unknown MT5 execution failure'));
                     if (btnElement) {
                         btnElement.disabled = false;
-                        btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Reintentar Aprobación';
+                        btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Retry Approval';
                     }
                 }
             } catch (err) {
                 console.error('[BentoPositions] Approve error:', err);
-                alert('Error de conexión al aprobar señal: ' + err);
+                alert('Connection error approving signal: ' + err);
                 if (btnElement) {
                     btnElement.disabled = false;
-                    btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Reintentar Aprobación';
+                    btnElement.innerHTML = '<i class="fa-solid fa-bolt"></i> Retry Approval';
                 }
             } finally {
                 this.loadingApproveId = null;
@@ -768,7 +768,7 @@
         async rejectSignal(sigId, btnElement) {
             if (btnElement) {
                 btnElement.disabled = true;
-                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Descartando...';
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dismissing...';
             }
 
             try {
@@ -794,18 +794,18 @@
                         this.renderPendingSignals();
                     }
                 } else {
-                    alert('Error descartando señal: ' + (result.error || 'Fallo en el servidor'));
+                    alert('Error dismissing signal: ' + (result.error || 'Server error'));
                     if (btnElement) {
                         btnElement.disabled = false;
-                        btnElement.innerHTML = '<i class="fa-solid fa-xmark"></i> Descartar';
+                        btnElement.innerHTML = '<i class="fa-solid fa-xmark"></i> Dismiss';
                     }
                 }
             } catch (err) {
                 console.error('[BentoPositions] Reject error:', err);
-                alert('Error de conexión al descartar señal: ' + err);
+                alert('Connection error dismissing signal: ' + err);
                 if (btnElement) {
                     btnElement.disabled = false;
-                    btnElement.innerHTML = '<i class="fa-solid fa-xmark"></i> Descartar';
+                    btnElement.innerHTML = '<i class="fa-solid fa-xmark"></i> Dismiss';
                 }
             }
         }
@@ -831,42 +831,42 @@
                                 <i class="fa-solid fa-triangle-exclamation"></i>
                             </div>
                             <div>
-                                <h3 class="bento-modal-title">Alerta de Desviación de Precio</h3>
-                                <p class="bento-modal-subtitle">${sym} &middot; Slippage Guard Activo</p>
+                                <h3 class="bento-modal-title">Price Drift Alert</h3>
+                                <p class="bento-modal-subtitle">${sym} &middot; Active Slippage Guard</p>
                             </div>
                         </div>
 
                         <div class="bento-modal-body">
                             <p style="font-size: 13px; color: var(--t2); line-height: 1.5; margin-bottom: 14px;">
-                                El precio de mercado se ha movido desde la emisión de la señal:
+                                Market price has moved since signal generation:
                             </p>
                             <div class="drift-comparison-grid">
                                 <div class="drift-comp-cell">
-                                    <span class="drift-comp-lbl">Precio Señal</span>
+                                    <span class="drift-comp-lbl">Signal Price</span>
                                     <span class="drift-comp-val">${sigPrice}</span>
                                 </div>
                                 <div class="drift-comp-arrow">
                                     <i class="fa-solid fa-arrow-right"></i>
                                 </div>
                                 <div class="drift-comp-cell highlight-drift">
-                                    <span class="drift-comp-lbl">Precio Actual MT5</span>
+                                    <span class="drift-comp-lbl">Current MT5 Price</span>
                                     <span class="drift-comp-val">${curPrice}</span>
                                 </div>
                             </div>
                             <div class="drift-summary-pill">
-                                <i class="fa-solid fa-gauge-high"></i> Desviación Detectada: <strong>${driftPips}</strong>
+                                <i class="fa-solid fa-gauge-high"></i> Detected Drift: <strong>${driftPips}</strong>
                             </div>
                             <p style="font-size: 12px; color: var(--t3); margin-top: 12px; line-height: 1.4;">
-                                ¿Deseas ejecutar la orden al precio actual de mercado o cancelar la ejecución?
+                                Do you wish to execute at the current market price or cancel execution?
                             </p>
                         </div>
 
                         <div class="bento-modal-actions">
                             <button class="btn-modal-cancel" id="btn-drift-cancel">
-                                <i class="fa-solid fa-xmark"></i> Cancelar
+                                <i class="fa-solid fa-xmark"></i> Cancel
                             </button>
                             <button class="btn-modal-force" id="btn-drift-confirm">
-                                <i class="fa-solid fa-bolt"></i> Ejecutar a Mercado
+                                <i class="fa-solid fa-bolt"></i> Execute at Market
                             </button>
                         </div>
                     </div>
@@ -902,7 +902,7 @@
          * ── CLOSE POSITION ACTION ───────────────────────────────────────────
          */
         async closePosition(ticket, btnElement) {
-            if (!confirm(`¿Confirmas el cierre inmediato de la posición #${ticket} en MetaTrader 5?`)) {
+            if (!confirm(`Confirm immediate close of position #${ticket} on MetaTrader 5?`)) {
                 return;
             }
 
@@ -928,11 +928,11 @@
                     // Re-sincronizar posiciones y diario
                     await this.syncFreshPositions();
                 } else {
-                    alert('Error cerrando posición: ' + (result.error || 'MT5 no pudo procesar la solicitud'));
+                    alert('Error closing position: ' + (result.error || 'MT5 could not process request'));
                 }
             } catch (err) {
                 console.error('[BentoPositions] Close error:', err);
-                alert('Error de conexión al cerrar posición: ' + err);
+                alert('Connection error closing position: ' + err);
             } finally {
                 this.closingTicket = null;
                 this.renderOpenPositions();
