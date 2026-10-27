@@ -25,10 +25,10 @@ APP_DIR = Path(__file__).resolve().parent.parent
 LOGS_DIR = APP_DIR / "logs" / "charts"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
-from services.charts import generate_chart
+from services.charts import generate_chart, fmt_price
 
 
-def _fetch_candles_mt5(symbol: str, timeframe: str = "H1", bars: int = 40) -> Optional[pd.DataFrame]:
+def _fetch_candles_mt5(symbol: str, timeframe: str = "H1", bars: int = 80) -> Optional[pd.DataFrame]:
     """Fetches real-time candles directly from MetaTrader 5 terminal."""
     try:
         import MetaTrader5 as mt5
@@ -60,18 +60,24 @@ def _fetch_candles_mt5(symbol: str, timeframe: str = "H1", bars: int = 40) -> Op
         return None
 
 
-def _fetch_candles_fallback(symbol: str, timeframe: str = "H1", bars: int = 40) -> Optional[pd.DataFrame]:
+def _fetch_candles_fallback(symbol: str, timeframe: str = "H1", bars: int = 80) -> Optional[pd.DataFrame]:
     """Fallback to Strategy Lab parquet historical data if MT5 is offline."""
     try:
-        data_path = APP_DIR.parent / "LastEdge Strategy Lab" / "data" / "historical" / symbol.upper() / f"{timeframe.upper()}.parquet"
-        if data_path.exists():
-            df = pd.read_parquet(data_path)
-            if len(df) > bars:
-                df = df.iloc[-bars:].copy()
-            df["time"] = pd.to_datetime(df["time"], utc=True)
+        data_dir = APP_DIR.parent / "LastEdge Strategy Lab" / "data"
+        candidates = list(data_dir.glob(f"{symbol.upper()}*.parquet")) + list(data_dir.glob(f"{symbol.lower()}*.parquet"))
+        if not candidates:
+            candidates = list(data_dir.glob("*.parquet"))
+
+        if candidates:
+            df = pd.read_parquet(candidates[0])
+            for t_col in ["time", "datetime", "timestamp"]:
+                if t_col in df.columns:
+                    df["time"] = pd.to_datetime(df[t_col])
+                    break
+            df = df.sort_values("time").tail(max(20, bars))
             return df[["time", "open", "high", "low", "close"]]
     except Exception as e:
-        logger.debug(f"[ChartHelper] Fallback parquet loader error: {e}")
+        logger.debug(f"[ChartHelper] Fallback parquet error: {e}")
     return None
 
 
@@ -79,7 +85,7 @@ def get_chart_for_signal(
     symbol: Any,
     timeframe: str = "H1",
     signal_data: Optional[Dict[str, Any]] = None,
-    bars: int = 40,
+    bars: int = 80,
     title: Optional[str] = None
 ) -> Optional[str]:
     """
@@ -92,6 +98,7 @@ def get_chart_for_signal(
         symbol = signal_data.get("symbol", "EURUSD")
         timeframe = signal_data.get("timeframe", timeframe)
     sym = str(symbol).upper()
+
     df = _fetch_candles_mt5(sym, timeframe, bars)
     if df is None or len(df) < 5:
         df = _fetch_candles_fallback(sym, timeframe, bars)
@@ -118,8 +125,11 @@ def get_chart_for_signal(
     out_file = str(LOGS_DIR / f"chart_{sym}_{now_tag}_{uuid.uuid4().hex[:6]}.png")
 
     if not title:
-        sig_str = f" [{sig_param['type']}]" if sig_param and sig_param.get("type") else ""
-        title = f"{sym} ({timeframe}){sig_str} — Technical Structure"
+        sig_str = f" • {sig_param['type'].upper()}" if sig_param and sig_param.get("type") else ""
+        entry_str = f" | Entry: {fmt_price(sig_param['entry'])}" if sig_param and sig_param.get("entry") else ""
+        sl_str = f" | SL: {fmt_price(sig_param['sl'])}" if sig_param and sig_param.get("sl") else ""
+        tp_str = f" | TP: {fmt_price(sig_param['tp'])}" if sig_param and sig_param.get("tp") else ""
+        title = f"{sym} ({timeframe}){sig_str}{entry_str}{sl_str}{tp_str}"
 
     try:
         path = generate_chart(
@@ -137,7 +147,7 @@ def get_chart_for_signal(
         return None
 
 
-def get_chart_for_position(ticket: int, bars: int = 40) -> Optional[str]:
+def get_chart_for_position(ticket: int, bars: int = 80) -> Optional[str]:
     """
     Fetches the live position by ticket, resolves symbol, entry, current SL & TP,
     and returns the rendered chart image path.
@@ -189,7 +199,22 @@ def get_chart_for_position(ticket: int, bars: int = 40) -> Optional[str]:
 
     sym = pos_data["symbol"]
     pnl_sign = "+" if pos_data["profit"] >= 0 else ""
-    title = f"{sym} H1 — Position #{ticket} ({pos_data['type']} {pos_data['volume']}L) PnL: {pnl_sign}${pos_data['profit']:.2f}"
+    
+    # Calculate R:R if SL and TP exist
+    rr_str = ""
+    entry = pos_data["entry"]
+    sl = pos_data["sl"]
+    tp = pos_data["tp"]
+    if entry > 0 and sl > 0 and tp > 0:
+        risk = abs(entry - sl)
+        reward = abs(entry - tp)
+        if risk > 0:
+            rr_str = f" | R:R 1:{reward/risk:.2f}"
+
+    title = (
+        f"{sym} (H1) • #{ticket} {pos_data['type']} {pos_data['volume']}L • "
+        f"PnL: {pnl_sign}${pos_data['profit']:.2f}{rr_str}"
+    )
 
     return get_chart_for_signal(
         symbol=sym,

@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+from typing import Optional, Dict, Any, List
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -16,17 +17,15 @@ def _make_filename(prefix='chart'):
     return f"{prefix}_{uid}.png"
 
 
-def _calculate_indicators(df):
-    """Calculate technical indicators for the chart"""
+def _calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate technical indicators (EMAs, RSI) for the chart."""
     df = df.copy()
     
-    # Calculate EMAs if not present
     if 'ema50' not in df.columns:
         df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
     if 'ema200' not in df.columns:
         df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
     
-    # Calculate RSI if not present
     if 'rsi' not in df.columns:
         delta = df['close'].diff()
         up = delta.clip(lower=0).ewm(alpha=1/14, adjust=False).mean()
@@ -37,14 +36,36 @@ def _calculate_indicators(df):
     return df
 
 
-def generate_chart(df, symbol='EURUSD', signal=None, filename=None, title=None, dark_mode=True, candlesticks=True):
-    """Generate a professional candlestick chart using mplfinance.
+def fmt_price(val: float) -> str:
+    """Format price dynamically according to magnitude (Crypto vs FX)."""
+    try:
+        fval = float(val)
+        if abs(fval) >= 100:
+            return f"{fval:,.2f}"
+        elif abs(fval) >= 1:
+            return f"{fval:.5f}"
+        else:
+            return f"{fval:.6f}"
+    except (ValueError, TypeError):
+        return str(val)
+
+
+def generate_chart(
+    df: pd.DataFrame,
+    symbol: str = 'EURUSD',
+    signal: Optional[Dict[str, Any]] = None,
+    filename: Optional[str] = None,
+    title: Optional[str] = None,
+    dark_mode: bool = True,
+    candlesticks: bool = True
+) -> str:
+    """Generate a high-definition TradingView-style candlestick chart using mplfinance.
 
     - `df` must contain columns: ['time','open','high','low','close'] with 'time' as datetime
-    - returns path to PNG file
+    - Dynamically expands Y-axis (`ylim`) so TP and SL levels are NEVER cut off
+    - Adds institutional dark aesthetic, shaded Risk/Reward zones, and price badges
     """
-    # Asegurar que symbol sea un string
-    if hasattr(symbol, 'iloc'):  # Es una Serie de pandas
+    if hasattr(symbol, 'iloc'):
         symbol = str(symbol.iloc[0]) if len(symbol) > 0 else 'EURUSD'
     elif not isinstance(symbol, str):
         symbol = str(symbol)
@@ -55,8 +76,7 @@ def generate_chart(df, symbol='EURUSD', signal=None, filename=None, title=None, 
         filename = _make_filename(symbol)
 
     try:
-        # Prepare data for mplfinance: set index to datetime and use OHLC columns
-        # Ser flexible con el nombre de la columna de tiempo
+        # Prepare data for mplfinance
         time_col = None
         for col in ['time', 'datetime', 'timestamp']:
             if col in df.columns:
@@ -64,7 +84,6 @@ def generate_chart(df, symbol='EURUSD', signal=None, filename=None, title=None, 
                 break
         
         if time_col is None:
-            # Si no hay columna de tiempo, usar el índice si es datetime
             if isinstance(df.index, pd.DatetimeIndex):
                 data = df.copy()
             else:
@@ -72,7 +91,6 @@ def generate_chart(df, symbol='EURUSD', signal=None, filename=None, title=None, 
         else:
             data = df.set_index(time_col).copy()
         
-        # Ensure datetime index and sort ascending (mplfinance expects increasing time)
         try:
             data.index = pd.to_datetime(data.index)
         except Exception:
@@ -80,27 +98,24 @@ def generate_chart(df, symbol='EURUSD', signal=None, filename=None, title=None, 
             
         data = data.sort_index()
 
-        # Ensure OHLC columns exist and are numeric; drop rows with NaNs
         required_cols = ['open', 'high', 'low', 'close']
         if not all(col in data.columns for col in required_cols):
             raise ValueError(f"Missing required OHLC columns. Available: {list(data.columns)}")
             
-        # Clean and prepare OHLC data
         mpf_df = data[required_cols].astype(float).dropna()
-        
         if len(mpf_df) < 3:
             raise ValueError(f'Not enough OHLC bars to plot: {len(mpf_df)}')
 
         # Calculate indicators
         data_with_indicators = _calculate_indicators(data)
 
-        # Define professional style
+        # Institutional Modern Dark Palette
         if dark_mode:
             mc = mpf.make_marketcolors(
-                up='#00ff88',      # Bright green for up candles
-                down='#ff4444',    # Bright red for down candles
+                up='#00c087',      # Clean emerald teal
+                down='#ff3b69',    # Vivid crimson red
                 edge='inherit',
-                wick={'up': '#00ff88', 'down': '#ff4444'},
+                wick={'up': '#00c087', 'down': '#ff3b69'},
                 ohlc='inherit'
             )
             s = mpf.make_mpf_style(
@@ -108,190 +123,220 @@ def generate_chart(df, symbol='EURUSD', signal=None, filename=None, title=None, 
                 marketcolors=mc,
                 rc={
                     'font.size': 10,
-                    'axes.labelcolor': 'white',
-                    'axes.edgecolor': 'white',
-                    'xtick.color': 'white',
-                    'ytick.color': 'white',
-                    'figure.facecolor': '#1e1e1e',
-                    'axes.facecolor': '#2d2d2d'
+                    'axes.labelcolor': '#94a3b8',
+                    'axes.edgecolor': '#1e293b',
+                    'xtick.color': '#64748b',
+                    'ytick.color': '#94a3b8',
+                    'figure.facecolor': '#090d16',
+                    'axes.facecolor': '#0f172a',
+                    'grid.color': '#1e293b',
+                    'grid.linestyle': ':',
+                    'grid.alpha': 0.6
                 },
-                gridcolor='#404040',
-                gridstyle='-',
                 y_on_right=True
             )
         else:
             mc = mpf.make_marketcolors(
-                up='green', 
-                down='red', 
-                edge='inherit',
-                wick='black'
+                up='#089981', down='#f23645',
+                edge='inherit', wick='inherit'
             )
             s = mpf.make_mpf_style(
-                base_mpf_style='classic', 
-                marketcolors=mc, 
+                base_mpf_style='classic',
+                marketcolors=mc,
                 rc={'font.size': 10}
             )
 
-        # Title with symbol and timeframe info
-        if title is None:
-            title = f"{symbol} - Candlestick Chart ({len(mpf_df)} bars)"
-
-        # Prepare addplots for indicators
-        addplots = []
-        
-        # Add EMAs if available
-        if 'ema50' in data_with_indicators.columns:
-            ema50_clean = data_with_indicators['ema50'].dropna()
-            if len(ema50_clean) > 0:
-                addplots.append(mpf.make_addplot(
-                    data_with_indicators['ema50'], 
-                    color='cyan', 
-                    width=2,
-                    alpha=0.8
-                ))
-                
-        if 'ema200' in data_with_indicators.columns:
-            ema200_clean = data_with_indicators['ema200'].dropna()
-            if len(ema200_clean) > 0:
-                addplots.append(mpf.make_addplot(
-                    data_with_indicators['ema200'], 
-                    color='magenta', 
-                    width=2,
-                    alpha=0.8
-                ))
-
-        # Prepare horizontal lines for signals
-        hlines = None
+        # Dynamic Y-axis limits: guarantees TP, SL & Entry are NEVER off-screen
+        price_levels: List[float] = []
         if signal:
-            lines = []
-            colors = []
-            linestyles = []
-            linewidths = []
-            
-            if signal.get('entry') is not None:
-                lines.append(float(signal.get('entry')))
-                colors.append('#00ff00')  # Bright green for entry
-                linestyles.append('--')
-                linewidths.append(2)
-                
-            if signal.get('sl') is not None:
-                lines.append(float(signal.get('sl')))
-                colors.append('#ff0000')  # Red for stop loss
-                linestyles.append('--')
-                linewidths.append(2)
-                
-            if signal.get('tp') is not None:
-                lines.append(float(signal.get('tp')))
-                colors.append('#0080ff')  # Blue for take profit
-                linestyles.append('--')
-                linewidths.append(2)
-                
-            if lines:
-                hlines = dict(
-                    hlines=lines, 
-                    colors=colors, 
-                    linestyle=linestyles,
-                    linewidths=linewidths,
-                    alpha=0.8
-                )
+            for k in ['entry', 'price', 'entry_price', 'sl', 'sl_price', 'stopLoss', 'tp', 'tp_price', 'takeProfit']:
+                val = signal.get(k)
+                if val is not None:
+                    try:
+                        f_val = float(val)
+                        if f_val > 0:
+                            price_levels.append(f_val)
+                    except (ValueError, TypeError):
+                        pass
 
-        # Configure plot parameters
+        candle_low = float(mpf_df['low'].min())
+        candle_high = float(mpf_df['high'].max())
+        all_levels = price_levels + [candle_low, candle_high]
+        p_min = min(all_levels)
+        p_max = max(all_levels)
+        p_pad = max((p_max - p_min) * 0.08, 0.0005)
+        calculated_ylim = (p_min - p_pad, p_max + p_pad)
+
+        # Prepare EMA addplots
+        addplots = []
+        if 'ema50' in data_with_indicators.columns:
+            ema50_s = data_with_indicators['ema50'].dropna()
+            if len(ema50_s) > 0:
+                addplots.append(mpf.make_addplot(
+                    data_with_indicators['ema50'],
+                    color='#38bdf8',  # Sky Blue
+                    width=1.4,
+                    alpha=0.85
+                ))
+
+        if 'ema200' in data_with_indicators.columns:
+            ema200_s = data_with_indicators['ema200'].dropna()
+            if len(ema200_s) > 0:
+                addplots.append(mpf.make_addplot(
+                    data_with_indicators['ema200'],
+                    color='#e879f9',  # Orchid Violet
+                    width=1.4,
+                    alpha=0.85
+                ))
+
         mpf_kwargs = {
             'type': 'candle' if candlesticks else 'ohlc',
             'style': s,
-            'title': title,
-            'savefig': dict(fname=filename, dpi=150, bbox_inches='tight'),
             'figsize': (14, 8),
-            'volume': False,  # Disable volume for cleaner look
+            'ylim': calculated_ylim,
+            'volume': False,
             'tight_layout': True,
-            'scale_padding': {'left': 0.3, 'top': 0.8, 'right': 0.5, 'bottom': 0.8},
-            'update_width_config': dict(
-                candle_linewidth=0.8,
-                candle_width=0.8,
-                volume_linewidth=0.8,
-                volume_width=0.8
-            )
+            'returnfig': True
         }
-        
-        # Add plots and lines if available
         if addplots:
             mpf_kwargs['addplot'] = addplots
-            
-        if hlines:
-            mpf_kwargs['hlines'] = hlines
 
-        # Generate the chart
-        mpf.plot(mpf_df, **mpf_kwargs)
-        
-        logger.info(f"Successfully generated chart: {filename}")
+        fig, axes = mpf.plot(mpf_df, **mpf_kwargs)
+        ax = axes[0]
+        xlim = ax.get_xlim()
+        x_end = xlim[1]
+        x_start = xlim[0]
+        x_badge = x_end - (x_end - x_start) * 0.008
+
+        # Draw dotted line for last close price
+        last_close = float(mpf_df['close'].iloc[-1])
+        ax.axhline(last_close, color='#475569', linestyle=':', linewidth=1.1, alpha=0.8)
+
+        # Extract signal levels
+        entry_val = None
+        sl_val = None
+        tp_val = None
+        sig_type = 'SIGNAL'
+
+        if signal:
+            for k in ['entry', 'price', 'entry_price']:
+                if signal.get(k) is not None:
+                    try:
+                        entry_val = float(signal[k])
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            for k in ['sl', 'sl_price', 'stopLoss']:
+                if signal.get(k) is not None:
+                    try:
+                        sl_val = float(signal[k])
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            for k in ['tp', 'tp_price', 'takeProfit']:
+                if signal.get(k) is not None:
+                    try:
+                        tp_val = float(signal[k])
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            sig_type = str(signal.get('type') or signal.get('direction') or 'SIGNAL').upper()
+
+            # Shaded Risk / Reward zones (TradingView Position Tool aesthetic)
+            if entry_val is not None:
+                if tp_val is not None:
+                    ax.axhspan(min(entry_val, tp_val), max(entry_val, tp_val), color='#10b981', alpha=0.07)
+                if sl_val is not None:
+                    ax.axhspan(min(entry_val, sl_val), max(entry_val, sl_val), color='#ef4444', alpha=0.07)
+
+            # Horizontal Level Lines & Right Badges
+            if entry_val is not None:
+                ax.axhline(entry_val, color='#38bdf8', linestyle='--', linewidth=1.8, alpha=0.9)
+                ax.text(x_badge, entry_val, f" ENTRY  {fmt_price(entry_val)} ",
+                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='right',
+                        bbox=dict(boxstyle='square,pad=0.25', facecolor='#38bdf8', edgecolor='none'))
+
+            if sl_val is not None:
+                ax.axhline(sl_val, color='#f43f5e', linestyle='--', linewidth=1.8, alpha=0.9)
+                ax.text(x_badge, sl_val, f" SL  {fmt_price(sl_val)} ",
+                        color='white', fontsize=9, fontweight='bold', va='center', ha='right',
+                        bbox=dict(boxstyle='square,pad=0.25', facecolor='#f43f5e', edgecolor='none'))
+
+            if tp_val is not None:
+                ax.axhline(tp_val, color='#10b981', linestyle='--', linewidth=1.8, alpha=0.9)
+                ax.text(x_badge, tp_val, f" TP  {fmt_price(tp_val)} ",
+                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='right',
+                        bbox=dict(boxstyle='square,pad=0.25', facecolor='#10b981', edgecolor='none'))
+
+        # Header Title Banner (Top Left)
+        if title:
+            banner_text = title
+        elif signal and (entry_val or sl_val or tp_val):
+            parts = [f"{symbol} • {sig_type}"]
+            if entry_val: parts.append(f"Entry: {fmt_price(entry_val)}")
+            if sl_val: parts.append(f"SL: {fmt_price(sl_val)}")
+            if tp_val: parts.append(f"TP: {fmt_price(tp_val)}")
+            banner_text = " | ".join(parts)
+        else:
+            banner_text = f"{symbol} — Candlestick Chart ({len(mpf_df)} bars)"
+
+        ax.text(0.015, 0.965, f" {banner_text} ", transform=ax.transAxes, color='#f8fafc',
+                fontsize=11, fontweight='bold', va='top', ha='left',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#1e293b', edgecolor='#334155', alpha=0.92))
+
+        # Indicator Legend (Top Right)
+        ax.text(0.985, 0.965, "— EMA 50   — EMA 200", transform=ax.transAxes, color='#94a3b8',
+                fontsize=9.5, va='top', ha='right',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#1e293b', edgecolor='#334155', alpha=0.85))
+
+        # Save to disk
+        fig.savefig(filename, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
+        plt.close(fig)
+
+        logger.info(f"Successfully generated institutional chart: {filename}")
         return filename
 
     except Exception as e:
         logger.exception(f'mplfinance plotting failed: {e}')
         
-        # Enhanced fallback with better styling
+        # Robust Fallback
         try:
             plt.style.use('dark_background' if dark_mode else 'default')
             fig, ax = plt.subplots(figsize=(14, 8))
             
             if dark_mode:
-                fig.patch.set_facecolor('#1e1e1e')
-                ax.set_facecolor('#2d2d2d')
-                ax.grid(True, color='#404040', linestyle='-', alpha=0.3)
-                text_color = 'white'
+                fig.patch.set_facecolor('#090d16')
+                ax.set_facecolor('#0f172a')
+                ax.grid(True, color='#1e293b', linestyle=':', alpha=0.6)
+                text_color = '#f8fafc'
             else:
                 ax.grid(True, alpha=0.3)
                 text_color = 'black'
             
-            # Plot price line
             if 'close' in data.columns:
-                ax.plot(data.index, data['close'], 
-                       color='white' if dark_mode else 'black', 
-                       linewidth=2, label='Close Price')
+                ax.plot(data.index, data['close'], color='#38bdf8', linewidth=2, label='Close Price')
             
-            # Add EMAs if available
-            if 'ema50' in data.columns:
-                ax.plot(data.index, data['ema50'], 
-                       color='cyan', linewidth=2, alpha=0.8, label='EMA 50')
-            if 'ema200' in data.columns:
-                ax.plot(data.index, data['ema200'], 
-                       color='magenta', linewidth=2, alpha=0.8, label='EMA 200')
+            if 'ema50' in data_with_indicators.columns:
+                ax.plot(data_with_indicators.index, data_with_indicators['ema50'], color='#38bdf8', linewidth=1.5, alpha=0.8, label='EMA 50')
+            if 'ema200' in data_with_indicators.columns:
+                ax.plot(data_with_indicators.index, data_with_indicators['ema200'], color='#e879f9', linewidth=1.5, alpha=0.8, label='EMA 200')
             
-            # Add signal lines
             if signal:
                 if signal.get('entry') is not None:
-                    ax.axhline(signal.get('entry'), color='#00ff00', 
-                              linestyle='--', linewidth=2, alpha=0.8, label='Entry')
+                    ax.axhline(float(signal['entry']), color='#38bdf8', linestyle='--', linewidth=1.8, label='Entry')
                 if signal.get('sl') is not None:
-                    ax.axhline(signal.get('sl'), color='#ff0000', 
-                              linestyle='--', linewidth=2, alpha=0.8, label='Stop Loss')
+                    ax.axhline(float(signal['sl']), color='#f43f5e', linestyle='--', linewidth=1.8, label='Stop Loss')
                 if signal.get('tp') is not None:
-                    ax.axhline(signal.get('tp'), color='#0080ff', 
-                              linestyle='--', linewidth=2, alpha=0.8, label='Take Profit')
+                    ax.axhline(float(signal['tp']), color='#10b981', linestyle='--', linewidth=1.8, label='Take Profit')
             
-            # Styling
-            ax.set_title(title or f"{symbol} - Price Chart", 
-                        color=text_color, fontsize=14, fontweight='bold')
-            ax.set_xlabel('Time', color=text_color)
-            ax.set_ylabel('Price', color=text_color)
+            ax.set_title(title or f"{symbol} - Price Chart", color=text_color, fontsize=14, fontweight='bold')
             ax.tick_params(colors=text_color)
-            
-            # Add legend
             ax.legend(loc='upper left', fancybox=True, shadow=True)
-            
-            # Format x-axis for better date display
             fig.autofmt_xdate()
-            
             plt.tight_layout()
-            plt.savefig(filename, dpi=150, bbox_inches='tight', 
-                       facecolor=fig.get_facecolor(), edgecolor='none')
-            plt.close()
-            
-            logger.info(f"Generated fallback chart: {filename}")
+            plt.savefig(filename, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
+            plt.close(fig)
             return filename
-            
         except Exception as fallback_error:
             logger.exception(f'Fallback chart generation also failed: {fallback_error}')
             raise
-
-    return filename
