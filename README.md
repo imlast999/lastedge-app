@@ -7,12 +7,12 @@
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
 [![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.41-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/releases/download/v1.1.41/LastEdge-v1.1.41.apk)
-[![Tests](https://img.shields.io/badge/Tests-28%2F28%20Passed-success)](https://github.com/imlast999/lastedge-app)
+[![Tests](https://img.shields.io/badge/Tests-35%2F35%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
-> **Tests:** 28 / 28 Passed (100% Green)  
+> **Tests:** 35 / 35 Passed (100% Green)  
 
 </div>
 
@@ -34,7 +34,10 @@
 - **Direct APK Release (`v1.1.41`)**: Instant downloadable release build signed with production keystore: [**`LastEdge-v1.1.41.apk`**](https://github.com/imlast999/lastedge-app/releases/download/v1.1.41/LastEdge-v1.1.41.apk).
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
 - **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are temporarily offline.
-- **Messaging Adapters**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`).
+- **Messaging Adapters & Control Center**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`) with native command autocomplete (`setMyCommands`) in English and Spanish.
+- **Visual Technical Chart Engine**: TradingView-styled dark mode (`#090d16`) chart generator (`services/chart_helper.py`, `services/charts.py`) with 80 H1 candles, dynamic Y-axis scaling (+8% padding ensuring Entry, SL & TP are in frame), EMA50/EMA200, and shaded Risk/Reward zone boxes.
+- **Deep Linking & On-Demand Position Charts**: Direct bot triggers (`t.me/LastEdgeBot?start=chart_{ticket}`) and `/chart_{ticket}` commands for instant visual chart generation from open MT5 positions.
+- **Web Dashboard Chart Modals**: Interactive `📊 Chart` modal viewer directly inside the Bento Grid positions table powered by `/api/positions/{ticket}/chart`.
 
 ---
 
@@ -70,12 +73,13 @@ LastEdge App/
 │   ├── telegram_adapter.py         # Decoupled Telegram Bot adapter
 │   ├── commands_refactored.py      # Decoupled Discord Slash command adapter
 │   ├── notification_dispatcher.py  # Central notification router
-│   ├── charts.py                   # Chart generation helpers
+│   ├── chart_helper.py             # TradingView dark-theme chart generator (mplfinance)
+│   ├── charts.py                   # Chart generation and MT5 candle adapters
 │   ├── i18n.py                     # Multi-language support (ES, EN)
 │   └── clients/                    # Decoupled HTTP REST Clients
 │       ├── trading_client.py       # Client for Trading Engine (:8081)
 │       └── research_client.py      # Client for Strategy Lab (:8082)
-├── tests/                          # 28 automated unit & degradation tests
+├── tests/                          # 35 automated unit & degradation tests
 └── docs/                           # Technical documentation
 ```
 
@@ -126,7 +130,7 @@ Or download the pre-compiled APK directly: [**`LastEdge-v1.1.41.apk`**](https://
 # Run all App tests locally
 python -m pytest tests/ -v
 ```
-Current test suite status: **28 / 28 passed (100% Green)**.
+Current test suite status: **35 / 35 passed (100% Green)**.
 
 ### CI / Continuous Integration:
 - **App & Control Plane CI**: Automated on every push and pull request via [GitHub Actions](.github/workflows/ci.yml).

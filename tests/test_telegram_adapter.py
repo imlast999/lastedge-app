@@ -51,7 +51,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
             "recent_experiments": []
         }
         self.adapter = TelegramAdapter(bot_service=self.bot_service)
-        self.adapter.token = "TEST_TOKEN"
+        self.adapter.token = "TEST_TOKEN_123456789"
         self.adapter.authorized_chat_id = "12345"
 
     def _create_mock_session(self):
@@ -258,6 +258,17 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         calls = [c[1]["json"] for c in mock_session.post.call_args_list if "text" in c[1].get("json", {})]
         self.assertTrue(any("LastEdge — System Status" in c["text"] or "LastEdge — Estado del Bot" in c["text"] for c in calls))
 
+
+    async def test_register_bot_commands(self):
+        mock_session, mock_post = self._create_mock_session()
+        success = await self.adapter.register_bot_commands(mock_session)
+        self.assertTrue(success)
+        self.assertEqual(mock_session.post.call_count, 2)
+        urls = [c[0][0] for c in mock_session.post.call_args_list]
+        self.assertTrue(all("setMyCommands" in u for u in urls))
+        payloads = [c[1]["json"] for c in mock_session.post.call_args_list]
+        self.assertNotIn("language_code", payloads[0])
+        self.assertEqual(payloads[1].get("language_code"), "es")
 
 if __name__ == '__main__':
     unittest.main()

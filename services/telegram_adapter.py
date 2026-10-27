@@ -345,6 +345,68 @@ class TelegramAdapter:
         """Devuelve ReplyKeyboardRemove para ocultar el teclado inferior y dejar sólo botones inline en los mensajes."""
         return {"remove_keyboard": True}
 
+    async def register_bot_commands(self, session: Optional[aiohttp.ClientSession] = None) -> bool:
+        """Registra los comandos de LastEdge en Telegram Bot API para autocompletado en EN y ES."""
+        if not self.is_configured():
+            return False
+
+        commands_en = [
+            {"command": "start", "description": "Trading Control Center & Main Menu"},
+            {"command": "positions", "description": "Active MT5 positions & live P&L"},
+            {"command": "status", "description": "System health, MT5 & Circuit Breaker"},
+            {"command": "equity", "description": "Account balance, equity & margin"},
+            {"command": "risk", "description": "Risk Engine telemetry & parameters"},
+            {"command": "journal", "description": "30-day execution performance analytics"},
+            {"command": "research", "description": "Strategy Lab experiment database"},
+            {"command": "autosignals", "description": "Toggle automated signal execution"},
+            {"command": "chart", "description": "Generate live technical chart for symbol"},
+            {"command": "health", "description": "Technical infrastructure diagnostics"},
+            {"command": "language", "description": "Toggle language (English / Espanol)"},
+            {"command": "ping", "description": "Check bot latency & responsiveness"},
+            {"command": "help", "description": "Quick instructions & command guide"}
+        ]
+
+        commands_es = [
+            {"command": "start", "description": "Panel de Control y Menú Principal"},
+            {"command": "positions", "description": "Posiciones abiertas y P&L flotante"},
+            {"command": "status", "description": "Estado del sistema, MT5 y disyuntor"},
+            {"command": "equity", "description": "Balance, capital y margenes"},
+            {"command": "risk", "description": "Telemetria y parametros de riesgo"},
+            {"command": "journal", "description": "Metricas de ejecucion y rendimiento (30d)"},
+            {"command": "research", "description": "Base de datos de estrategias Lab"},
+            {"command": "autosignals", "description": "Conmutar ejecucion automatica de senales"},
+            {"command": "chart", "description": "Generar grafico tecnico en vivo por simbolo"},
+            {"command": "health", "description": "Diagnostico de salud tecnica"},
+            {"command": "language", "description": "Cambiar idioma (English / Espanol)"},
+            {"command": "ping", "description": "Comprobar latencia del bot"},
+            {"command": "help", "description": "Guia rapida de instrucciones y comandos"}
+        ]
+
+        url = f"https://api.telegram.org/bot{self.token}/setMyCommands"
+
+        async def _send(s: aiohttp.ClientSession, payload: dict):
+            async with s.post(url, json=payload) as r:
+                return r.status == 200
+
+        try:
+            if session:
+                await _send(session, {"commands": commands_en})
+                await _send(session, {"commands": commands_es, "language_code": "es"})
+            else:
+                import ssl
+                ssl_ctx = ssl.create_default_context()
+                ssl_ctx.check_hostname = False
+                ssl_ctx.verify_mode = ssl.CERT_NONE
+                connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+                async with aiohttp.ClientSession(connector=connector) as local_session:
+                    await _send(local_session, {"commands": commands_en})
+                    await _send(local_session, {"commands": commands_es, "language_code": "es"})
+            logger.info("[TelegramAdapter] Comandos de bot registrados en Telegram (EN / ES)")
+            return True
+        except Exception as e:
+            logger.warning(f"[TelegramAdapter] No se pudieron registrar los comandos en Telegram: {e}")
+            return False
+
     async def start_polling(self):
         """Inicia el bucle de polling asíncrono de comandos de Telegram."""
         if not self.is_configured():
@@ -362,6 +424,10 @@ class TelegramAdapter:
 
         timeout = aiohttp.ClientTimeout(total=20)
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+            try:
+                await self.register_bot_commands(session)
+            except Exception as e:
+                logger.warning(f"[TelegramAdapter] Error registrando comandos: {e}")
             while self.is_running:
                 try:
                     url = f"https://api.telegram.org/bot{self.token}/getUpdates"
