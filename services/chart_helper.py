@@ -1,0 +1,200 @@
+"""
+LastEdge App — Chart Rendering Helper
+services/chart_helper.py
+=====================================
+Unified utility for generating high-definition, institutional dark-mode
+candlestick charts from MetaTrader 5 live candle feeds or historical fallback data.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import uuid
+import logging
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any
+import matplotlib
+matplotlib.use('Agg')
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+APP_DIR = Path(__file__).resolve().parent.parent
+LOGS_DIR = APP_DIR / "logs" / "charts"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+from services.charts import generate_chart
+
+
+def _fetch_candles_mt5(symbol: str, timeframe: str = "H1", bars: int = 40) -> Optional[pd.DataFrame]:
+    """Fetches real-time candles directly from MetaTrader 5 terminal."""
+    try:
+        import MetaTrader5 as mt5
+        if not mt5.initialize():
+            logger.debug("[ChartHelper] MT5 initialize failed.")
+            return None
+
+        tf_map = {
+            "M1": mt5.TIMEFRAME_M1,
+            "M5": mt5.TIMEFRAME_M5,
+            "M15": mt5.TIMEFRAME_M15,
+            "M30": mt5.TIMEFRAME_M30,
+            "H1": mt5.TIMEFRAME_H1,
+            "H4": mt5.TIMEFRAME_H4,
+            "D1": mt5.TIMEFRAME_D1,
+        }
+        mt5_tf = tf_map.get(timeframe.upper(), mt5.TIMEFRAME_H1)
+
+        rates = mt5.copy_rates_from_pos(symbol.upper(), mt5_tf, 0, max(20, bars))
+        if rates is None or len(rates) == 0:
+            logger.debug(f"[ChartHelper] No rates returned from MT5 for {symbol}.")
+            return None
+
+        df = pd.DataFrame(rates)
+        df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
+        return df[["time", "open", "high", "low", "close", "tick_volume"]]
+    except Exception as e:
+        logger.debug(f"[ChartHelper] Error copying rates from MT5: {e}")
+        return None
+
+
+def _fetch_candles_fallback(symbol: str, timeframe: str = "H1", bars: int = 40) -> Optional[pd.DataFrame]:
+    """Fallback to Strategy Lab parquet historical data if MT5 is offline."""
+    try:
+        data_path = APP_DIR.parent / "LastEdge Strategy Lab" / "data" / "historical" / symbol.upper() / f"{timeframe.upper()}.parquet"
+        if data_path.exists():
+            df = pd.read_parquet(data_path)
+            if len(df) > bars:
+                df = df.iloc[-bars:].copy()
+            df["time"] = pd.to_datetime(df["time"], utc=True)
+            return df[["time", "open", "high", "low", "close"]]
+    except Exception as e:
+        logger.debug(f"[ChartHelper] Fallback parquet loader error: {e}")
+    return None
+
+
+def get_chart_for_signal(
+    symbol: Any,
+    timeframe: str = "H1",
+    signal_data: Optional[Dict[str, Any]] = None,
+    bars: int = 40,
+    title: Optional[str] = None
+) -> Optional[str]:
+    """
+    Generates a candlestick chart with Entry, SL, and TP levels plotted.
+    Returns the absolute path to the generated PNG image.
+    Supports either get_chart_for_signal('EURUSD', signal_data={...}) or get_chart_for_signal(signal_dict).
+    """
+    if isinstance(symbol, dict):
+        signal_data = symbol
+        symbol = signal_data.get("symbol", "EURUSD")
+        timeframe = signal_data.get("timeframe", timeframe)
+    sym = str(symbol).upper()
+    df = _fetch_candles_mt5(sym, timeframe, bars)
+    if df is None or len(df) < 5:
+        df = _fetch_candles_fallback(sym, timeframe, bars)
+
+    if df is None or len(df) < 5:
+        logger.warning(f"[ChartHelper] Insufficient candle data for {sym}.")
+        return None
+
+    # Format signal parameters
+    sig_param = None
+    if signal_data:
+        entry = signal_data.get("entry") or signal_data.get("price") or signal_data.get("entry_price")
+        sl = signal_data.get("sl") or signal_data.get("sl_price") or signal_data.get("stopLoss")
+        tp = signal_data.get("tp") or signal_data.get("tp_price") or signal_data.get("takeProfit")
+        sig_type = signal_data.get("type") or signal_data.get("direction") or "SIGNAL"
+        sig_param = {
+            "entry": float(entry) if entry else None,
+            "sl": float(sl) if sl else None,
+            "tp": float(tp) if tp else None,
+            "type": sig_type
+        }
+
+    now_tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    out_file = str(LOGS_DIR / f"chart_{sym}_{now_tag}_{uuid.uuid4().hex[:6]}.png")
+
+    if not title:
+        sig_str = f" [{sig_param['type']}]" if sig_param and sig_param.get("type") else ""
+        title = f"{sym} ({timeframe}){sig_str} — Technical Structure"
+
+    try:
+        path = generate_chart(
+            df=df,
+            symbol=sym,
+            signal=sig_param,
+            filename=out_file,
+            title=title,
+            dark_mode=True,
+            candlesticks=True
+        )
+        return path
+    except Exception as e:
+        logger.error(f"[ChartHelper] Failed generating chart for {sym}: {e}")
+        return None
+
+
+def get_chart_for_position(ticket: int, bars: int = 40) -> Optional[str]:
+    """
+    Fetches the live position by ticket, resolves symbol, entry, current SL & TP,
+    and returns the rendered chart image path.
+    """
+    pos_data = None
+    try:
+        import MetaTrader5 as mt5
+        if mt5.initialize():
+            positions = mt5.positions_get(ticket=int(ticket))
+            if positions and len(positions) > 0:
+                p = positions[0]
+                pos_data = {
+                    "symbol": str(p.symbol),
+                    "type": "BUY" if p.type == 0 else "SELL",
+                    "entry": float(p.price_open),
+                    "sl": float(p.sl),
+                    "tp": float(p.tp),
+                    "profit": float(p.profit),
+                    "volume": float(p.volume)
+                }
+    except Exception as e:
+        logger.debug(f"[ChartHelper] MT5 query for ticket #{ticket} error: {e}")
+
+    # Fallback to trading_client positions
+    if not pos_data:
+        try:
+            from services.clients.trading_client import get_trading_client
+            t_client = get_trading_client()
+            res = t_client.get_positions()
+            positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+            for p in positions:
+                if int(p.get("ticket", 0)) == int(ticket):
+                    pos_data = {
+                        "symbol": str(p.get("symbol", "EURUSD")),
+                        "type": str(p.get("type", "BUY")).upper(),
+                        "entry": float(p.get("open_price", 0.0)),
+                        "sl": float(p.get("sl", 0.0)),
+                        "tp": float(p.get("tp", 0.0)),
+                        "profit": float(p.get("profit", 0.0)),
+                        "volume": float(p.get("volume", 0.0))
+                    }
+                    break
+        except Exception as e:
+            logger.debug(f"[ChartHelper] TradingClient position query error: {e}")
+
+    if not pos_data:
+        logger.warning(f"[ChartHelper] Position #{ticket} not found.")
+        return None
+
+    sym = pos_data["symbol"]
+    pnl_sign = "+" if pos_data["profit"] >= 0 else ""
+    title = f"{sym} H1 — Position #{ticket} ({pos_data['type']} {pos_data['volume']}L) PnL: {pnl_sign}${pos_data['profit']:.2f}"
+
+    return get_chart_for_signal(
+        symbol=sym,
+        timeframe="H1",
+        signal_data=pos_data,
+        bars=bars,
+        title=title
+    )

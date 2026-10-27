@@ -283,6 +283,29 @@ class TelegramAdapter:
             if cq_id:
                 await self._answer_callback_query(session, cq_id, "✅ Estado actualizado")
 
+        # ── Caso F: Generar y Enviar Gráfico de Operación ─────────────────
+        elif data.startswith("chart_"):
+            try:
+                ticket = int(data.split("_")[1])
+            except Exception:
+                ticket = 0
+            if ticket:
+                if cq_id:
+                    await self._answer_callback_query(session, cq_id, f"📊 Generando gráfico #{ticket}...")
+                from services.chart_helper import get_chart_for_position
+                chart_path = await asyncio.to_thread(get_chart_for_position, ticket)
+                if chart_path and os.path.exists(chart_path):
+                    caption = (
+                        f"📊 *Gráfico Técnico en Vivo — Posición #{ticket}*\n"
+                        f"• Timeframe: `H1` (Últimas 40 velas de MT5)\n"
+                        f"• Niveles: 🟩 Entrada | 🟥 Stop Loss | 🟦 Take Profit\n"
+                        f"⏰ `{datetime.now(timezone.utc).strftime('%H:%M:%S UTC')}`"
+                    )
+                    await self.send_photo(session, chat_id, chart_path, caption=caption)
+                else:
+                    await self._send_response(session, chat_id, f"⚠️ No se pudo generar el gráfico para la posición #{ticket}.")
+
+
 
     @staticmethod
     def get_persistent_keyboard() -> Dict[str, Any]:
@@ -352,6 +375,8 @@ class TelegramAdapter:
                 "health": "/health",
                 "salud": "/health",
                 "version": "/version",
+                "chart": "/chart",
+                "grafico": "/chart",
                 "ping": "/ping",
                 "help": "/help",
                 "ayuda": "/help",
@@ -387,6 +412,8 @@ class TelegramAdapter:
             await self._cmd_version(session, chat_id)
         elif command == "/logs":
             await self._cmd_logs(session, chat_id)
+        elif command in ("/chart", "/grafico"):
+            await self._cmd_chart(session, chat_id, args)
         elif command == "/ping":
             elapsed_ms = int((time.perf_counter() - start_t) * 1000)
             await self._send_response(session, chat_id, f"🏓 Pong! Latencia de respuesta: {elapsed_ms} ms")
@@ -421,6 +448,51 @@ class TelegramAdapter:
                             logger.error(f"[TelegramAdapter] Fallo al enviar mensaje: {err_text}")
         except Exception as e:
             logger.error(f"[TelegramAdapter] Error enviando respuesta: {e}")
+
+    async def send_photo(
+        self,
+        session: aiohttp.ClientSession,
+        chat_id: int,
+        photo_path: str,
+        caption: Optional[str] = None,
+        reply_markup: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Envía una imagen a Telegram con pie de foto opcional y botones inline."""
+        if not self.token or not os.path.exists(photo_path):
+            return False
+
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+            form = aiohttp.FormData()
+            form.add_field("chat_id", str(chat_id))
+            if caption:
+                form.add_field("caption", caption)
+                form.add_field("parse_mode", "Markdown")
+            if reply_markup:
+                form.add_field("reply_markup", json.dumps(reply_markup))
+
+            with open(photo_path, "rb") as f:
+                form.add_field("photo", f.read(), filename=os.path.basename(photo_path), content_type="image/png")
+
+            client_timeout = aiohttp.ClientTimeout(total=15)
+            async with session.post(url, data=form, timeout=client_timeout) as resp:
+                if resp.status == 200:
+                    return True
+                # Reintento sin Markdown si hubo error de sintaxis en el caption
+                if caption:
+                    form_retry = aiohttp.FormData()
+                    form_retry.add_field("chat_id", str(chat_id))
+                    form_retry.add_field("caption", caption)
+                    if reply_markup:
+                        form_retry.add_field("reply_markup", json.dumps(reply_markup))
+                    with open(photo_path, "rb") as f:
+                        form_retry.add_field("photo", f.read(), filename=os.path.basename(photo_path), content_type="image/png")
+                    async with session.post(url, data=form_retry, timeout=client_timeout) as r2:
+                        return r2.status == 200
+                return False
+        except Exception as e:
+            logger.error(f"[TelegramAdapter] Error enviando imagen: {e}")
+            return False
 
     # ── Manejadores de Comandos ──────────────────────────────────────────────
 
@@ -515,13 +587,20 @@ class TelegramAdapter:
             positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
 
         now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
-        markup = {
-            "inline_keyboard": [
-                [
-                    {"text": "🔄 Actualizar Posiciones", "callback_data": "refresh_positions"}
-                ]
-            ]
-        }
+        chart_buttons = []
+        for p in positions:
+            t = p.get("ticket")
+            sym = p.get("symbol", "OP")
+            if t:
+                chart_buttons.append({"text": f"📊 Gráfico #{t} ({sym})", "callback_data": f"chart_{t}"})
+
+        keyboard_rows = [
+            [{"text": "🔄 Actualizar Posiciones", "callback_data": "refresh_positions"}]
+        ]
+        for i in range(0, len(chart_buttons), 2):
+            keyboard_rows.append(chart_buttons[i:i+2])
+
+        markup = {"inline_keyboard": keyboard_rows}
 
         if not positions:
             text = (
@@ -739,6 +818,48 @@ class TelegramAdapter:
             "• Estado: Producción Ready\n"
         )
         await self._send_response(session, chat_id, text)
+
+    async def _cmd_chart(self, session: aiohttp.ClientSession, chat_id: int, args: List[str]):
+        target = args[0].strip().upper() if args else ""
+        from services.chart_helper import get_chart_for_position, get_chart_for_signal
+
+        chart_path = None
+        caption = ""
+
+        if target.isdigit():
+            ticket = int(target)
+            chart_path = await asyncio.to_thread(get_chart_for_position, ticket)
+            caption = f"📊 *Gráfico Técnico en Vivo — Posición #{ticket}*"
+        elif target in ("EURUSD", "XAUUSD", "BTCEUR", "BTCUSDT", "GOLD"):
+            sym = "XAUUSD" if target == "GOLD" else target
+            chart_path = await asyncio.to_thread(get_chart_for_signal, sym)
+            caption = f"📊 *Gráfico Técnico en Vivo — {sym} (H1)*"
+        else:
+            res = await asyncio.to_thread(self.trading_client.get_positions)
+            positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+            if len(positions) == 1:
+                ticket = int(positions[0].get("ticket", 0))
+                sym = positions[0].get("symbol", "EURUSD")
+                chart_path = await asyncio.to_thread(get_chart_for_position, ticket)
+                caption = f"📊 *Gráfico Técnico en Vivo — Posición #{ticket} ({sym})*"
+            elif len(positions) > 1:
+                buttons = []
+                for p in positions:
+                    t = p.get("ticket")
+                    sym = p.get("symbol", "")
+                    if t:
+                        buttons.append({"text": f"📊 #{t} {sym}", "callback_data": f"chart_{t}"})
+                rows = [buttons[i:i+2] for i in range(0, len(buttons), 2)]
+                await self._send_response(session, chat_id, "📈 *Selecciona la posición para ver su gráfico:*", reply_markup={"inline_keyboard": rows})
+                return
+            else:
+                chart_path = await asyncio.to_thread(get_chart_for_signal, "EURUSD")
+                caption = "📊 *Gráfico Técnico en Vivo — EURUSD (H1)*"
+
+        if chart_path and os.path.exists(chart_path):
+            await self.send_photo(session, chat_id, chart_path, caption=caption)
+        else:
+            await self._send_response(session, chat_id, "⚠️ No se pudo generar el gráfico solicitado.")
 
     async def _cmd_logs(self, session: aiohttp.ClientSession, chat_id: int):
         try:

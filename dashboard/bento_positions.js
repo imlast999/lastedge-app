@@ -400,7 +400,10 @@
                         </div>
 
                         <!-- Action Row -->
-                        <div class="pos-item-actions">
+                        <div class="pos-item-actions" style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <button class="btn-chart-pos" onclick="LastEdgeBentoPositions.instance.viewPositionChart(${ticket}, '${symbol}')" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                                <i class="fa-solid fa-chart-line" style="color: #00ff88;"></i> Chart
+                            </button>
                             <button class="btn-close-pos" onclick="LastEdgeBentoPositions.instance.closePosition(${ticket}, this)" ${isClosing ? 'disabled' : ''}>
                                 ${isClosing ? '<i class="fa-solid fa-spinner fa-spin"></i> Closing...' : '<i class="fa-solid fa-xmark"></i> Close Position'}
                             </button>
@@ -542,6 +545,10 @@
                             <button class="btn-reject-signal" onclick="LastEdgeBentoPositions.instance.rejectSignal('${sigId}', this)">
                                 <i class="fa-solid fa-xmark"></i>
                                 <span>Dismiss</span>
+                            </button>
+                            <button class="btn-chart-pos" onclick="LastEdgeBentoPositions.instance.viewSymbolChart('${sym}')" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-chart-line" style="color: #00ff88;"></i>
+                                <span>Chart</span>
                             </button>
                             <button class="btn-approve-1click" onclick="LastEdgeBentoPositions.instance.approveSignal('${sigId}', this)" ${isApproving ? 'disabled' : ''}>
                                 ${isApproving ? '<i class="fa-solid fa-spinner fa-spin"></i> Executing on MT5...' : '<i class="fa-solid fa-bolt"></i> Approve & Execute'}
@@ -961,6 +968,46 @@
             } catch (e) {
                 console.warn('[BentoPositions] syncFreshPositions error:', e);
             }
+        }
+
+        viewPositionChart(ticket, symbol) {
+            this._openChartModal(`/api/positions/${ticket}/chart`, `${symbol} — Position #${ticket}`);
+        }
+
+        viewSymbolChart(symbol) {
+            this._openChartModal(`/api/chart/${symbol}`, `${symbol} — Live Technical Chart`);
+        }
+
+        _openChartModal(imgUrl, title) {
+            const modalId = 'bento-chart-modal-overlay';
+            let modal = document.getElementById(modalId);
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+                modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+                document.body.appendChild(modal);
+            }
+
+            modal.innerHTML = `
+                <div style="background:#1e1e1e;border:1px solid rgba(255,255,255,0.18);border-radius:14px;max-width:920px;width:100%;padding:20px;box-shadow:0 24px 48px rgba(0,0,0,0.7);position:relative;animation:fadeIn 0.2s ease;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
+                        <h3 style="margin:0;font-size:16px;color:#fff;display:flex;align-items:center;gap:10px;">
+                            <i class="fa-solid fa-chart-candlestick" style="color:#00ff88;"></i>
+                            <span>${title}</span>
+                        </h3>
+                        <button onclick="document.getElementById('${modalId}').style.display='none'" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:16px;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:center;min-height:360px;background:#151515;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
+                        <img src="${imgUrl}?t=${Date.now()}" alt="${title}" style="max-width:100%;height:auto;display:block;" onerror="this.parentElement.innerHTML='<div style=\'text-align:center;padding:40px;color:#f87171;\'><i class=\'fa-solid fa-triangle-exclamation\' style=\'font-size:28px;margin-bottom:8px;\'></i><p style=\'margin:0;\'>Chart currently unavailable from MT5.</p></div>'" />
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#94a3b8;">
+                        <span><b style="color:#00ff88;">🟩 Entry</b> | <b style="color:#ef4444;">🟥 Stop Loss</b> | <b style="color:#38bdf8;">🟦 Take Profit</b> | <b style="color:#22d3ee;">Cyan EMA50</b> | <b style="color:#e879f9;">Magenta EMA200</b></span>
+                        <button onclick="document.getElementById('${modalId}').style.display='none'" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:500;">Close</button>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
         }
 
         manualSync() {

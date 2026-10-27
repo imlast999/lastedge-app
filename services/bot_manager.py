@@ -431,22 +431,56 @@ class BotManager:
                         ]
                     ]
                 }
-                url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
-                payload = {
-                    "chat_id": self.telegram_chat_id,
-                    "text": tg_text,
-                    "reply_markup": reply_markup
-                }
+                # Generar gráfico técnico con velas reales y niveles de entrada/SL/TP
+                chart_path = None
+                try:
+                    from services.chart_helper import get_chart_for_signal
+                    chart_path = await asyncio.to_thread(
+                        get_chart_for_signal,
+                        symbol,
+                        "H1",
+                        signal_data,
+                        40,
+                        f"{symbol} H1 — {direction} Setup (Pending Approval)"
+                    )
+                except Exception as c_err:
+                    logger.debug(f"[Bot Manager] Error generando gráfico de señal: {c_err}")
+
                 import ssl
                 ssl_ctx = ssl.create_default_context()
                 ssl_ctx.check_hostname = False
                 ssl_ctx.verify_mode = ssl.CERT_NONE
                 connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+
                 async with aiohttp.ClientSession(connector=connector) as session:
-                    async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            msg_id = data.get("result", {}).get("message_id")
+                    msg_id = None
+                    if chart_path and os.path.exists(chart_path):
+                        photo_url = f"https://api.telegram.org/bot{self.telegram_token}/sendPhoto"
+                        form = aiohttp.FormData()
+                        form.add_field("chat_id", str(self.telegram_chat_id))
+                        form.add_field("caption", tg_text)
+                        form.add_field("parse_mode", "Markdown")
+                        form.add_field("reply_markup", json.dumps(reply_markup))
+                        with open(chart_path, "rb") as pf:
+                            form.add_field("photo", pf.read(), filename="chart.png", content_type="image/png")
+                        async with session.post(photo_url, data=form, timeout=aiohttp.ClientTimeout(total=10)) as p_resp:
+                            if p_resp.status == 200:
+                                data = await p_resp.json()
+                                msg_id = data.get("result", {}).get("message_id")
+
+                    if not msg_id:
+                        # Fallback a mensaje estándar de texto si no hubo gráfico
+                        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
+                        payload = {
+                            "chat_id": self.telegram_chat_id,
+                            "text": tg_text,
+                            "reply_markup": reply_markup,
+                            "parse_mode": "Markdown"
+                        }
+                        async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                msg_id = data.get("result", {}).get("message_id")
                             if msg_id and signal_id:
                                 self._pending_tg_messages[str(signal_id)] = {
                                     "message_id": msg_id,

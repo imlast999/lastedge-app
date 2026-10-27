@@ -441,6 +441,53 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/positions", "/api/trading/positions"):
                 self._send_json(200, trading_client.get_positions())
 
+            elif path.startswith("/api/positions/") and path.endswith("/chart"):
+                parts = path.split("/")
+                try:
+                    ticket = int(parts[3])
+                    from services.chart_helper import get_chart_for_position
+                    chart_path = get_chart_for_position(ticket)
+                    if chart_path and os.path.exists(chart_path):
+                        with open(chart_path, "rb") as f:
+                            img_data = f.read()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "image/png")
+                        self.send_header("Content-Length", str(len(img_data)))
+                        self.send_header("Access-Control-Allow-Origin", "*")
+                        self.send_header("Cache-Control", "no-cache")
+                        self.end_headers()
+                        self.wfile.write(img_data)
+                        return
+                    else:
+                        self._send_json(404, {"ok": False, "error": f"Chart could not be generated for position #{ticket}"})
+                        return
+                except Exception as e:
+                    self._send_json(500, {"ok": False, "error": str(e)})
+                    return
+
+            elif path.startswith("/api/chart/"):
+                sym = path.split("/")[-1].upper()
+                try:
+                    from services.chart_helper import get_chart_for_signal
+                    chart_path = get_chart_for_signal(sym)
+                    if chart_path and os.path.exists(chart_path):
+                        with open(chart_path, "rb") as f:
+                            img_data = f.read()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "image/png")
+                        self.send_header("Content-Length", str(len(img_data)))
+                        self.send_header("Access-Control-Allow-Origin", "*")
+                        self.send_header("Cache-Control", "no-cache")
+                        self.end_headers()
+                        self.wfile.write(img_data)
+                        return
+                    else:
+                        self._send_json(404, {"ok": False, "error": f"Chart could not be generated for {sym}"})
+                        return
+                except Exception as e:
+                    self._send_json(500, {"ok": False, "error": str(e)})
+                    return
+
             elif path in ("/api/risk", "/api/trading/risk"):
                 self._send_json(200, trading_client.get_risk())
 
