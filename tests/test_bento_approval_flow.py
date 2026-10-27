@@ -76,7 +76,7 @@ class TestTelegramInteractiveCallbacks(unittest.IsolatedAsyncioTestCase):
             mock_edit.assert_called_once()
             call_args = mock_edit.call_args
             assert "987654" in call_args[0][3]
-            assert "ORDEN EJECUTADA EN MT5" in call_args[0][3]
+            assert ("ORDEN EJECUTADA EN MT5" in call_args[0][3] or "ORDER EXECUTED IN MT5" in call_args[0][3])
 
     async def test_callback_approve_price_drift(self):
         """Simular callback de aprobación (appr_101) con detección de deslizamiento (PRICE_DRIFT)."""
@@ -109,7 +109,7 @@ class TestTelegramInteractiveCallbacks(unittest.IsolatedAsyncioTestCase):
             reply_markup = kwargs.get("reply_markup") or {}
 
             # Debe avisar sobre desviación de precio
-            assert "ALERTA DE DESVIACIÓN DE PRECIO" in edited_text
+            assert ("ALERTA DE DESVIACIÓN DE PRECIO" in edited_text or "PRICE DRIFT WARNING" in edited_text)
             assert "2740.0" in edited_text
             assert "2752.0" in edited_text
 
@@ -146,7 +146,7 @@ class TestTelegramInteractiveCallbacks(unittest.IsolatedAsyncioTestCase):
             mock_edit.assert_called_once()
             args, kwargs = mock_edit.call_args
             edited_text = args[3]
-            assert "SEÑAL DESCARTADA MANUALMENTE" in edited_text
+            assert ("SEÑAL DESCARTADA" in edited_text or "SIGNAL REJECTED" in edited_text)
 
     async def test_callback_force_execute(self):
         """Simular callback de ejecución forzada tras desviación de precio (force_101)."""
@@ -174,7 +174,7 @@ class TestTelegramInteractiveCallbacks(unittest.IsolatedAsyncioTestCase):
             mock_edit.assert_called_once()
             args, kwargs = mock_edit.call_args
             edited_text = args[3]
-            assert "ORDEN EJECUTADA EN MT5" in edited_text
+            assert ("ORDEN EJECUTADA EN MT5" in edited_text or "ORDER EXECUTED IN MT5" in edited_text)
             assert "987655" in edited_text
 
 

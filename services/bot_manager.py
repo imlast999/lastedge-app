@@ -413,24 +413,48 @@ class BotManager:
         if self.telegram_token and self.telegram_chat_id:
             try:
                 import aiohttp
-                tg_text = (
-                    "⏸️ SEÑAL PENDIENTE DE CONFIRMACIÓN\n"
-                    "━━━━━━━━━━━━━━━━━━\n"
-                    f"Par: {symbol} | Dirección: {direction}\n"
-                    f"Precio: {price}\n"
-                    f"SL: {sl} | TP: {tp} | R:R: 1:{rr:.2f}\n"
-                    f"Confianza: {confidence} | Estrategia: {strategy}\n"
-                    "━━━━━━━━━━━━━━━━━━\n"
-                    "👉 Confirma o descarta con los botones inferiores o en tu Web Dashboard."
-                )
-                reply_markup = {
-                    "inline_keyboard": [
-                        [
-                            {"text": "✅ Aprobar y Ejecutar", "callback_data": f"appr_{signal_id}"},
-                            {"text": "❌ Descartar", "callback_data": f"rejc_{signal_id}"}
+                from services.telegram_adapter import get_chat_language
+                user_lang = get_chat_language(self.telegram_chat_id)
+                if user_lang == "es":
+                    tg_text = (
+                        f"🎯 *SEÑAL PENDIENTE DE CONFIRMACIÓN*\n"
+                        f"━━━━━━━━━━━━━━━━━━\n"
+                        f"• *Par:* `{symbol}` | *Tipo:* `{direction}`\n"
+                        f"• *Entrada:* `{price}`\n"
+                        f"• *Stop Loss:* `{sl}` | *Take Profit:* `{tp}`\n"
+                        f"• *R:R Ratio:* `1:{rr:.2f}`\n"
+                        f"• *Confianza:* *{confidence}* | *Estrategia:* `{strategy}`\n"
+                        f"━━━━━━━━━━━━━━━━━━\n"
+                        f"👉 Confirma o descarta con los botones inferiores o en tu Web Dashboard."
+                    )
+                    reply_markup = {
+                        "inline_keyboard": [
+                            [
+                                {"text": "✅ Aprobar y Ejecutar", "callback_data": f"appr_{signal_id}"},
+                                {"text": "❌ Descartar", "callback_data": f"rejc_{signal_id}"}
+                            ]
                         ]
-                    ]
-                }
+                    }
+                else:
+                    tg_text = (
+                        f"🎯 *PENDING SIGNAL CONFIRMATION*\n"
+                        f"━━━━━━━━━━━━━━━━━━\n"
+                        f"• *Symbol:* `{symbol}` | *Direction:* `{direction}`\n"
+                        f"• *Entry:* `{price}`\n"
+                        f"• *Stop Loss:* `{sl}` | *Take Profit:* `{tp}`\n"
+                        f"• *R:R Ratio:* `1:{rr:.2f}`\n"
+                        f"• *Confidence:* *{confidence}* | *Strategy:* `{strategy}`\n"
+                        f"━━━━━━━━━━━━━━━━━━\n"
+                        f"👉 Confirm or discard using the buttons below or in your Web Dashboard."
+                    )
+                    reply_markup = {
+                        "inline_keyboard": [
+                            [
+                                {"text": "✅ Approve & Execute", "callback_data": f"appr_{signal_id}"},
+                                {"text": "❌ Discard", "callback_data": f"rejc_{signal_id}"}
+                            ]
+                        ]
+                    }
                 # Generar gráfico técnico con velas reales y niveles de entrada/SL/TP
                 chart_path = None
                 try:
@@ -440,7 +464,7 @@ class BotManager:
                         symbol,
                         "H1",
                         signal_data,
-                        40,
+                        80,
                         f"{symbol} H1 — {direction} Setup (Pending Approval)"
                     )
                 except Exception as c_err:

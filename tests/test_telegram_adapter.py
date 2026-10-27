@@ -7,7 +7,7 @@ BotService, y que NotificationDispatcher despacha alertas multi-canal.
 
 import unittest
 from unittest.mock import AsyncMock, patch, MagicMock
-from services.telegram_adapter import TelegramAdapter
+from services.telegram_adapter import TelegramAdapter, set_chat_language, get_chat_language
 from services.notification_dispatcher import NotificationDispatcher
 
 class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
@@ -60,7 +60,6 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value="{}")
         
-        # Async Context Manager mock for session.post
         mock_post = MagicMock()
         mock_post.__aenter__ = AsyncMock(return_value=mock_response)
         mock_post.__aexit__ = AsyncMock(return_value=None)
@@ -75,7 +74,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(mock_session.post.called)
         json_sent = mock_session.post.call_args[1]["json"]
         self.assertEqual(json_sent["chat_id"], 12345)
-        self.assertIn("LastEdge — Estado del Bot", json_sent["text"])
+        self.assertTrue("LastEdge — System Status" in json_sent["text"] or "LastEdge — Estado del Bot" in json_sent["text"])
 
     async def test_cmd_positions(self):
         mock_session, mock_post = self._create_mock_session()
@@ -83,7 +82,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         
         self.assertTrue(mock_session.post.called)
         json_sent = mock_session.post.call_args[1]["json"]
-        self.assertIn("posiciones abiertas", json_sent["text"])
+        self.assertTrue("MT5 Open Positions" in json_sent["text"] or "posiciones abiertas" in json_sent["text"].lower())
 
     async def test_cmd_equity(self):
         mock_session, mock_post = self._create_mock_session()
@@ -107,7 +106,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         
         self.assertTrue(mock_session.post.called)
         json_sent = mock_session.post.call_args[1]["json"]
-        self.assertIn("Research Database", json_sent["text"])
+        self.assertTrue("Research Database" in json_sent["text"] or "Base de Estrategias" in json_sent["text"])
 
     async def test_notification_dispatcher_broadcast(self):
         dispatcher = NotificationDispatcher()
@@ -124,7 +123,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Alerta de Riesgo", discord_received[0])
 
     async def test_persistent_reply_keyboard(self):
-        """Verifica que el teclado persistente se incluye en la respuesta enviada a Telegram."""
+        """Verifica que el teclado persistente se incluye en la respuesta de ayuda enviada a Telegram."""
         mock_session, mock_post = self._create_mock_session()
         await self.adapter._cmd_help(mock_session, 12345)
 
@@ -143,6 +142,31 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertIn("💰 /equity", flat_buttons)
         self.assertIn("🛡️ /risk", flat_buttons)
 
+    async def test_cmd_start_inline_menu(self):
+        """Verifica que /start despliega el menú interactivo con botones inline y selector de idioma."""
+        mock_session, mock_post = self._create_mock_session()
+        await self.adapter._cmd_start(mock_session, 12345)
+
+        self.assertTrue(mock_session.post.called)
+        json_sent = mock_session.post.call_args[1]["json"]
+        self.assertIn("reply_markup", json_sent)
+        markup = json_sent["reply_markup"]
+        self.assertIn("inline_keyboard", markup)
+        all_cb = [btn.get("callback_data") for row in markup["inline_keyboard"] for btn in row]
+        self.assertIn("nav_positions", all_cb)
+        self.assertIn("nav_status", all_cb)
+        self.assertIn("toggle_language", all_cb)
+
+    async def test_language_toggle(self):
+        """Verifica alternancia entre inglés y español y persistencia."""
+        set_chat_language(99999, "en")
+        self.assertEqual(get_chat_language(99999), "en")
+        new_lang = self.adapter.toggle_lang(99999)
+        self.assertEqual(new_lang, "es")
+        self.assertEqual(get_chat_language(99999), "es")
+        new_lang2 = self.adapter.toggle_lang(99999)
+        self.assertEqual(new_lang2, "en")
+
     async def test_emoji_button_routing(self):
         """Verifica que al pulsar un botón que envía '⚡ /status', se procesa el comando /status."""
         mock_session, mock_post = self._create_mock_session()
@@ -157,7 +181,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(mock_session.post.called)
         json_sent = mock_session.post.call_args[1]["json"]
-        self.assertIn("LastEdge — Estado del Bot", json_sent["text"])
+        self.assertTrue("LastEdge — System Status" in json_sent["text"] or "LastEdge — Estado del Bot" in json_sent["text"])
 
     async def test_refresh_positions_callback(self):
         self.bot_service.get_open_positions.return_value = [
@@ -173,7 +197,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         await self.adapter._process_callback_query(mock_session, cq)
         self.assertTrue(mock_session.post.called)
         calls = [c[1]["json"] for c in mock_session.post.call_args_list if "text" in c[1].get("json", {})]
-        self.assertTrue(any("P&L Flotante Total" in c["text"] for c in calls))
+        self.assertTrue(any("Total Floating P&L" in c["text"] or "P&L Flotante Total" in c["text"] for c in calls))
 
     async def test_refresh_status_callback(self):
         mock_session, mock_post = self._create_mock_session()
@@ -186,7 +210,7 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         await self.adapter._process_callback_query(mock_session, cq)
         self.assertTrue(mock_session.post.called)
         calls = [c[1]["json"] for c in mock_session.post.call_args_list if "text" in c[1].get("json", {})]
-        self.assertTrue(any("LastEdge — Estado del Bot" in c["text"] for c in calls))
+        self.assertTrue(any("LastEdge — System Status" in c["text"] or "LastEdge — Estado del Bot" in c["text"] for c in calls))
 
 
 if __name__ == '__main__':
