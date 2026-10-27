@@ -1120,6 +1120,21 @@
                 const arrowSvg = isBuy
                     ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>`
                     : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10M17 7v10H7"/></svg>`;
+                let timeStr = 'Live';
+                let relStr = '';
+                if (sig.timestamp && sig.timestamp !== 'Live') {
+                    let raw = String(sig.timestamp).trim().replace(' ', 'T');
+                    if (!raw.includes('Z') && !raw.includes('+') && !raw.slice(10).includes('-')) raw += 'Z';
+                    const d = new Date(raw);
+                    if (!isNaN(d.getTime())) {
+                        timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        const ageSec = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+                        const ageMin = Math.floor(ageSec / 60);
+                        relStr = ageMin < 1 ? ` · hace ${ageSec}s` : (ageMin < 60 ? ` · hace ${ageMin}m` : ` · hace ${Math.floor(ageMin/60)}h`);
+                    } else {
+                        timeStr = String(sig.timestamp).slice(11, 19) || 'Live';
+                    }
+                }
                 return `
                     <div class="signal-item-card">
                         <span style="width:24px;height:24px;border-radius:7px;background:${isBuy ? 'rgba(16,185,129,0.14)' : 'rgba(239,68,68,0.14)'};display:grid;place-items:center;flex-shrink:0;">
@@ -1130,7 +1145,7 @@
                                 <span>${sig.symbol}</span>
                                 <span class="mono muted" style="font-size:10px;font-weight:500;color:${color}">${sig.direction}</span>
                             </div>
-                            <div class="mono muted" style="font-size:10px">${sig.rr} RR · ${sig.timestamp.slice(11, 19) || 'Live'}</div>
+                            <div class="mono muted" style="font-size:10px">${sig.rr} RR · <span style="color:var(--t1);font-weight:600">${timeStr}</span><span style="color:var(--acc);font-weight:500">${relStr}</span></div>
                         </div>
                         <div style="text-align:right">
                             <div class="mono" style="font-size:12px;font-weight:600">${sig.price || '—'}</div>

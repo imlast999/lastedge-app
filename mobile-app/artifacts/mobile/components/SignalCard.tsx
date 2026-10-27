@@ -20,13 +20,52 @@ interface Props {
 
 const TTL_TOTAL_SECONDS = 10 * 60; // 10 minutes
 
+function parseSignalDate(raw?: string | number | null): Date {
+  if (!raw) return new Date();
+  if (typeof raw === "number") {
+    return raw > 1e11 ? new Date(raw) : new Date(raw * 1000);
+  }
+  let str = String(raw).trim();
+  if (/^\d+$/.test(str)) {
+    const num = Number(str);
+    return num > 1e11 ? new Date(num) : new Date(num * 1000);
+  }
+  str = str.replace(" ", "T");
+  if (!str.includes("Z") && !str.includes("+") && !str.slice(10).includes("-")) {
+    str += "Z";
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function formatRelativeTime(secondsAgo: number): string {
+  if (secondsAgo < 5) return "justo ahora";
+  if (secondsAgo < 60) return `hace ${secondsAgo}s`;
+  const mins = Math.floor(secondsAgo / 60);
+  if (mins < 60) return `hace ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} d`;
+}
+
 export function SignalCard({ signal, onAccept, onReject }: Props) {
   const colors = useColors();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(() => {
+    try {
+      const createdTime = parseSignalDate(signal.timestamp).getTime();
+      return Math.max(0, Math.floor((Date.now() - createdTime) / 1000));
+    } catch {
+      return 0;
+    }
+  });
+
   const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
     try {
-      const createdTime = new Date(signal.timestamp || new Date()).getTime();
+      const createdTime = parseSignalDate(signal.timestamp).getTime();
       const elapsedSec = Math.floor((Date.now() - createdTime) / 1000);
       return Math.max(0, TTL_TOTAL_SECONDS - elapsedSec);
     } catch {
@@ -34,19 +73,22 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
     }
   });
 
-  // 1-second countdown interval
+  // 1-second countdown and elapsed timer interval
   useEffect(() => {
-    const timer = setInterval(() => {
+    const update = () => {
       try {
-        const createdTime = new Date(signal.timestamp || new Date()).getTime();
-        const elapsedSec = Math.floor((Date.now() - createdTime) / 1000);
-        const rem = Math.max(0, TTL_TOTAL_SECONDS - elapsedSec);
-        setSecondsRemaining(rem);
+        const createdTime = parseSignalDate(signal.timestamp).getTime();
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - createdTime) / 1000));
+        setElapsedSeconds(elapsedSec);
+        setSecondsRemaining(Math.max(0, TTL_TOTAL_SECONDS - elapsedSec));
       } catch {
+        setElapsedSeconds(0);
         setSecondsRemaining(0);
       }
-    }, 1000);
+    };
 
+    update();
+    const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [signal.timestamp]);
 
@@ -61,6 +103,14 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
 
   const isBuy = signal.type === "BUY";
   const typeColor = isBuy ? "#3B82F6" : "#F43F5E";
+
+  const sigDate = parseSignalDate(signal.timestamp);
+  const exactTimeStr = sigDate.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const relativeStr = formatRelativeTime(elapsedSeconds);
 
   const handleAccept = async () => {
     if (!onAccept || accepting || isExpired) return;
@@ -127,6 +177,60 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
         </View>
       )}
 
+      {/* Sent Time & Elapsed Counter Row */}
+      <View style={styles.timingRow}>
+        <View style={styles.timingLeft}>
+          <Feather
+            name="clock"
+            size={12}
+            color={isPending ? "#60A5FA" : isActive ? "#34D399" : "#94A3B8"}
+          />
+          <Text style={styles.exactTimeText}>
+            {isPending ? "Enviada:" : "Hora:"} {exactTimeStr}
+          </Text>
+          <View
+            style={[
+              styles.relativeChip,
+              isActive && { backgroundColor: "rgba(16, 185, 129, 0.15)" },
+              isExpired && { backgroundColor: "rgba(255, 255, 255, 0.05)" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.relativeText,
+                isActive && { color: "#34D399" },
+                isExpired && { color: "#94A3B8" },
+              ]}
+            >
+              {relativeStr}
+            </Text>
+          </View>
+        </View>
+
+        {isPending && (
+          <View
+            style={[
+              styles.countdownPill,
+              secondsRemaining < 180 && styles.countdownPillUrgent,
+            ]}
+          >
+            <Feather
+              name="hourglass"
+              size={11}
+              color={secondsRemaining < 180 ? "#EF4444" : "#F59E0B"}
+            />
+            <Text
+              style={[
+                styles.countdownPillText,
+                secondsRemaining < 180 && styles.countdownPillTextUrgent,
+              ]}
+            >
+              {formatCountdown(secondsRemaining)}
+            </Text>
+          </View>
+        )}
+      </View>
+
       {/* Main Signal Identification Row */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -449,5 +553,59 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  timingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+  },
+  timingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  exactTimeText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontWeight: "700",
+    color: "#E2E8F0",
+  },
+  relativeChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: "rgba(59, 130, 246, 0.15)",
+  },
+  relativeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#60A5FA",
+  },
+  countdownPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+  },
+  countdownPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FBBF24",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  countdownPillUrgent: {
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+  },
+  countdownPillTextUrgent: {
+    color: "#F87171",
   },
 });

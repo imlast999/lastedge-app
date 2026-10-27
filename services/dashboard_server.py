@@ -255,6 +255,11 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     "successRate": round(float(b_qual.get("fill_rate_pct", 100.0)), 1),
                 }
 
+                curr = str(
+                    (t_stat.get("health", {}) if isinstance(t_stat.get("health"), dict) else {}).get("mt5", {}).get("currency")
+                    or eq_data.get("currency")
+                    or "USD"
+                ).upper()
                 self._send_json(200, {
                     "ok": True,
                     "connected": mt5_conn,
@@ -263,6 +268,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                     "equity": equity,
                     "margin": margin,
                     "freeMargin": free_margin,
+                    "currency": curr,
                     "executionQuality": exec_qual,
                     "app": "LastEdge Control App",
                     "trading_engine": t_stat,
@@ -677,6 +683,15 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 exp_type = qs.get("type", [None])[0]
                 self._send_json(200, research_client.get_experiments(exp_type))
 
+            elif path.startswith("/api/research/experiments/") or path.startswith("/api/experiments/"):
+                parts = path.split("/")
+                exp_id = parts[4] if path.startswith("/api/research/experiments/") else parts[3]
+                if path.endswith("/reopen"):
+                    res = research_client.get_reopen_payload(exp_id)
+                else:
+                    res = research_client.get_experiment_detail(exp_id)
+                self._send_json(200 if res.get("ok") else 404, res)
+
             elif path in ("/api/research/candidates", "/api/candidates"):
                 self._send_json(200, research_client.get_candidates())
 
@@ -729,6 +744,9 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
         except Exception as e:
             logger.error("Dashboard error handling GET %s: %s", self.path, e)
             self._send_json(500, {"ok": False, "error": str(e)})
+
+    def do_PATCH(self):
+        self.do_POST()
 
     def do_POST(self):
         path = self.path.split("?")[0].rstrip("/")
@@ -809,6 +827,12 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 strat = body_data.get("strategy", "eurusd_partial")
                 self._send_json(200, research_client.get_pillars(sym, strat))
 
+            elif path.startswith("/api/research/experiments/") or path.startswith("/api/experiments/"):
+                parts = path.split("/")
+                exp_id = parts[4] if path.startswith("/api/research/experiments/") else parts[3]
+                res = research_client.update_experiment(exp_id, body_data)
+                self._send_json(200 if res.get("ok") else 400, res)
+
             elif path in ("/api/signals/approve", "/api/trading/signals/approve") or (path.startswith("/api/signals/") and path.endswith("/approve")):
                 sig_id = body_data.get("signal_id") or body_data.get("id")
                 force = bool(body_data.get("force", False))
@@ -853,10 +877,23 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                                 logger.error("Error rejecting signal in sqlite %s: %s", sig_id, _e)
                 self._send_json(200 if res.get("ok") else 400, res)
 
-            elif path.startswith("/api/signals/") and (path.endswith("/accept") or path.endswith("/discard")):
+            elif path.startswith("/api/signals/") and (path.endswith("/accept") or path.endswith("/discard") or path.endswith("/reject")):
                 parts = path.split("/")
                 sig_id = parts[3] if len(parts) > 3 else "0"
-                action = "ACCEPTED" if path.endswith("/accept") else "REJECTED_MANUAL"
+                is_accept = path.endswith("/accept")
+                action = "ACCEPTED" if is_accept else "REJECTED_MANUAL"
+                
+                # Execute through Trading Engine to place live MT5 trade if accepted
+                eng_res = {}
+                try:
+                    if is_accept:
+                        eng_res = trading_client.approve_signal(int(sig_id), force=True)
+                    else:
+                        eng_res = trading_client.reject_signal(int(sig_id))
+                except Exception as _e:
+                    logger.warning("Trading Engine proxy error for signal %s: %s", sig_id, _e)
+
+                # Persist state directly in SQLite database
                 db_cand = [
                     Path(__file__).parent.parent.parent / "bot_state.db",
                     Path(__file__).parent.parent.parent / "LastEdge Trading Engine" / "bot_state.db"
@@ -872,7 +909,11 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                             break
                         except Exception as _e:
                             logger.error("Error updating signal %s: %s", sig_id, _e)
-                self._send_json(200, {"ok": True, "signal_id": sig_id, "status": action})
+                
+                resp_payload = {"ok": True, "signal_id": sig_id, "status": action}
+                if isinstance(eng_res, dict) and eng_res:
+                    resp_payload.update(eng_res)
+                self._send_json(200 if resp_payload.get("ok", True) else 400, resp_payload)
 
 
             else:

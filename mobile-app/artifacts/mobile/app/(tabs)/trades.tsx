@@ -37,6 +37,7 @@ export default function TradesScreen() {
     trades,
     acceptSignal,
     rejectSignal,
+    currencySymbol,
     loading,
     refresh,
   } = useTrading();
@@ -231,7 +232,7 @@ export default function TradesScreen() {
                   />
                   <SummaryItem
                     label={t("pnl")}
-                    value={`€${totalPnL.toFixed(2)}`}
+                    value={`${currencySymbol}${totalPnL.toFixed(2)}`}
                     color={totalPnL >= 0 ? colors.profit : colors.destructive}
                     colors={colors}
                   />

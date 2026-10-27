@@ -25,7 +25,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const { status, equityHistory, dailyPnL, winrate, openPositions, pendingSignals, loading, refresh } =
+  const { status, equityHistory, dailyPnL, winrate, openPositions, pendingSignals, currencySymbol, loading, refresh } =
     useTrading();
 
   const safeStatus = {
@@ -104,7 +104,7 @@ export default function DashboardScreen() {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
-              <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}> €</Text>
+              <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}> {currencySymbol}</Text>
             </Text>
           </View>
 
@@ -124,11 +124,11 @@ export default function DashboardScreen() {
                 ]}
               >
                 {floatingPnL >= 0 ? "+" : ""}
-                {floatingPnL.toFixed(2)}€ Float
+                {floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} Float
               </Text>
             </View>
             <Text style={[styles.balanceValue, { color: colors.mutedForeground }]}>
-              Bal: {safeStatus.balance.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+              Bal: {currencySymbol}{safeStatus.balance.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
         </View>
@@ -153,7 +153,7 @@ export default function DashboardScreen() {
       <View style={styles.statsGrid}>
         <StatsCard
           label={t("profitDay")}
-          value={`${isProfit ? "+" : ""}${dailyPnL.toFixed(2)}€`}
+          value={`${isProfit ? "+" : ""}${currencySymbol}${dailyPnL.toFixed(2)}`}
           icon="trending-up"
           trend={isProfit ? "up" : "down"}
           accent={isProfit ? colors.profit : colors.loss}
@@ -234,7 +234,7 @@ export default function DashboardScreen() {
           <View style={styles.indicatorHeader}>
             <Text style={styles.indicatorLabel}>Margen Libre Disponible</Text>
             <Text style={styles.indicatorValue}>
-              {safeStatus.freeMargin.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€{" "}
+              {currencySymbol}{safeStatus.freeMargin.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
               <Text style={styles.indicatorSub}>
                 ({safeStatus.equity > 0 ? ((safeStatus.freeMargin / safeStatus.equity) * 100).toFixed(1) : "100.0"}%)
               </Text>
@@ -259,9 +259,9 @@ export default function DashboardScreen() {
           <View style={styles.indicatorHeader}>
             <Text style={styles.indicatorLabel}>Equidad vs Balance</Text>
             <Text style={styles.indicatorValue}>
-              {safeStatus.equity.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€{" "}
+              {currencySymbol}{safeStatus.equity.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
               <Text style={{ color: floatingPnL >= 0 ? "#34D399" : "#F87171", fontSize: 11, fontWeight: "700" }}>
-                ({floatingPnL >= 0 ? "+" : ""}{floatingPnL.toFixed(2)}€ Float)
+                ({floatingPnL >= 0 ? "+" : ""}{floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} Float)
               </Text>
             </Text>
           </View>

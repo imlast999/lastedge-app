@@ -107,6 +107,21 @@ class ResearchClient:
             return {"ok": False, "experiments": [], "backtests": [], "research": [], "total": 0, "offline": True}
         return res
 
+    def get_experiment_detail(self, exp_id: str) -> Dict[str, Any]:
+        """Gets single experiment full profile and metrics."""
+        import urllib.parse
+        return self._get(f"/api/research/experiments/{urllib.parse.quote(str(exp_id))}")
+
+    def get_reopen_payload(self, exp_id: str) -> Dict[str, Any]:
+        """Gets reproducible configuration payload for reopening an experiment."""
+        import urllib.parse
+        return self._get(f"/api/research/experiments/{urllib.parse.quote(str(exp_id))}/reopen")
+
+    def update_experiment(self, exp_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """Updates decision status or notes for an experiment."""
+        import urllib.parse
+        return self._post(f"/api/research/experiments/{urllib.parse.quote(str(exp_id))}", updates)
+
     def get_candidates(self) -> Dict[str, Any]:
         """Gets validated candidate strategies eligible for promotion."""
         res = self._get("/api/research/candidates")

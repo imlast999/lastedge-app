@@ -19,6 +19,7 @@ export interface BotStatus {
   equity: number;
   margin: number;
   freeMargin: number;
+  currency?: string;
   executionQuality?: {
     avgLatency: number;
     avgSlippage: number;
@@ -71,6 +72,7 @@ interface TradingContextValue {
   winrate: number;
   openPositions: number;
   pendingSignals: number;
+  currencySymbol: string;
   /** true during the first load or a manual refresh */
   loading: boolean;
   /** non-null when the API is unreachable */
@@ -113,6 +115,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const winrate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
   const openPositions = signals.filter((s) => s.status === "active" || s.status === "executed").length;
   const pendingSignals = signals.filter((s) => s.status === "pending").length;
+  const currencySymbol = (status?.currency || "USD").toUpperCase() === "EUR" ? "€" : "$";
 
   // ── Fetch helpers ───────────────────────────────────────────────────────────
 
@@ -196,7 +199,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             sendLocalNotification(
               "TRADE_CLOSE",
               `✅ Operación cerrada en ${trade.symbol}`,
-              `${trade.closeReason === "TAKE_PROFIT" ? "Take Profit 🎯" : "Stop Loss 🛡️"} (${sign}${trade.profit} €)`
+              `${trade.closeReason === "TAKE_PROFIT" ? "Take Profit 🎯" : "Stop Loss 🛡️"} (${sign}${currencySymbol}${trade.profit})`
             );
           }
         });
@@ -313,6 +316,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         winrate,
         openPositions,
         pendingSignals,
+        currencySymbol,
         loading,
         apiError,
         usingMockData,

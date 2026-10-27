@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import { useTrading } from "@/context/TradingContext";
 import type { Trade } from "@/context/TradingContext";
 
 interface Props {
@@ -23,6 +24,7 @@ function formatDate(isoString: string): string {
 
 export function TradeCard({ trade }: Props) {
   const colors = useColors();
+  const { currencySymbol } = useTrading();
 
   const profitVal = Number(trade?.profit ?? 0);
   const pipsVal = Number(trade?.pips ?? 0);
@@ -62,7 +64,7 @@ export function TradeCard({ trade }: Props) {
         <View style={styles.right}>
           <Text style={[styles.profit, { color: profitColor }]}>
             {isProfit ? "+" : ""}
-            {profitVal.toFixed(2)}€
+            {currencySymbol}{profitVal.toFixed(2)}
           </Text>
           <Text style={styles.pips}>
             {pipsVal >= 0 ? "+" : ""}

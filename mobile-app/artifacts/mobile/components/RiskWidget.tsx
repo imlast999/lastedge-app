@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import { useTrading } from "@/context/TradingContext";
 import { resolveApiConfig } from "@/lib/apiConfig";
 import { useSettings } from "@/context/SettingsContext";
 
@@ -50,6 +51,7 @@ interface RiskDashboardData {
 
 export default function RiskWidget() {
   const colors = useColors();
+  const { currencySymbol } = useTrading();
   const { apiOverrides } = useSettings();
   const [data, setData] = useState<RiskDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -205,10 +207,10 @@ export default function RiskWidget() {
           <View style={styles.gridCol}>
             <Text style={styles.gridLabel}>Margen Libre</Text>
             <Text style={styles.gridValue}>
-              {safeData.free_margin.toLocaleString("en", {
+              {currencySymbol}{safeData.free_margin.toLocaleString("en", {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
-              })}€
+              })}
             </Text>
           </View>
           <View style={styles.gridCol}>

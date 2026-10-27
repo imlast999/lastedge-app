@@ -434,7 +434,7 @@
                     return num > 1e11 ? new Date(num) : new Date(num * 1000);
                 }
                 str = str.replace(' ', 'T');
-                if (!str.includes('Z') && !str.includes('+') && !str.includes('-')) {
+                if (!str.includes('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
                     str += 'Z';
                 }
                 const d = new Date(str);

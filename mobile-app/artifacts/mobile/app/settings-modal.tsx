@@ -81,7 +81,7 @@ export default function SettingsScreen() {
     if (result.ok && result.status) {
       const s = result.status;
       setTestResult(
-        `OK · ${result.latencyMs} ms · MT5 ${s.connected ? "conectado" : "desconectado"} · ${s.equity.toFixed(2)} €`
+        `OK · ${result.latencyMs} ms · MT5 ${s.connected ? "conectado" : "desconectado"} · ${s.currency || "USD"} ${s.equity.toFixed(2)}`
       );
     } else {
       setTestResult(result.error ?? "No se pudo conectar al servidor");

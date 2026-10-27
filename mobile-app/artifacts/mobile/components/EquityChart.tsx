@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, Text } from "react-native";
 import Svg, { Path, Defs, LinearGradient, Stop, Line } from "react-native-svg";
 import { useColors } from "@/hooks/useColors";
+import { useTrading } from "@/context/TradingContext";
 import type { EquityPoint } from "@/context/TradingContext";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 
 export function EquityChart({ data, height = 110, showLabels = true }: Props) {
   const colors = useColors();
+  const { currencySymbol } = useTrading();
 
   const { points, minVal, maxVal, isPositive, deltaPct } = useMemo(() => {
     if (data.length < 2) {
@@ -108,7 +110,7 @@ export function EquityChart({ data, height = 110, showLabels = true }: Props) {
       {showLabels && (
         <View style={styles.labels}>
           <Text style={[styles.labelText, { color: colors.mutedForeground }]}>
-            {minVal.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+            {currencySymbol}{minVal.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
           <View style={styles.deltaBadge}>
             <Text
@@ -122,7 +124,7 @@ export function EquityChart({ data, height = 110, showLabels = true }: Props) {
             </Text>
           </View>
           <Text style={[styles.labelText, { color: colors.mutedForeground }]}>
-            {maxVal.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+            {currencySymbol}{maxVal.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
         </View>
       )}

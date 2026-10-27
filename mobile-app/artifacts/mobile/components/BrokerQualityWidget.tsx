@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import { useTrading } from "@/context/TradingContext";
 import { resolveApiConfig } from "@/lib/apiConfig";
 
 interface ExecutionAnalytics {
@@ -15,6 +16,7 @@ interface ExecutionAnalytics {
 
 export function BrokerQualityWidget() {
   const colors = useColors();
+  const { currencySymbol } = useTrading();
   const [data, setData] = useState<ExecutionAnalytics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -103,7 +105,7 @@ export function BrokerQualityWidget() {
                 { color: (data?.totalSlippageCostEur ?? 0) <= 0 ? colors.profit : colors.loss },
               ]}
             >
-              {(data?.totalSlippageCostEur ?? 0).toFixed(2)} €
+              {currencySymbol}{(data?.totalSlippageCostEur ?? 0).toFixed(2)}
             </Text>
           </View>
         </View>
