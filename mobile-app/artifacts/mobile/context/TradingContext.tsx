@@ -34,11 +34,27 @@ export interface Signal {
   entry: number;
   takeProfit: number;
   stopLoss: number;
-  status: "pending" | "active" | "closed" | "rejected";
+  status: "pending" | "active" | "closed" | "rejected" | "executed" | "expired";
   rrRatio: number;
   timestamp: string;
   lot: number;
   strategy?: string;
+}
+
+export interface Position {
+  ticket: number;
+  symbol: string;
+  type: "BUY" | "SELL";
+  volume: number;
+  open_price: number;
+  current_price: number;
+  sl: number;
+  tp: number;
+  profit: number;
+  swap?: number;
+  magic?: number;
+  comment?: string;
+  time?: string;
 }
 
 export interface Trade {
@@ -66,6 +82,7 @@ export interface EquityPoint {
 interface TradingContextValue {
   status: BotStatus | null;      // null while the first fetch is in flight
   signals: Signal[];
+  positions: Position[];
   trades: Trade[];
   equityHistory: EquityPoint[];
   dailyPnL: number;
@@ -95,6 +112,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const { settings, shouldNotify, apiOverrides } = useSettings();
   const [status, setStatus] = useState<BotStatus | null>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [equityHistory, setEquityHistory] = useState<EquityPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +131,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const totalTrades = trades.length;
   const winningTrades = trades.filter((t) => t.profit > 0).length;
   const winrate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
-  const openPositions = signals.filter((s) => s.status === "active" || s.status === "executed").length;
+  const openPositions = positions.length > 0 ? positions.length : signals.filter((s) => s.status === "active" || s.status === "executed").length;
   const pendingSignals = signals.filter((s) => s.status === "pending").length;
   const currencySymbol = (status?.currency || "USD").toUpperCase() === "EUR" ? "€" : "$";
 
@@ -184,6 +202,15 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         setSignals(signalsList);
         prevSignals.current = signalsList;
       }
+
+      // 2b. MT5 Positions
+      const rawPositions = await safeFetch<any>("/api/positions");
+      const positionsList: Position[] = Array.isArray(rawPositions)
+        ? rawPositions
+        : Array.isArray(rawPositions?.positions)
+        ? rawPositions.positions
+        : [];
+      setPositions(positionsList);
 
       // 3. Trades
       const rawTrades = await safeFetch<any>("/api/trades");
@@ -310,6 +337,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
       value={{
         status,
         signals,
+        positions,
         trades,
         equityHistory,
         dailyPnL,

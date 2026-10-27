@@ -893,10 +893,10 @@ export default function LabScreen() {
 
                   {/* Métricas clave pedagógicas */}
                   <View style={styles.metricsGrid}>
-                    <MetricCard label="{isEs ? "Ratio Ganancia / Pérdida" : "Profit / Loss Ratio"}" value={`PF ${selectedExp.best_profit_factor?.toFixed(2) ?? "—"}`} colors={colors} />
-                    <MetricCard label="{isEs ? "Tasa de Acierto" : "Win Rate"}" value={`${selectedExp.best_winrate?.toFixed(1) ?? "—"}%`} colors={colors} />
+                    <MetricCard label={isEs ? "Ratio Ganancia / Pérdida" : "Profit / Loss Ratio"} value={`PF ${selectedExp.best_profit_factor?.toFixed(2) ?? "—"}`} colors={colors} />
+                    <MetricCard label={isEs ? "Tasa de Acierto" : "Win Rate"} value={`${selectedExp.best_winrate?.toFixed(1) ?? "—"}%`} colors={colors} />
                     <MetricCard label="Puntuación de Estabilidad" value={`${selectedExp.best_stability_score?.toFixed(1) ?? "—"} / 100`} colors={colors} />
-                    <MetricCard label="{isEs ? "Mayor Caída Temporal" : "Max Temporary Drawdown"}" value={`${selectedExp.best_max_drawdown?.toFixed(0) ?? "—"} pips`} colors={colors} />
+                    <MetricCard label={isEs ? "Mayor Caída Temporal" : "Max Temporary Drawdown"} value={`${selectedExp.best_max_drawdown?.toFixed(0) ?? "—"} pips`} colors={colors} />
                   </View>
 
                   {/* Dictamen Científico Amigable */}

@@ -441,6 +441,48 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/positions", "/api/trading/positions"):
                 self._send_json(200, trading_client.get_positions())
 
+            elif path.startswith("/api/positions/") and path.endswith("/flow"):
+                parts = path.split("/")
+                try:
+                    ticket = int(parts[3])
+                    from services.chart_helper import get_position_flow_data
+                    flow_data = get_position_flow_data(ticket, trading_client=trading_client)
+                    if flow_data:
+                        self._send_json(200, {"ok": True, "flow": flow_data})
+                    else:
+                        self._send_json(404, {"ok": False, "error": f"Position #{ticket} flow data not available"})
+                    return
+                except Exception as e:
+                    self._send_json(500, {"ok": False, "error": str(e)})
+                    return
+
+            elif path.startswith("/api/signals/") and path.endswith("/flow"):
+                parts = path.split("/")
+                try:
+                    sig_id = parts[3]
+                    from services.chart_helper import get_signal_flow_data
+                    flow_data = get_signal_flow_data(sig_id, trading_client=trading_client)
+                    if flow_data:
+                        self._send_json(200, {"ok": True, "flow": flow_data})
+                    else:
+                        self._send_json(404, {"ok": False, "error": f"Signal {sig_id} flow data not available"})
+                    return
+                except Exception as e:
+                    self._send_json(500, {"ok": False, "error": str(e)})
+                    return
+
+            elif path.startswith("/api/candles/"):
+                parts = path.split("/")
+                try:
+                    sym = parts[3].upper()
+                    from services.chart_helper import get_candles_json
+                    candles = get_candles_json(sym, "H1", 100)
+                    self._send_json(200, {"ok": True, "symbol": sym, "count": len(candles), "candles": candles})
+                    return
+                except Exception as e:
+                    self._send_json(500, {"ok": False, "error": str(e)})
+                    return
+
             elif path.startswith("/api/positions/") and path.endswith("/chart"):
                 parts = path.split("/")
                 try:

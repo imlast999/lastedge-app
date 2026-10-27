@@ -7,12 +7,12 @@
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
 [![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.41-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/releases/download/v1.1.41/LastEdge-v1.1.41.apk)
-[![Tests](https://img.shields.io/badge/Tests-35%2F35%20Passed-success)](https://github.com/imlast999/lastedge-app)
+[![Tests](https://img.shields.io/badge/Tests-37%2F37%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
-> **Tests:** 35 / 35 Passed (100% Green)  
+> **Tests:** 37 / 37 Passed (100% Green)  
 
 </div>
 
@@ -79,7 +79,7 @@ LastEdge App/
 │   └── clients/                    # Decoupled HTTP REST Clients
 │       ├── trading_client.py       # Client for Trading Engine (:8081)
 │       └── research_client.py      # Client for Strategy Lab (:8082)
-├── tests/                          # 35 automated unit & degradation tests
+├── tests/                          # 37 automated unit & degradation tests
 └── docs/                           # Technical documentation
 ```
 
@@ -130,7 +130,7 @@ Or download the pre-compiled APK directly: [**`LastEdge-v1.1.41.apk`**](https://
 # Run all App tests locally
 python -m pytest tests/ -v
 ```
-Current test suite status: **35 / 35 passed (100% Green)**.
+Current test suite status: **37 / 37 passed (100% Green)**.
 
 ### CI / Continuous Integration:
 - **App & Control Plane CI**: Automated on every push and pull request via [GitHub Actions](.github/workflows/ci.yml).

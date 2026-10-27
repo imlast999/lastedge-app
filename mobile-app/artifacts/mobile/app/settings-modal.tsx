@@ -50,12 +50,7 @@ function formatLastSync(d: Date | null, isEs: boolean): string {
   if (diff < 3600) return isEs ? `Hace ${Math.floor(diff / 60)} min` : `${Math.floor(diff / 60)}m ago`;
   return d.toLocaleTimeString(isEs ? "es-ES" : "en-US", { hour: "2-digit", minute: "2-digit" });
 }
-  if (!d) return "Nunca";
-  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (diff < 60) return `Hace ${diff}s`;
-  if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
-  return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
-}
+
 
 export default function SettingsScreen() {
   const colors = useColors();

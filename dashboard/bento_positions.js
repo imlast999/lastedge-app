@@ -546,7 +546,7 @@
                                 <i class="fa-solid fa-xmark"></i>
                                 <span>Dismiss</span>
                             </button>
-                            <button class="btn-chart-pos" onclick="LastEdgeBentoPositions.instance.viewSymbolChart('${sym}')" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                            <button class="btn-chart-pos" onclick="LastEdgeBentoPositions.instance.viewSignalChart('${sigId}', '${sym}')" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
                                 <i class="fa-solid fa-chart-line" style="color: #00ff88;"></i>
                                 <span>Chart</span>
                             </button>
@@ -971,43 +971,257 @@
         }
 
         viewPositionChart(ticket, symbol) {
-            this._openChartModal(`/api/positions/${ticket}/chart`, `${symbol} — Position #${ticket}`);
+            this.openLiveFlowModal({ type: 'position', ticket: ticket, symbol: symbol });
+        }
+
+        viewSignalChart(sigId, symbol) {
+            this.openLiveFlowModal({ type: 'signal', id: sigId, symbol: symbol });
         }
 
         viewSymbolChart(symbol) {
-            this._openChartModal(`/api/chart/${symbol}`, `${symbol} — Live Technical Chart`);
+            this.openLiveFlowModal({ type: 'symbol', symbol: symbol });
         }
 
-        _openChartModal(imgUrl, title) {
+        openLiveFlowModal(params) {
             const modalId = 'bento-chart-modal-overlay';
             let modal = document.getElementById(modalId);
             if (!modal) {
                 modal = document.createElement('div');
                 modal.id = modalId;
                 modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
-                modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
                 document.body.appendChild(modal);
             }
 
+            // Cleanup any active chart or polling
+            if (this._activeFlowChart) {
+                try { this._activeFlowChart.remove(); } catch(e) {}
+                this._activeFlowChart = null;
+            }
+            if (this._flowPollTimer) {
+                clearInterval(this._flowPollTimer);
+                this._flowPollTimer = null;
+            }
+
+            const closeModal = () => {
+                if (this._activeFlowChart) {
+                    try { this._activeFlowChart.remove(); } catch(e) {}
+                    this._activeFlowChart = null;
+                }
+                if (this._flowPollTimer) {
+                    clearInterval(this._flowPollTimer);
+                    this._flowPollTimer = null;
+                }
+                modal.style.display = 'none';
+            };
+
+            modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+            const isPosition = params.type === 'position';
+            const isSignal = params.type === 'signal';
+            const sym = params.symbol || 'EURUSD';
+            const title = isPosition ? `${sym} • Flujo de Operación #${params.ticket}` : (isSignal ? `${sym} • Flujo de Señal` : `${sym} • Live Chart`);
+
             modal.innerHTML = `
-                <div style="background:#1e1e1e;border:1px solid rgba(255,255,255,0.18);border-radius:14px;max-width:920px;width:100%;padding:20px;box-shadow:0 24px 48px rgba(0,0,0,0.7);position:relative;animation:fadeIn 0.2s ease;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
-                        <h3 style="margin:0;font-size:16px;color:#fff;display:flex;align-items:center;gap:10px;">
-                            <i class="fa-solid fa-chart-candlestick" style="color:#00ff88;"></i>
-                            <span>${title}</span>
-                        </h3>
-                        <button onclick="document.getElementById('${modalId}').style.display='none'" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:16px;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>
+                <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.18);border-radius:16px;max-width:960px;width:100%;padding:22px;box-shadow:0 28px 60px rgba(0,0,0,0.8);position:relative;animation:fadeIn 0.2s ease;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <span class="pulse-indicator" style="background:#00ff88;box-shadow:0 0 10px #00ff88;width:9px;height:9px;border-radius:50%;display:inline-block;"></span>
+                            <h3 style="margin:0;font-size:16px;color:#fff;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                <span>${title}</span>
+                            </h3>
+                            <span id="flow-modal-pnl-chip" style="font-family:'Geist Mono',monospace;font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,0.06);color:#94a3b8;">
+                                Sincronizando con MT5...
+                            </span>
+                        </div>
+                        <button id="btn-close-flow-modal" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:18px;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">&times;</button>
                     </div>
-                    <div style="display:flex;align-items:center;justify-content:center;min-height:360px;background:#151515;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
-                        <img src="${imgUrl}?t=${Date.now()}" alt="${title}" style="max-width:100%;height:auto;display:block;" onerror="this.parentElement.innerHTML='<div style=\'text-align:center;padding:40px;color:#f87171;\'><i class=\'fa-solid fa-triangle-exclamation\' style=\'font-size:28px;margin-bottom:8px;\'></i><p style=\'margin:0;\'>Chart currently unavailable from MT5.</p></div>'" />
+
+                    <!-- Telemetry Pill Header -->
+                    <div id="flow-modal-metrics-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;font-family:'Geist Mono',monospace;">
+                        <span style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px;color:#cbd5e1;" id="pill-flow-type">Tipo: --</span>
+                        <span style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);padding:4px 10px;border-radius:6px;color:#10b981;" id="pill-flow-entry">Entrada: --</span>
+                        <span style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);padding:4px 10px;border-radius:6px;color:#ef4444;" id="pill-flow-sl">SL: --</span>
+                        <span style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);padding:4px 10px;border-radius:6px;color:#38bdf8;" id="pill-flow-tp">TP: --</span>
+                        <span style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px;color:#e2e8f0;margin-left:auto;" id="pill-flow-cur">Actual: --</span>
                     </div>
+
+                    <!-- Canvas Container -->
+                    <div id="tv-flow-chart-container" style="width:100%;height:430px;background:#090d16;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);position:relative;">
+                        <div id="tv-chart-loader" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#94a3b8;gap:10px;z-index:5;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:#00ff88;"></i>
+                            <span>Cargando velas de MT5 en tiempo real...</span>
+                        </div>
+                    </div>
+
+                    <!-- Legend & Controls Footer -->
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#94a3b8;">
-                        <span><b style="color:#00ff88;">🟩 Entry</b> | <b style="color:#ef4444;">🟥 Stop Loss</b> | <b style="color:#38bdf8;">🟦 Take Profit</b> | <b style="color:#22d3ee;">Cyan EMA50</b> | <b style="color:#e879f9;">Magenta EMA200</b></span>
-                        <button onclick="document.getElementById('${modalId}').style.display='none'" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:500;">Close</button>
+                        <span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                            <span><b style="color:#10b981;">━━ Entrada</b></span>
+                            <span><b style="color:#ef4444;">━━ Stop Loss</b></span>
+                            <span><b style="color:#38bdf8;">━━ Take Profit</b></span>
+                            <span><b style="color:#00ff88;">▲ Vela Alcista</b></span>
+                            <span><b style="color:#ef4444;">▼ Vela Bajista</b></span>
+                            <span style="color:#64748b;">(Rueda ratón = Zoom | Arrastre = Desplazamiento)</span>
+                        </span>
+                        <button id="btn-close-flow-footer" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:#fff;padding:6px 18px;border-radius:8px;cursor:pointer;font-weight:500;">Cerrar</button>
                     </div>
                 </div>
             `;
             modal.style.display = 'flex';
+
+            document.getElementById('btn-close-flow-modal').onclick = closeModal;
+            document.getElementById('btn-close-flow-footer').onclick = closeModal;
+
+            // Fetch flow data and mount Lightweight Charts
+            const endpoint = isPosition 
+                ? `/api/positions/${params.ticket}/flow` 
+                : (isSignal ? `/api/signals/${params.id}/flow` : `/api/candles/${sym}`);
+
+            const loadAndRender = async () => {
+                try {
+                    const res = await fetch(endpoint);
+                    const json = await res.json();
+                    const flow = json.flow || json;
+                    const loader = document.getElementById('tv-chart-loader');
+                    if (loader) loader.style.display = 'none';
+
+                    // Update header telemetry
+                    const pnlChip = document.getElementById('flow-modal-pnl-chip');
+                    if (pnlChip) {
+                        if (flow.profit !== undefined) {
+                            const pSign = flow.profit >= 0 ? '+' : '';
+                            const pCol = flow.profit >= 0 ? '#10b981' : '#ef4444';
+                            pnlChip.innerHTML = `P&amp;L Flotante: <b style="color:${pCol};">${pSign}$${parseFloat(flow.profit).toFixed(2)}</b> (${flow.volume || 0.01}L)`;
+                        } else {
+                            pnlChip.innerHTML = `Estado: <b>${flow.status || 'EN VIVO'}</b>`;
+                        }
+                    }
+
+                    const typePill = document.getElementById('pill-flow-type');
+                    if (typePill && flow.type) typePill.innerHTML = `Tipo: <b>${flow.type}</b>`;
+                    const entryPill = document.getElementById('pill-flow-entry');
+                    if (entryPill && flow.entry) entryPill.innerHTML = `Entrada: <b>${flow.entry}</b>`;
+                    const slPill = document.getElementById('pill-flow-sl');
+                    if (slPill && flow.sl) slPill.innerHTML = `SL: <b>${flow.sl}</b>`;
+                    const tpPill = document.getElementById('pill-flow-tp');
+                    if (tpPill && flow.tp) tpPill.innerHTML = `TP: <b>${flow.tp}</b>`;
+                    const curPill = document.getElementById('pill-flow-cur');
+                    if (curPill && (flow.current_price || flow.candles?.length)) {
+                        const curP = flow.current_price || flow.candles[flow.candles.length - 1].close;
+                        curPill.innerHTML = `Actual: <b style="color:#00ff88;">${curP}</b>`;
+                    }
+
+                    // Mount chart if LightweightCharts is loaded
+                    const container = document.getElementById('tv-flow-chart-container');
+                    if (window.LightweightCharts && container && !this._activeFlowChart) {
+                        const chart = window.LightweightCharts.createChart(container, {
+                            width: container.clientWidth,
+                            height: container.clientHeight,
+                            layout: {
+                                background: { color: '#090d16' },
+                                textColor: '#94a3b8',
+                                fontSize: 11,
+                                fontFamily: "'Geist Mono', monospace"
+                            },
+                            grid: {
+                                vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
+                                horzLines: { color: 'rgba(255, 255, 255, 0.04)' }
+                            },
+                            crosshair: {
+                                mode: window.LightweightCharts.CrosshairMode.Normal,
+                            },
+                            rightPriceScale: {
+                                borderColor: 'rgba(255, 255, 255, 0.12)',
+                                autoScale: true,
+                            },
+                            timeScale: {
+                                borderColor: 'rgba(255, 255, 255, 0.12)',
+                                timeVisible: true,
+                                secondsVisible: false,
+                            }
+                        });
+
+                        const candleSeries = chart.addCandlestickSeries({
+                            upColor: '#00ff88',
+                            downColor: '#ef4444',
+                            borderVisible: false,
+                            wickUpColor: '#00ff88',
+                            wickDownColor: '#ef4444'
+                        });
+
+                        if (flow.candles && flow.candles.length > 0) {
+                            candleSeries.setData(flow.candles);
+                        }
+
+                        // Price lines for Entry, SL, TP
+                        if (flow.entry && flow.entry > 0) {
+                            candleSeries.createPriceLine({
+                                price: parseFloat(flow.entry),
+                                color: '#10b981',
+                                lineWidth: 2,
+                                lineStyle: window.LightweightCharts.LineStyle.Dashed,
+                                axisLabelVisible: true,
+                                title: 'ENTRADA'
+                            });
+                        }
+                        if (flow.sl && flow.sl > 0) {
+                            candleSeries.createPriceLine({
+                                price: parseFloat(flow.sl),
+                                color: '#ef4444',
+                                lineWidth: 2,
+                                lineStyle: window.LightweightCharts.LineStyle.Solid,
+                                axisLabelVisible: true,
+                                title: 'SL'
+                            });
+                        }
+                        if (flow.tp && flow.tp > 0) {
+                            candleSeries.createPriceLine({
+                                price: parseFloat(flow.tp),
+                                color: '#38bdf8',
+                                lineWidth: 2,
+                                lineStyle: window.LightweightCharts.LineStyle.Solid,
+                                axisLabelVisible: true,
+                                title: 'TP'
+                            });
+                        }
+
+                        chart.timeScale().fitContent();
+                        this._activeFlowChart = chart;
+                        this._activeCandleSeries = candleSeries;
+
+                        // Responsive resize
+                        const resizeObserver = new ResizeObserver(() => {
+                            if (this._activeFlowChart && container) {
+                                this._activeFlowChart.applyOptions({
+                                    width: container.clientWidth,
+                                    height: container.clientHeight
+                                });
+                            }
+                        });
+                        resizeObserver.observe(container);
+                    } else if (this._activeCandleSeries && flow.candles?.length) {
+                        // Incremental update of the current candle
+                        const lastCandle = flow.candles[flow.candles.length - 1];
+                        this._activeCandleSeries.update(lastCandle);
+                    }
+                } catch (err) {
+                    console.error('[LiveFlowModal] Error loading flow data:', err);
+                    const loader = document.getElementById('tv-chart-loader');
+                    if (loader) {
+                        loader.innerHTML = `
+                            <div style="text-align:center;color:#ef4444;">
+                                <i class="fa-solid fa-triangle-exclamation" style="font-size:24px;margin-bottom:8px;"></i>
+                                <p style="margin:0;">No se pudo conectar con el feed de MT5 para ${sym}.</p>
+                            </div>
+                        `;
+                    }
+                }
+            };
+
+            loadAndRender();
+
+            // Set up real-time live ticker polling every 2.5 seconds
+            this._flowPollTimer = setInterval(loadAndRender, 2500);
         }
 
         manualSync() {

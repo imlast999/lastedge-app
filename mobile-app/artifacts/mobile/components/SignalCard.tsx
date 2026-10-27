@@ -49,15 +49,7 @@ function formatRelativeTime(secondsAgo: number, isEs = true): string {
   const days = Math.floor(hours / 24);
   return isEs ? `hace ${days} d` : `${days}d ago`;
 }
-  if (secondsAgo < 5) return "justo ahora";
-  if (secondsAgo < 60) return `hace ${secondsAgo}s`;
-  const mins = Math.floor(secondsAgo / 60);
-  if (mins < 60) return `hace ${mins} min`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `hace ${hours} h`;
-  const days = Math.floor(hours / 24);
-  return `hace ${days} d`;
-}
+
 
 export function SignalCard({ signal, onAccept, onReject }: Props) {
   const colors = useColors();
@@ -265,7 +257,7 @@ export function SignalCard({ signal, onAccept, onReject }: Props) {
 
             <Feather
 
-              name="hourglass"
+              name="clock"
 
               size={11}
 

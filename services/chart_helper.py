@@ -14,7 +14,7 @@ import uuid
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import matplotlib
 matplotlib.use('Agg')
 import pandas as pd
@@ -174,8 +174,10 @@ def get_chart_for_position(ticket: int, bars: int = 80) -> Optional[str]:
     # Fallback to trading_client positions
     if not pos_data:
         try:
-            from services.clients.trading_client import get_trading_client
-            t_client = get_trading_client()
+            t_client = trading_client
+            if not t_client:
+                from services.clients.trading_client import get_trading_client
+                t_client = get_trading_client()
             res = t_client.get_positions()
             positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
             for p in positions:
@@ -223,3 +225,126 @@ def get_chart_for_position(ticket: int, bars: int = 80) -> Optional[str]:
         bars=bars,
         title=title
     )
+
+
+def get_candles_json(symbol: str, timeframe: str = "H1", bars: int = 100) -> List[Dict[str, Any]]:
+    """Devuelve las ultimas velas formateadas en JSON para TradingView Lightweight Charts."""
+    df = _fetch_candles_mt5(symbol, timeframe, bars)
+    if df is None or len(df) == 0:
+        df = _fetch_candles_fallback(symbol, timeframe, bars)
+    if df is None or len(df) == 0:
+        return []
+
+    result = []
+    for _, row in df.iterrows():
+        t_val = row["time"]
+        if hasattr(t_val, "timestamp"):
+            t = int(t_val.timestamp())
+        else:
+            t = int(pd.to_datetime(t_val).timestamp())
+        vol = float(row["tick_volume"]) if "tick_volume" in row and pd.notna(row["tick_volume"]) else 0.0
+        result.append({
+            "time": t,
+            "open": round(float(row["open"]), 5),
+            "high": round(float(row["high"]), 5),
+            "low": round(float(row["low"]), 5),
+            "close": round(float(row["close"]), 5),
+            "volume": vol
+        })
+    result.sort(key=lambda x: x["time"])
+    return result
+
+
+def get_position_flow_data(ticket: int, bars: int = 100, trading_client: Any = None) -> Optional[Dict[str, Any]]:
+    """Devuelve la posicion en vivo con sus niveles (Entry, SL, TP) y la serie de velas para el grafico de flujo."""
+    pos_data = None
+    try:
+        import MetaTrader5 as mt5
+        if mt5.initialize():
+            positions = mt5.positions_get(ticket=int(ticket))
+            if positions and len(positions) > 0:
+                p = positions[0]
+                pos_data = {
+                    "ticket": int(ticket),
+                    "symbol": str(p.symbol),
+                    "type": "BUY" if p.type == 0 else "SELL",
+                    "entry": float(p.price_open),
+                    "current_price": float(p.price_current),
+                    "sl": float(p.sl),
+                    "tp": float(p.tp),
+                    "profit": float(p.profit),
+                    "volume": float(p.volume),
+                    "time": datetime.fromtimestamp(p.time, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                }
+    except Exception as e:
+        logger.debug(f"[ChartHelper] MT5 query for ticket #{ticket} error: {e}")
+
+    if not pos_data:
+        try:
+            if trading_client is not None:
+                t_client = trading_client
+            else:
+                from services.clients.trading_client import get_trading_client
+                t_client = get_trading_client()
+            res = t_client.get_positions()
+            positions = res.get("positions", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+            for p in positions:
+                if int(p.get("ticket", 0)) == int(ticket):
+                    pos_data = {
+                        "ticket": int(ticket),
+                        "symbol": str(p.get("symbol", "EURUSD")),
+                        "type": str(p.get("type", "BUY")).upper(),
+                        "entry": float(p.get("open_price", 0.0)),
+                        "current_price": float(p.get("current_price", 0.0)),
+                        "sl": float(p.get("sl", 0.0)),
+                        "tp": float(p.get("tp", 0.0)),
+                        "profit": float(p.get("profit", 0.0)),
+                        "volume": float(p.get("volume", 0.0)),
+                        "time": str(p.get("time", ""))
+                    }
+                    break
+        except Exception as e:
+            logger.debug(f"[ChartHelper] TradingClient position query error: {e}")
+
+    if not pos_data:
+        return None
+
+    candles = get_candles_json(pos_data["symbol"], "H1", bars)
+    pos_data["candles"] = candles
+    return pos_data
+
+
+def get_signal_flow_data(signal_id: str, bars: int = 100, trading_client: Any = None) -> Optional[Dict[str, Any]]:
+    """Devuelve la senal con sus niveles y las velas de MT5."""
+    try:
+        t_client = trading_client
+        if not t_client:
+            from services.clients.trading_client import get_trading_client
+            t_client = get_trading_client()
+        res = t_client.get_signals()
+        signals = res if isinstance(res, list) else res.get("signals", [])
+        target_sig = None
+        for s in signals:
+            if str(s.get("id")) == str(signal_id):
+                target_sig = s
+                break
+
+        if not target_sig:
+            return None
+
+        sym = str(target_sig.get("symbol", "EURUSD"))
+        candles = get_candles_json(sym, "H1", bars)
+        return {
+            "id": str(target_sig.get("id")),
+            "symbol": sym,
+            "type": str(target_sig.get("type", "BUY")).upper(),
+            "entry": float(target_sig.get("entry", 0.0)),
+            "sl": float(target_sig.get("stopLoss", target_sig.get("sl", 0.0))),
+            "tp": float(target_sig.get("takeProfit", target_sig.get("tp", 0.0))),
+            "status": str(target_sig.get("status", "pending")),
+            "time": str(target_sig.get("timestamp", "")),
+            "candles": candles
+        }
+    except Exception as e:
+        logger.debug(f"[ChartHelper] Error getting signal flow: {e}")
+        return None

@@ -298,3 +298,40 @@ class TestDashboardServerApprovalProxy(unittest.TestCase):
             assert data["status"] == "REJECTED_MANUAL"
 
         self.mock_trading_client.reject_signal.assert_called_once_with(202)
+    def test_proxy_position_flow_endpoint(self):
+        """GET /api/positions/{ticket}/flow devuelve los datos de la posicion y sus velas."""
+        self.mock_trading_client.get_positions.return_value = {
+            "ok": True,
+            "positions": [
+                {
+                    "ticket": 55555,
+                    "symbol": "EURUSD",
+                    "type": "BUY",
+                    "open_price": 1.1050,
+                    "current_price": 1.1070,
+                    "sl": 1.1000,
+                    "tp": 1.1150,
+                    "profit": 20.0,
+                    "volume": 0.1
+                }
+            ]
+        }
+        req = urllib.request.Request(f"http://localhost:{self.port}/api/positions/55555/flow")
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["ok"] is True
+            assert data["flow"]["ticket"] == 55555
+            assert data["flow"]["symbol"] == "EURUSD"
+            assert "candles" in data["flow"]
+
+    def test_proxy_candles_endpoint(self):
+        """GET /api/candles/{symbol} devuelve la lista de velas JSON."""
+        req = urllib.request.Request(f"http://localhost:{self.port}/api/candles/EURUSD")
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["ok"] is True
+            assert data["symbol"] == "EURUSD"
+            assert "candles" in data
+
