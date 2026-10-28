@@ -6,7 +6,7 @@
 
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
-[![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.41-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/releases/download/v1.1.41/LastEdge-v1.1.41.apk)
+[![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.50-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/actions/runs/40590182509)
 [![Tests](https://img.shields.io/badge/Tests-37%2F37%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
@@ -29,19 +29,33 @@
 **LastEdge App** is the control plane and user-facing monitoring suite for the LastEdge quantitative platform. It provides real-time visibility and control into live trading positions, account metrics, risk telemetry, research experiments, and messaging alerts.
 
 ### Key Capabilities:
-- **Web Dashboard (Bento Grid 2.0)**: Modern, responsive glassmorphism dashboard running on port `8080` (`services/dashboard_server.py`) with real-time Chart.js equity tracking and educational financial tooltips.
-- **Mobile Native Application (React Native / Expo 54)**: Production-ready Android & iOS client featuring biometric authentication, 1-tap MT5 signal approval, live 1-second countdown tickers, and a 2-subtab Strategy Lab.
-- **Direct APK Release (`v1.1.41`)**: Instant downloadable release build signed with production keystore: [**`LastEdge-v1.1.41.apk`**](https://github.com/imlast999/lastedge-app/releases/download/v1.1.41/LastEdge-v1.1.41.apk).
+- **Web Dashboard (Bento Grid 2.0)**: Modern, responsive glassmorphism dashboard running on port `8080` (`services/dashboard_server.py`) with real-time Chart.js equity tracking, embedded TradingView Lightweight Charts, and educational financial tooltips.
+- **Mobile Native Application (React Native / Expo 54)**: Production-ready Android & iOS client featuring biometric authentication, 1-tap MT5 signal approval, live 1-second countdown tickers, and a 3-section Trades manager (`Abiertas`, `Por aceptar`, `Cerradas`).
+- **Direct APK Release**: Automated GitHub Actions workflow compiling signed release APKs: [**`LastEdge-v1.1.50.apk`**](https://github.com/imlast999/lastedge-app/actions/runs/40590182509).
+- **Confidence-Aware Signal Hub**: Coordinates with Trading Engine's multi-tier scoring matrix to route auto-executed trades (`HIGH`/`VERY_HIGH` $\ge 0.67$) directly to live positions, while holding discretionary setups (`MEDIUM` $0.60 - 0.66$) in the 1-click approval queue.
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
 - **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are temporarily offline.
 - **Messaging Adapters & Control Center**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`) with native command autocomplete (`setMyCommands`) in English and Spanish.
 - **Visual Technical Chart Engine**: TradingView-styled dark mode (`#090d16`) chart generator (`services/chart_helper.py`, `services/charts.py`) with 80 H1 candles, dynamic Y-axis scaling (+8% padding ensuring Entry, SL & TP are in frame), EMA50/EMA200, and shaded Risk/Reward zone boxes.
 - **Deep Linking & On-Demand Position Charts**: Direct bot triggers (`t.me/LastEdgeBot?start=chart_{ticket}`) and `/chart_{ticket}` commands for instant visual chart generation from open MT5 positions.
-- **Web Dashboard Chart Modals**: Interactive `📊 Chart` modal viewer directly inside the Bento Grid positions table powered by `/api/positions/{ticket}/chart`.
+- **Interactive Flow Modals**: Live Trade Flow modals inside the Bento Grid and Mobile App with real-time candle feeds, Entry/SL/TP horizontal overlays, and live tick polling.
 
 ---
 
-## 2. Ecosystem & Sister Repositories
+## 2. Signal Routing & Approval Workflow
+
+The App coordinates with the Trading Engine's deterministic 4-tier confidence scoring:
+
+| Signal Tier | Confluence Score | App UI Presentation | User / Bot Action |
+| :--- | :---: | :--- | :--- |
+| **`VERY_HIGH`** | **`0.85 – 1.00`** | **Active Positions Table** | Executed automatically in MT5. App displays live P&L, trailing stop, and interactive chart button. |
+| **`HIGH`** | **`0.67 – 0.84`** | **Active Positions Table** | Executed automatically in MT5 (optimized $\ge 0.67$ gate). Direct execution with zero latency. |
+| **`MEDIUM`** | **`0.60 – 0.66`** | **Pending Signals Queue** | Displays 10-minute TTL countdown timer. Trader reviews setup on candlestick chart and confirms via 1-tap `[Aprobar]`. |
+| **`LOW`** | **`< 0.60`** | **Filtered Out (Suppressed)** | Never displayed in UI or forwarded to notification channels. 100% noise suppression. |
+
+---
+
+## 3. Ecosystem & Sister Repositories
 
 LastEdge App sits at the presentation layer of the LastEdge ecosystem, connecting traders and researchers with the underlying engines:
 
@@ -55,17 +69,17 @@ If either backend engine is offline, LastEdge App continues serving user request
 
 ---
 
-## 3. Architecture & Directory Structure
+## 4. Architecture & Directory Structure
 
 ```text
 LastEdge App/
 ├── build_apk.bat                   # Windows CLI launcher for Android APK compilation
 ├── build_apk.py                    # Interactive Python build, diagnostic & ADB deployer
-├── dashboard/                      # Web Dashboard frontend (HTML, CSS, JS, Chart.js)
+├── dashboard/                      # Web Dashboard frontend (HTML, CSS, JS, Lightweight Charts)
 ├── mobile-app/                     # React Native / Expo mobile application
 │   └── artifacts/mobile/
 │       ├── app/                    # Expo Router tabs (index, trades, lab, settings)
-│       ├── components/             # Reusable UI components & PedagogicalPillarsSuite
+│       ├── components/             # TradeFlowModal, SignalCard, PedagogicalPillarsSuite
 │       ├── context/                # TradingContext, SettingsContext
 │       └── services/               # mobileApi, researchApi, notifications
 ├── services/
@@ -85,70 +99,23 @@ LastEdge App/
 
 ---
 
-## 4. Quick Start & Installation
-
-### Requirements:
-- Python 3.10+ (For Web Dashboard and Bot Adapters)
-- Node.js 20+ & PNPM 10 (Optional, for Mobile App development)
-
-### Step 1: Install Python Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Step 2: Configure Environment
-```bash
-cp .env.example .env
-```
-Default `.env` configuration:
-```ini
-APP_PORT=8080
-TRADING_ENGINE_URL=http://localhost:8081
-STRATEGY_LAB_URL=http://localhost:8082
-API_TIMEOUT_SECONDS=2.0
-```
-
-### Step 3: Start Web Dashboard Server
-```bash
-python -m services.dashboard_server 8080
-```
-Open your browser at `http://localhost:8080` to access the live dashboard.
-
-### Step 4: Run Mobile App (Local Dev) or Build APK
-```bash
-cd mobile-app
-pnpm install
-npx expo start
-```
-Or download the pre-compiled APK directly: [**`LastEdge-v1.1.41.apk`**](https://github.com/imlast999/lastedge-app/releases/download/v1.1.41/LastEdge-v1.1.41.apk).
-
----
-
 ## 5. Running Tests & Continuous Integration
 
 ```bash
-# Run all App tests locally
+# Run all LastEdge App tests locally
 python -m pytest tests/ -v
 ```
 Current test suite status: **37 / 37 passed (100% Green)**.
 
 ### CI / Continuous Integration:
 - **App & Control Plane CI**: Automated on every push and pull request via [GitHub Actions](.github/workflows/ci.yml).
-- **Build Android APK**: Automated workflow [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) compiles and signs production `.apk` releases on version tags.
-- **Degraded Mode & Fallbacks**: Tests verify that App and clients never crash when backends are offline.
+- **Build Android APK**: Automated workflow compiling release APK on mobile changes via [GitHub Actions](.github/workflows/build-apk.yml).
 
 ---
 
-## 6. Documentation Index
+## 6. Accessing the Dashboard
 
-For detailed guides, refer to [`docs/`](docs/):
-
-- 📐 [**Architecture**](docs/ARCHITECTURE.md): Control plane design, REST clients, and adapters.
-- 🛠️ [**Installation**](docs/INSTALLATION.md): Setup for Dashboard, Discord, Telegram, and Mobile.
-- ⚙️ [**Configuration**](docs/CONFIGURATION.md): `.env` parameters, backend URLs, and API tokens.
-- 📊 [**Web Dashboard**](docs/DASHBOARD.md): UI layout, real-time polling, and static asset serving.
-- 🔌 [**REST API**](docs/API.md): App proxy endpoints and health check schemas on port `8080`.
-- 🤖 [**Bots Integration**](docs/BOTS.md): Discord slash commands, Telegram polling adapter, and notifications.
-- 📱 [**Mobile App**](docs/MOBILE.md): React Native, Expo, build scripts, and tabs architecture.
-- 🔄 [**Service Connections & Degradation**](docs/SERVICE_CONNECTIONS.md): HTTP communication with backend engines and offline handling.
-- 🧪 [**Testing & CI/CD**](docs/TESTING.md): Unit tests, degradation matrix, and GitHub Actions specification.
+The dashboard can be accessed remotely via Tailscale:
+- **Direct Tailscale IP**: `http://100.78.35.94:8080`
+- **Tailscale Funnel (HTTPS)**: `https://vps-dev-eugenio.tail96b8f8.ts.net`
+- **Default System PIN**: `1623`
