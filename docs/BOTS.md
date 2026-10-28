@@ -39,8 +39,9 @@ Interacts via asynchronous Discord Slash Commands:
 Runs non-blocking async long polling with rich Markdown message formatting:
 
 ### Supported Commands:
-- `/start`, `/help` — Interactive help menu.
-- `/status` — Real-time engine and broker health.
+- `/start`, `/help` — Interactive help menu with operational buttons.
+- `/status` — Real-time engine and broker health, including active operational mode.
+- `/autonomous` (aliases: `/autonomo`, `/modo`, `/handsfree`) — View and toggle 100% Autonomous Hands-Free Mode vs. Hybrid Review Mode.
 - `/positions` — Formatted list of open trades with current PnL.
 - `/equity` — Account equity and margin utilization.
 - `/risk` — Portfolio risk and drawdown status.

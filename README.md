@@ -50,8 +50,15 @@ The App coordinates with the Trading Engine's deterministic 4-tier confidence sc
 | :--- | :---: | :--- | :--- |
 | **`VERY_HIGH`** | **`0.85 – 1.00`** | **Active Positions Table** | Executed automatically in MT5. App displays live P&L, trailing stop, and interactive chart button. |
 | **`HIGH`** | **`0.67 – 0.84`** | **Active Positions Table** | Executed automatically in MT5 (optimized $\ge 0.67$ gate). Direct execution with zero latency. |
-| **`MEDIUM`** | **`0.60 – 0.66`** | **Pending Signals Queue** | Displays 10-minute TTL countdown timer. Trader reviews setup on candlestick chart and confirms via 1-tap `[Aprobar]`. |
+| **`MEDIUM`** | **`0.60 – 0.66`** | **Pending Signals Queue** | Displays 10-minute TTL countdown timer in Hybrid Mode. Suppressed automatically when 100% Autonomous Mode is ON. |
 | **`LOW`** | **`< 0.60`** | **Filtered Out (Suppressed)** | Never displayed in UI or forwarded to notification channels. 100% noise suppression. |
+
+### 🤖 Autonomous Mode Control (Web, App & Telegram)
+
+The App provides real-time control over the Trading Engine's operational mode:
+- **Interactive Header Pill & Signal Toggle**: Toggle between `100% AUTÓNOMO` (green) and `MODO HÍBRIDO` (amber) with 1 click.
+- **Telegram Bot Integration**: Use `/autonomous` or inline menu buttons to toggle modes remotely.
+- **REST Gateway**: Proxies `GET /api/trading/autonomous-mode` and `POST /api/trading/autonomous-mode` directly to the Trading Engine with full state persistence.
 
 ---
 

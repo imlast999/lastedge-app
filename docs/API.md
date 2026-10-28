@@ -34,3 +34,9 @@
 ### 1.4 Research Experiments Proxy
 - **`GET /api/research/experiments`**
 - **Description**: Proxies request to Strategy Lab (`/api/research/experiments`). Returns empty list if offline.
+
+### 1.5 Autonomous Mode Proxy
+- **`GET /api/trading/autonomous-mode`** (or `/api/autonomous-mode`)
+  - **Description**: Returns current Autonomous Mode status proxied from Trading Engine.
+- **`POST /api/trading/autonomous-mode`** (or `/api/autonomous-mode`)
+  - **Description**: Sets or toggles Autonomous Mode. Payload: `{"mode": "toggle"}` or `{"enabled": true/false}`.
