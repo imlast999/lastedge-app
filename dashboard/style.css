@@ -1799,3 +1799,51 @@ kbd {
     font-family: var(--font-mono);
 }
 
+
+/* ── Autonomous Mode Modern Toggle Styles ──────────────────────────────── */
+.mode-toggle-pill {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+}
+.mode-toggle-pill.autonomous-on {
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #10B981 !important;
+}
+.mode-toggle-pill.autonomous-off {
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: #F59E0B !important;
+}
+.autonomous-switch-wrap:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+.custom-toggle-switch {
+    width: 32px;
+    height: 18px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.2);
+    position: relative;
+    transition: background 0.2s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.custom-toggle-switch.active {
+    background: #10B981;
+}
+.custom-toggle-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.custom-toggle-switch.active .custom-toggle-thumb {
+    transform: translateX(14px);
+}

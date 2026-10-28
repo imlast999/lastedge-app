@@ -623,6 +623,9 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
             elif path in ("/api/checklist", "/api/trading/checklist"):
                 self._send_json(200, trading_client.get_checklist())
 
+            elif path in ("/api/trading/autonomous-mode", "/api/autonomous-mode"):
+                self._send_json(200, trading_client.get_autonomous_mode())
+
             # ── Mobile App Dedicated Endpoints ────────────────────────────────
             elif path in ("/api/trades", "/api/trading/trades"):
                 trades_list = get_reconstructed_trades_from_mt5(14)
@@ -920,6 +923,12 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                 parts = path.split("/")
                 exp_id = parts[4] if path.startswith("/api/research/experiments/") else parts[3]
                 res = research_client.update_experiment(exp_id, body_data)
+                self._send_json(200 if res.get("ok") else 400, res)
+
+            elif path in ("/api/trading/autonomous-mode", "/api/autonomous-mode"):
+                enabled = body_data.get("enabled")
+                mode = body_data.get("mode")
+                res = trading_client.set_autonomous_mode(enabled=enabled, mode=mode)
                 self._send_json(200 if res.get("ok") else 400, res)
 
             elif path in ("/api/signals/approve", "/api/trading/signals/approve") or (path.startswith("/api/signals/") and path.endswith("/approve")):

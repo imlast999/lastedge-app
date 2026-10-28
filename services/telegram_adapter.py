@@ -40,6 +40,7 @@ I18N = {
         "btn_research": "🔬 Strategy Lab",
         "btn_health": "🩺 System Health",
         "btn_autosignals": "⚙️ AutoSignals",
+        "btn_autonomous": "🤖 Autonomous Mode",
         "btn_refresh": "🔄 Refresh Menu",
         "btn_toggle_lang": "🌐 Language: English 🇬🇧",
         "btn_back_menu": "⚡ Main Menu",
@@ -162,6 +163,7 @@ I18N = {
         "btn_research": "🔬 Strategy Lab",
         "btn_health": "🩺 Salud del Sistema",
         "btn_autosignals": "⚙️ AutoSignals",
+        "btn_autonomous": "🤖 Autonomous Mode",
         "btn_refresh": "🔄 Actualizar Menú",
         "btn_toggle_lang": "🌐 Idioma: Español 🇪🇸",
         "btn_back_menu": "⚡ Menú Principal",
@@ -359,6 +361,7 @@ class TelegramAdapter:
             {"command": "journal", "description": "30-day execution performance analytics"},
             {"command": "research", "description": "Strategy Lab experiment database"},
             {"command": "autosignals", "description": "Toggle automated signal execution"},
+            {"command": "autonomous", "description": "Toggle 100% Autonomous Hands-Free Mode"},
             {"command": "chart", "description": "Generate live technical chart for symbol"},
             {"command": "health", "description": "Technical infrastructure diagnostics"},
             {"command": "language", "description": "Toggle language (English / Espanol)"},
@@ -375,6 +378,7 @@ class TelegramAdapter:
             {"command": "journal", "description": "Metricas de ejecucion y rendimiento (30d)"},
             {"command": "research", "description": "Base de datos de estrategias Lab"},
             {"command": "autosignals", "description": "Conmutar ejecucion automatica de senales"},
+            {"command": "autonomous", "description": "Conmutar Modo 100% Autonomo / Manos Libres"},
             {"command": "chart", "description": "Generar grafico tecnico en vivo por simbolo"},
             {"command": "health", "description": "Diagnostico de salud tecnica"},
             {"command": "language", "description": "Cambiar idioma (English / Espanol)"},
@@ -614,6 +618,7 @@ class TelegramAdapter:
                     {"text": t["btn_autosignals"], "callback_data": "nav_autosignals"}
                 ],
                 [
+                    {"text": t.get("btn_autonomous", "🤖 Modo Autónomo"), "callback_data": "nav_autonomous"},
                     {"text": t["btn_toggle_lang"], "callback_data": "toggle_language"}
                 ],
                 [
@@ -651,6 +656,8 @@ class TelegramAdapter:
                 "news_indicator": "🟢 OK",
             }
 
+        auto_res = await asyncio.to_thread(self.trading_client.get_autonomous_mode)
+        auto_mode = auto_res.get("autonomous_mode", True)
         mt5_st = t["connected"] if st.get("mt5_connected") else t["disconnected"]
         cb = st.get("circuit_breaker", {})
         cb_st = t["active"] if cb.get("can_trade", True) else t["paused"]
@@ -670,6 +677,7 @@ class TelegramAdapter:
             f"{t['status_uptime']} `{st.get('uptime_formatted', '—')}`\n"
             f"{t['status_cb']} {cb_st} (×`{cb.get('risk_multiplier', 1.0):.1f}`)\n"
             f"{t['status_auto']} {'✅ Active' if st.get('autosignals_enabled') else '⏸ Disabled' if lang == 'en' else '✅ Activo' if st.get('autosignals_enabled') else '⏸ Desactivado'}\n"
+            f"• *Modo Operativo:* {'🟢 100% Autónomo (Manos Libres)' if auto_mode else '🟡 Híbrido (Manual)'}\n"
             f"{t['status_pairs']} `{', '.join(st.get('monitored_symbols', []))}`\n"
             f"{t['status_news']} {st.get('news_indicator', '🟢 OK')}\n"
             f"{CARD_LINE}\n"
@@ -1033,6 +1041,100 @@ class TelegramAdapter:
             await self._edit_message_text(session, chat_id, message_id, text, reply_markup=markup)
             return
 
+        elif data == "nav_autonomous":
+            if cq_id:
+                await self._answer_callback_query(session, cq_id)
+            res = await asyncio.to_thread(self.trading_client.get_autonomous_mode)
+            is_auto = res.get("autonomous_mode", True)
+            now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+            if lang == "en":
+                st_text = "🟢 100% AUTONOMOUS (Hands-Free)" if is_auto else "🟡 HYBRID MODE (Manual Review)"
+                desc = (
+                    "• *HIGH & VERY_HIGH (≥ 0.67):* Auto-executed instantly in MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* Auto-discarded (zero manual noise)."
+                    if is_auto else
+                    "• *HIGH & VERY_HIGH (≥ 0.67):* Auto-executed instantly in MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* Queued for manual approval in Dashboard & Telegram."
+                )
+                title = "🤖 *Institutional Autonomous Mode Control*"
+                btn_toggle = "🟡 Switch to Hybrid Mode" if is_auto else "🟢 Switch to 100% Autonomous"
+            else:
+                st_text = "🟢 100% AUTÓNOMO (Manos Libres)" if is_auto else "🟡 MODO HÍBRIDO (Revisión Manual)"
+                desc = (
+                    "• *HIGH y VERY_HIGH (≥ 0.67):* Auto-ejecución instantánea en MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* Descartadas automáticamente (sin ruido manual).\n"
+                    if is_auto else
+                    "• *HIGH y VERY_HIGH (≥ 0.67):* Auto-ejecución instantánea en MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* En espera de aprobación manual en Dashboard y Telegram.\n"
+                )
+                title = "🤖 *Control de Modo 100% Autónomo*"
+                btn_toggle = "🟡 Cambiar a Modo Híbrido" if is_auto else "🟢 Activar 100% Autónomo"
+
+            text = (
+                f"{title}\n"
+                f"{CARD_LINE}\n"
+                f"• *Estado:* {st_text}\n\n"
+                f"📋 *Reglas Operativas:*\n{desc}\n"
+                f"{CARD_LINE}\n"
+                f"⏰ _{t['updated']}: {now_str}_"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [{"text": btn_toggle, "callback_data": "toggle_autonomous_exec"}],
+                    [{"text": t["btn_back_menu"], "callback_data": "nav_start"}]
+                ]
+            }
+            await self._edit_message_text(session, chat_id, message_id, text, reply_markup=markup)
+            return
+
+        elif data == "toggle_autonomous_exec":
+            res = await asyncio.to_thread(self.trading_client.set_autonomous_mode, mode="toggle")
+            is_auto = res.get("autonomous_mode", True)
+            now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+            if lang == "en":
+                st_text = "🟢 100% AUTONOMOUS (Hands-Free)" if is_auto else "🟡 HYBRID MODE (Manual Review)"
+                desc = (
+                    "• *HIGH & VERY_HIGH (≥ 0.67):* Auto-executed instantly in MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* Auto-discarded (zero manual noise)."
+                    if is_auto else
+                    "• *HIGH & VERY_HIGH (≥ 0.67):* Auto-executed instantly in MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* Queued for manual approval in Dashboard & Telegram."
+                )
+                title = "🤖 *Institutional Autonomous Mode Control*"
+                btn_toggle = "🟡 Switch to Hybrid Mode" if is_auto else "🟢 Switch to 100% Autonomous"
+                toast = "Autonomous Mode: ACTIVE" if is_auto else "Hybrid Mode: ACTIVE"
+            else:
+                st_text = "🟢 100% AUTÓNOMO (Manos Libres)" if is_auto else "🟡 MODO HÍBRIDO (Revisión Manual)"
+                desc = (
+                    "• *HIGH y VERY_HIGH (≥ 0.67):* Auto-ejecución instantánea en MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* Descartadas automáticamente (sin ruido manual).\n"
+                    if is_auto else
+                    "• *HIGH y VERY_HIGH (≥ 0.67):* Auto-ejecución instantánea en MT5.\n"
+                    "• *MEDIUM (0.60 - 0.66):* En espera de aprobación manual en Dashboard y Telegram.\n"
+                )
+                title = "🤖 *Control de Modo 100% Autónomo*"
+                btn_toggle = "🟡 Cambiar a Modo Híbrido" if is_auto else "🟢 Activar 100% Autónomo"
+                toast = "Modo Autónomo: ACTIVADO" if is_auto else "Modo Híbrido: ACTIVADO"
+
+            text = (
+                f"{title}\n"
+                f"{CARD_LINE}\n"
+                f"• *Estado:* {st_text}\n\n"
+                f"📋 *Reglas Operativas:*\n{desc}\n"
+                f"{CARD_LINE}\n"
+                f"⏰ _{t['updated']}: {now_str}_"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [{"text": btn_toggle, "callback_data": "toggle_autonomous_exec"}],
+                    [{"text": t["btn_back_menu"], "callback_data": "nav_start"}]
+                ]
+            }
+            if cq_id:
+                await self._answer_callback_query(session, cq_id, toast)
+            await self._edit_message_text(session, chat_id, message_id, text, reply_markup=markup)
+            return
+
         elif data == "nav_autosignals":
             if cq_id:
                 await self._answer_callback_query(session, cq_id)
@@ -1218,6 +1320,7 @@ class TelegramAdapter:
                 "journal": "/journal", "diario": "/journal",
                 "research": "/research", "lab": "/research",
                 "autosignals": "/autosignals", "señales": "/autosignals", "signals": "/autosignals",
+                "autonomous": "/autonomous", "autonomo": "/autonomous", "modo": "/autonomous", "handsfree": "/autonomous",
                 "health": "/health", "salud": "/health",
                 "version": "/version",
                 "chart": "/chart", "grafico": "/chart",
@@ -1263,6 +1366,9 @@ class TelegramAdapter:
         elif command == "/autosignals":
             mode = args[0] if args else "status"
             await self._cmd_autosignals(session, chat_id, mode, lang=lang)
+        elif command in ("/autonomous", "/autonomo", "/modo", "/handsfree"):
+            mode = args[0] if args else "status"
+            await self._cmd_autonomous(session, chat_id, mode, lang=lang)
         elif command == "/health":
             await self._cmd_health(session, chat_id, lang=lang)
         elif command == "/version":
@@ -1336,6 +1442,60 @@ class TelegramAdapter:
             f"⏰ _{t['updated']}: {now_str}_"
         )
         markup = {"inline_keyboard": [[{"text": t["btn_back_menu"], "callback_data": "nav_start"}]]}
+        await self._send_response(session, chat_id, text, reply_markup=markup, lang=user_lang)
+
+    async def _cmd_autonomous(self, session: aiohttp.ClientSession, chat_id: int, mode: str, lang: Optional[str] = None):
+        user_lang = lang or self.get_lang(chat_id)
+        t = I18N[user_lang]
+        now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+
+        if mode in ("on", "enable", "1", "true"):
+            res = await asyncio.to_thread(self.trading_client.set_autonomous_mode, enabled=True)
+        elif mode in ("off", "disable", "0", "false"):
+            res = await asyncio.to_thread(self.trading_client.set_autonomous_mode, enabled=False)
+        elif mode == "toggle":
+            res = await asyncio.to_thread(self.trading_client.set_autonomous_mode, mode="toggle")
+        else:
+            res = await asyncio.to_thread(self.trading_client.get_autonomous_mode)
+
+        is_auto = res.get("autonomous_mode", True)
+        if user_lang == "en":
+            st_text = "🟢 100% AUTONOMOUS (Hands-Free)" if is_auto else "🟡 HYBRID MODE (Manual Review)"
+            desc = (
+                "• *HIGH & VERY_HIGH (≥ 0.67):* Auto-executed instantly in MT5.\n"
+                "• *MEDIUM (0.60 - 0.66):* Auto-discarded (zero manual noise)."
+                if is_auto else
+                "• *HIGH & VERY_HIGH (≥ 0.67):* Auto-executed instantly in MT5.\n"
+                "• *MEDIUM (0.60 - 0.66):* Queued for manual approval in Dashboard & Telegram."
+            )
+            title = "🤖 *Institutional Autonomous Mode Control*"
+            btn_toggle = "🟡 Switch to Hybrid Mode" if is_auto else "🟢 Switch to 100% Autonomous"
+        else:
+            st_text = "🟢 100% AUTÓNOMO (Manos Libres)" if is_auto else "🟡 MODO HÍBRIDO (Revisión Manual)"
+            desc = (
+                "• *HIGH y VERY_HIGH (≥ 0.67):* Auto-ejecución instantánea en MT5.\n"
+                "• *MEDIUM (0.60 - 0.66):* Descartadas automáticamente (sin ruido manual).\n"
+                if is_auto else
+                "• *HIGH y VERY_HIGH (≥ 0.67):* Auto-ejecución instantánea en MT5.\n"
+                "• *MEDIUM (0.60 - 0.66):* En espera de aprobación manual en Dashboard y Telegram.\n"
+            )
+            title = "🤖 *Control de Modo 100% Autónomo*"
+            btn_toggle = "🟡 Cambiar a Modo Híbrido" if is_auto else "🟢 Activar 100% Autónomo"
+
+        text = (
+            f"{title}\n"
+            f"{CARD_LINE}\n"
+            f"• *Estado Actual:* {st_text}\n\n"
+            f"📋 *Reglas Operativas:*\n{desc}\n"
+            f"{CARD_LINE}\n"
+            f"⏰ _{t['updated']}: {now_str}_"
+        )
+        markup = {
+            "inline_keyboard": [
+                [{"text": btn_toggle, "callback_data": "toggle_autonomous_exec"}],
+                [{"text": t["btn_back_menu"], "callback_data": "nav_start"}]
+            ]
+        }
         await self._send_response(session, chat_id, text, reply_markup=markup, lang=user_lang)
 
     async def _cmd_autosignals(self, session: aiohttp.ClientSession, chat_id: int, mode: str, lang: Optional[str] = None):

@@ -277,6 +277,11 @@
                             <span class="status-dot"></span>
                             <span id="badge-cb-text">CIRCUIT BREAKER: NORMAL</span>
                         </div>
+                        <div class="status-pill mode-toggle-pill autonomous-on" id="badge-autonomous" onclick="toggleAutonomousModeFromUI()" title="Clic para alternar entre Modo 100% Autónomo (Manos Libres) y Modo Híbrido" style="cursor: pointer;">
+                            <i class="fa-solid fa-robot" id="badge-autonomous-icon" style="color: #10B981; font-size: 11px;"></i>
+                            <span id="badge-autonomous-text">100% AUTÓNOMO</span>
+                            <span class="status-dot online" id="badge-autonomous-indicator" style="background-color: #10B981;"></span>
+                        </div>
                     </div>
 
                     <button class="header-action-btn" onclick="refreshDashboardData()" title="Sync data now">
@@ -403,7 +408,14 @@
                     <div class="card-title">
                         <i class="fa-solid fa-bolt"></i> Signal Stream & Decision Journal
                     </div>
-                    <div class="card-actions">
+                    <div class="card-actions" style="display: flex; align-items: center; gap: 12px;">
+                        <div class="autonomous-switch-wrap" onclick="toggleAutonomousModeFromUI()" title="Alternar Modo Autónomo vs Híbrido" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); padding: 5px 12px; border-radius: 20px; font-size: 12px; user-select: none;">
+                            <i class="fa-solid fa-robot" id="signals-auto-icon" style="color: #10B981;"></i>
+                            <span id="signals-auto-label" style="font-weight: 600; color: #10B981;">100% Autónomo (Activo)</span>
+                            <div class="custom-toggle-switch active" id="signals-auto-toggle">
+                                <div class="custom-toggle-thumb"></div>
+                            </div>
+                        </div>
                         <button class="btn-action btn-green" onclick="exportSignalsCSV()">
                             <i class="fa-solid fa-file-export"></i> Export CSV
                         </button>

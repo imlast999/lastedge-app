@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initBalanceEquityChart();
     fetchLiveDashboardData();
     fetchStrategyCatalog();
+    initAutonomousMode();
     pollingTimer = setInterval(fetchLiveDashboardData, 3000);
 });
 
@@ -3332,3 +3333,88 @@ function stopParticleSphereCanvas() {
 }
 
 
+
+/* ── Autonomous Mode Controller (Hands-Free vs Hybrid Gate) ─────────────── */
+let currentAutonomousMode = true;
+
+async function initAutonomousMode() {
+    try {
+        const res = await fetch('/api/trading/autonomous-mode');
+        if (res.ok) {
+            const data = await res.json();
+            currentAutonomousMode = !!data.autonomous_mode;
+            updateAutonomousModeUI(currentAutonomousMode);
+        }
+    } catch (e) {
+        console.debug('Error loading autonomous mode:', e);
+    }
+}
+
+function updateAutonomousModeUI(isAuto) {
+    currentAutonomousMode = isAuto;
+    const pill = document.getElementById('badge-autonomous');
+    const pillText = document.getElementById('badge-autonomous-text');
+    const pillIcon = document.getElementById('badge-autonomous-icon');
+    const pillDot = document.getElementById('badge-autonomous-indicator');
+
+    if (pill) {
+        pill.className = `status-pill mode-toggle-pill ${isAuto ? 'autonomous-on' : 'autonomous-off'}`;
+        if (pillText) pillText.textContent = isAuto ? '100% AUTÓNOMO' : 'MODO HÍBRIDO';
+        if (pillIcon) {
+            pillIcon.style.color = isAuto ? '#10B981' : '#F59E0B';
+            pillIcon.className = isAuto ? 'fa-solid fa-robot' : 'fa-solid fa-hand';
+        }
+        if (pillDot) {
+            pillDot.className = `status-dot ${isAuto ? 'online' : 'warning'}`;
+            pillDot.style.backgroundColor = isAuto ? '#10B981' : '#F59E0B';
+        }
+        pill.title = isAuto 
+            ? 'Modo 100% Autónomo ACTIVO (Manos Libres): Solo se ejecutan señales ≥ 0.67 directo en MT5. Clic para cambiar a Modo Híbrido.' 
+            : 'Modo Híbrido ACTIVO: Señales MEDIUM (0.60-0.66) quedan pendientes de aprobación manual. Clic para activar 100% Autónomo.';
+    }
+
+    const sigLabel = document.getElementById('signals-auto-label');
+    const sigIcon = document.getElementById('signals-auto-icon');
+    const sigToggle = document.getElementById('signals-auto-toggle');
+    if (sigLabel) {
+        sigLabel.textContent = isAuto ? '100% Autónomo (Activo)' : 'Modo Híbrido (Manual)';
+        sigLabel.style.color = isAuto ? '#10B981' : '#F59E0B';
+    }
+    if (sigIcon) {
+        sigIcon.className = isAuto ? 'fa-solid fa-robot' : 'fa-solid fa-hand';
+        sigIcon.style.color = isAuto ? '#10B981' : '#F59E0B';
+    }
+    if (sigToggle) {
+        if (isAuto) {
+            sigToggle.classList.add('active');
+        } else {
+            sigToggle.classList.remove('active');
+        }
+    }
+}
+
+async function toggleAutonomousModeFromUI(forcedVal) {
+    const nextVal = (typeof forcedVal === 'boolean') ? forcedVal : !currentAutonomousMode;
+    try {
+        const res = await fetch('/api/trading/autonomous-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: nextVal, mode: nextVal ? 'on' : 'off' })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const active = !!data.autonomous_mode;
+            updateAutonomousModeUI(active);
+            if (typeof showToastNotification === 'function') {
+                showToastNotification(
+                    active ? '🤖 Modo 100% Autónomo Activado' : '🟡 Modo Híbrido Activado',
+                    active ? 'Solo entran señales automáticas (≥ 0.67). Cero intervención manual requerida.' : 'Las señales MEDIUM requerirán aprobación manual.',
+                    active ? 'success' : 'warning'
+                );
+            }
+            refreshDashboardData();
+        }
+    } catch (e) {
+        console.error('Error toggling autonomous mode:', e);
+    }
+}

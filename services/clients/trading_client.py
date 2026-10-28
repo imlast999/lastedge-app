@@ -202,6 +202,22 @@ class TradingClient:
         """Toggles or queries AutoSignals state."""
         return self._post("/api/trading/autosignals", {"mode": mode})
 
+    def get_autonomous_mode(self) -> Dict[str, Any]:
+        """Gets current 100% Autonomous (Hands-Free) mode status."""
+        res = self._get("/api/trading/autonomous-mode")
+        if res.get("offline"):
+            return {"ok": False, "autonomous_mode": True, "offline": True}
+        return res
+
+    def set_autonomous_mode(self, enabled=None, mode=None) -> Dict[str, Any]:
+        """Sets or toggles 100% Autonomous mode on Trading Engine."""
+        payload = {}
+        if enabled is not None:
+            payload["enabled"] = bool(enabled)
+        if mode is not None:
+            payload["mode"] = mode
+        return self._post("/api/trading/autonomous-mode", payload)
+
     def get_equity_history(self, days: int = 30) -> Dict[str, Any]:
         """Gets real historical balance and equity curve data from Trading Engine."""
         res = self._get(f"/api/trading/equity/history?days={days}")
