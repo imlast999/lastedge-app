@@ -6,13 +6,18 @@ import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useSettings } from "@/context/SettingsContext";
 
 export default function TabLayout() {
   const colors = useColors();
+  const { settings } = useSettings();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+
+  const showTrading = settings.ecosystemModules?.tradingEngine !== false;
+  const showLab = settings.ecosystemModules?.strategyLab !== false;
 
   return (
     <Tabs
@@ -52,6 +57,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Dashboard",
+          href: showTrading ? undefined : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="chart.bar.fill" tintColor={color} size={22} />
@@ -64,6 +70,7 @@ export default function TabLayout() {
         name="trades"
         options={{
           title: "Trades",
+          href: showTrading ? undefined : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="chart.line.uptrend.xyaxis" tintColor={color} size={22} />
@@ -76,6 +83,7 @@ export default function TabLayout() {
         name="lab"
         options={{
           title: "Lab",
+          href: showLab ? undefined : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="flask.fill" tintColor={color} size={22} />

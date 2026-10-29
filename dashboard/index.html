@@ -144,7 +144,7 @@
             <div class="sidebar-nav-scroll">
                 
                 <!-- Group 1: Core -->
-                <div class="nav-group">
+                <div class="nav-group" id="nav-group-core">
                     <div class="nav-group-title">Core Trading</div>
                     <button class="nav-item active" id="nav-btn-overview" onclick="switchDashTab('overview')">
                         <div class="nav-item-left">
@@ -170,7 +170,7 @@
                 </div>
 
                 <!-- Group 2: Research -->
-                <div class="nav-group">
+                <div class="nav-group" id="nav-group-research">
                     <div class="nav-group-title">Quantitative Research</div>
                     <button class="nav-item" id="nav-btn-research" onclick="switchDashTab('research')">
                         <div class="nav-item-left">
@@ -208,6 +208,12 @@
 
             <!-- Bottom Sidebar Controls -->
             <div class="sidebar-bottom">
+                <button class="nav-item" onclick="openEcosystemSettingsModal()" title="Módulos del Ecosistema">
+                    <div class="nav-item-left">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Ecosistema</span>
+                    </div>
+                </button>
                 <button class="nav-item" onclick="refreshDashboardData()">
                     <div class="nav-item-left">
                         <i class="fa-solid fa-arrows-rotate" id="sidebar-refresh-icon"></i>
@@ -284,6 +290,9 @@
                         </div>
                     </div>
 
+                    <button class="header-action-btn" onclick="openEcosystemSettingsModal()" title="Configurar Módulos del Ecosistema">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
                     <button class="header-action-btn" onclick="refreshDashboardData()" title="Sync data now">
                         <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
                     </button>
@@ -1360,6 +1369,157 @@
         </main>
         </div><!-- .app-main -->
     </div><!-- #admin-dashboard .app-layout -->
+
+
+    <!-- ============================================================ -->
+    <!-- ECOSYSTEM ONBOARDING WIZARD MODAL (First Launch) -->
+    <!-- ============================================================ -->
+    <div id="ecosystem-onboarding-modal" class="ecosystem-modal-backdrop wip-hidden">
+        <div class="ecosystem-dialog" onclick="event.stopPropagation()">
+            <div class="ecosystem-dialog-header">
+                <div class="ecosystem-badge-tag">
+                    <i class="fa-solid fa-cubes"></i> ECOSISTEMA LASTEDGE
+                </div>
+                <h2 class="ecosystem-dialog-title">Configuración de Servicios Activos</h2>
+                <p class="ecosystem-dialog-desc">
+                    Esta app es parte del ecosistema <strong>LastEdge</strong>. Si no tienes alguno de estos servicios, esta app no tendrá ningún uso real.
+                    <br><br>
+                    <strong>¿Qué partes del ecosistema tienes activas?</strong>
+                </p>
+            </div>
+
+            <div class="ecosystem-cards-grid">
+                <!-- Card 1: Trading Engine -->
+                <div class="ecosystem-card selected" id="card-wizard-engine" onclick="toggleWizardModule('trading_engine')">
+                    <div class="ecosystem-card-header">
+                        <div class="ecosystem-card-icon engine-accent">
+                            <i class="fa-solid fa-bolt-lightning"></i>
+                        </div>
+                        <div class="ecosystem-card-checkbox" id="chk-wizard-engine">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="ecosystem-card-body">
+                        <div class="ecosystem-card-title">Trading Engine</div>
+                        <div class="ecosystem-card-port">Puerto 8081 &bull; MetaTrader 5</div>
+                        <p class="ecosystem-card-text">
+                            Ejecución autónoma o híbrida de órdenes en vivo en MT5, trailing stops en tiempo real, gestión de riesgo institucional, balance y posiciones abiertas.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Strategy Lab -->
+                <div class="ecosystem-card selected" id="card-wizard-lab" onclick="toggleWizardModule('strategy_lab')">
+                    <div class="ecosystem-card-header">
+                        <div class="ecosystem-card-icon lab-accent">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <div class="ecosystem-card-checkbox" id="chk-wizard-lab">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="ecosystem-card-body">
+                        <div class="ecosystem-card-title">Strategy Lab</div>
+                        <div class="ecosystem-card-port">Puerto 8082 &bull; Research Cuantitativo</div>
+                        <p class="ecosystem-card-text">
+                            Laboratorio cuantitativo, simulación vela a vela, stress test Monte Carlo de ruina, auditoría de 6 Pilares pedagógicos y análisis Walk-Forward.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="wizard-error-banner" class="ecosystem-error-banner wip-hidden">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Debes seleccionar como mínimo 1 servicio del ecosistema para continuar.</span>
+            </div>
+
+            <div class="ecosystem-dialog-footer">
+                <div class="ecosystem-footer-note">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <span>Podrás cambiar esta selección en cualquier momento desde Ajustes o el menú lateral.</span>
+                </div>
+                <button id="btn-wizard-submit" class="btn-ecosystem-confirm" onclick="confirmWizardEcosystem()">
+                    <i class="fa-solid fa-arrow-right"></i> Guardar y Entrar al Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ECOSYSTEM SETTINGS MODAL (Reconfiguration Anytime) -->
+    <!-- ============================================================ -->
+    <div id="ecosystem-settings-modal" class="ecosystem-modal-backdrop wip-hidden" onclick="handleEcosystemBackdropClick(event)">
+        <div class="ecosystem-dialog" onclick="event.stopPropagation()">
+            <div class="ecosystem-dialog-header">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="ecosystem-badge-tag">
+                        <i class="fa-solid fa-sliders"></i> AJUSTES DE ECOSISTEMA
+                    </div>
+                    <button class="modal-close-icon-btn" onclick="closeEcosystemSettingsModal()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <h2 class="ecosystem-dialog-title">Módulos Activos de LastEdge</h2>
+                <p class="ecosystem-dialog-desc">
+                    Selecciona qué componentes tienes instalados y operativos. La interfaz adaptará automáticamente sus pestañas y monitores sin mostrar alertas de servicios inactivos.
+                </p>
+            </div>
+
+            <div class="ecosystem-cards-grid">
+                <!-- Card 1: Trading Engine -->
+                <div class="ecosystem-card selected" id="card-settings-engine" onclick="toggleSettingsModule('trading_engine')">
+                    <div class="ecosystem-card-header">
+                        <div class="ecosystem-card-icon engine-accent">
+                            <i class="fa-solid fa-bolt-lightning"></i>
+                        </div>
+                        <div class="ecosystem-card-checkbox" id="chk-settings-engine">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="ecosystem-card-body">
+                        <div class="ecosystem-card-title">Trading Engine</div>
+                        <div class="ecosystem-card-port">Puerto 8081 &bull; MetaTrader 5</div>
+                        <p class="ecosystem-card-text">
+                            Activa las pestañas de Overview, Posiciones MT5, Señales y control de ejecución automática.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Strategy Lab -->
+                <div class="ecosystem-card selected" id="card-settings-lab" onclick="toggleSettingsModule('strategy_lab')">
+                    <div class="ecosystem-card-header">
+                        <div class="ecosystem-card-icon lab-accent">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <div class="ecosystem-card-checkbox" id="chk-settings-lab">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="ecosystem-card-body">
+                        <div class="ecosystem-card-title">Strategy Lab</div>
+                        <div class="ecosystem-card-port">Puerto 8082 &bull; Research Cuantitativo</div>
+                        <p class="ecosystem-card-text">
+                            Activa la pestaña de Strategy Lab, Backtest vela a vela, Monte Carlo y análisis de 6 Pilares.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings-error-banner" class="ecosystem-error-banner wip-hidden">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Debes mantener al menos 1 servicio activo para poder utilizar la aplicación.</span>
+            </div>
+
+            <div class="ecosystem-dialog-footer" style="justify-content: flex-end; gap: 12px;">
+                <button class="btn-ecosystem-cancel" onclick="closeEcosystemSettingsModal()">
+                    Cancelar
+                </button>
+                <button id="btn-settings-save" class="btn-ecosystem-confirm" onclick="saveEcosystemSettings()">
+                    <i class="fa-solid fa-check"></i> Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Command Palette Dialog (⌘K - from dashboard_new.tsx) -->
     <div id="command-palette-modal" class="command-modal-backdrop wip-hidden" onclick="handleCommandBackdropClick(event)">

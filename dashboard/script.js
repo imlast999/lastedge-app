@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuthLockScreen();
     initThemeSetting();
     initAppShell();
+    initEcosystemModules();
     initBentoOverview();
     initBentoPositions();
     initBalanceEquityChart();
@@ -254,22 +255,26 @@ function processDashboardData(data) {
     const cbCanTrade = isEngineOnline && risk.can_trade !== false && cbData.can_trade !== false;
     const cbTripped = isEngineOnline && (risk.can_trade === false || cbData.can_trade === false);
 
-    // 3. Global Outage Banner
+    // 3. Global Outage Banner (Respects Active Ecosystem Modules)
     const banner = document.getElementById('system-alert-banner');
     const bannerMsg = document.getElementById('system-alert-message');
     const outages = [];
 
-    if (!isEngineOnline) {
-        outages.push('<strong>Trading Engine (:8081) is offline</strong>');
-    } else if (!isMT5Connected) {
-        outages.push('<strong>MetaTrader 5 terminal is disconnected</strong> (Launch MT5 and log in to your broker)');
+    if (activeEcosystemModules.trading_engine) {
+        if (!isEngineOnline) {
+            outages.push('<strong>Trading Engine (:8081) is offline</strong>');
+        } else if (!isMT5Connected) {
+            outages.push('<strong>MetaTrader 5 terminal is disconnected</strong> (Launch MT5 and log in to your broker)');
+        }
     }
 
-    if (!isLabOnline) {
-        outages.push('<strong>Strategy Lab (:8082) is offline</strong>');
+    if (activeEcosystemModules.strategy_lab) {
+        if (!isLabOnline) {
+            outages.push('<strong>Strategy Lab (:8082) is offline</strong>');
+        }
     }
 
-    if (cbTripped) {
+    if (activeEcosystemModules.trading_engine && cbTripped) {
         outages.push('<strong>Circuit Breaker TRIPPED</strong> (Trading halted by risk safeguards)');
     }
 
@@ -516,6 +521,18 @@ function updateHeaderBadges(isEngineOnline, isLabOnline, isMT5Connected, cbCanTr
             badgeCBText.textContent = 'CIRCUIT BREAKER: TRIPPED';
             badgeCB.className = 'status-pill pill-red';
         }
+    }
+
+    // Enforce active ecosystem visibility rules
+    if (!activeEcosystemModules.trading_engine) {
+        if (badgeEngine) badgeEngine.style.display = 'none';
+        if (badgeMT5) badgeMT5.style.display = 'none';
+        if (badgeCB) badgeCB.style.display = 'none';
+        const badgeAuto = document.getElementById('badge-autonomous');
+        if (badgeAuto) badgeAuto.style.display = 'none';
+    }
+    if (!activeEcosystemModules.strategy_lab) {
+        if (badgeLab) badgeLab.style.display = 'none';
     }
 }
 
@@ -3416,5 +3433,250 @@ async function toggleAutonomousModeFromUI(forcedVal) {
         }
     } catch (e) {
         console.error('Error toggling autonomous mode:', e);
+    }
+}
+
+
+/* ==========================================================================
+   LastEdge Ecosystem Onboarding & Modular Configuration
+   ========================================================================== */
+
+const ECOSYSTEM_STORAGE_KEY = 'lastedge_ecosystem_modules';
+
+let activeEcosystemModules = {
+    trading_engine: true,
+    strategy_lab: true
+};
+
+let wizardSelectedModules = {
+    trading_engine: true,
+    strategy_lab: true
+};
+
+let settingsSelectedModules = {
+    trading_engine: true,
+    strategy_lab: true
+};
+
+function getStoredEcosystemModules() {
+    try {
+        const stored = localStorage.getItem(ECOSYSTEM_STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (typeof parsed === 'object' && parsed !== null) {
+                // Enforce invariant: at least 1 module must be enabled
+                const tEngine = parsed.trading_engine !== false;
+                const sLab = parsed.strategy_lab !== false;
+                if (!tEngine && !sLab) {
+                    return { trading_engine: true, strategy_lab: true };
+                }
+                return {
+                    trading_engine: tEngine,
+                    strategy_lab: sLab
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('Error reading ecosystem modules from storage:', e);
+    }
+    return null; // First launch indicator
+}
+
+function saveEcosystemModulesToStorage(modules) {
+    if (!modules.trading_engine && !modules.strategy_lab) {
+        console.error('Cannot save ecosystem: at least 1 module must be active');
+        return false;
+    }
+    try {
+        localStorage.setItem(ECOSYSTEM_STORAGE_KEY, JSON.stringify(modules));
+        activeEcosystemModules = { ...modules };
+        applyEcosystemModules(activeEcosystemModules);
+        return true;
+    } catch (e) {
+        console.error('Error saving ecosystem modules:', e);
+        return false;
+    }
+}
+
+function initEcosystemModules() {
+    const stored = getStoredEcosystemModules();
+    if (stored === null) {
+        wizardSelectedModules = { trading_engine: true, strategy_lab: true };
+        updateWizardUI();
+        const modal = document.getElementById('ecosystem-onboarding-modal');
+        if (modal) modal.classList.remove('wip-hidden');
+    } else {
+        activeEcosystemModules = stored;
+        applyEcosystemModules(activeEcosystemModules);
+    }
+}
+
+function toggleWizardModule(modKey) {
+    const next = !wizardSelectedModules[modKey];
+    const otherKey = modKey === 'trading_engine' ? 'strategy_lab' : 'trading_engine';
+    
+    // Check invariant: at least 1 must remain active
+    if (!next && !wizardSelectedModules[otherKey]) {
+        const banner = document.getElementById('wizard-error-banner');
+        if (banner) {
+            banner.classList.remove('wip-hidden');
+            banner.style.animation = 'none';
+            void banner.offsetWidth;
+            banner.style.animation = 'fadeIn 0.15s ease';
+        }
+        return;
+    }
+    
+    const banner = document.getElementById('wizard-error-banner');
+    if (banner) banner.classList.add('wip-hidden');
+    
+    wizardSelectedModules[modKey] = next;
+    updateWizardUI();
+}
+
+function updateWizardUI() {
+    const cardEngine = document.getElementById('card-wizard-engine');
+    const cardLab = document.getElementById('card-wizard-lab');
+    const btnSubmit = document.getElementById('btn-wizard-submit');
+    const banner = document.getElementById('wizard-error-banner');
+
+    if (cardEngine) {
+        if (wizardSelectedModules.trading_engine) cardEngine.classList.add('selected');
+        else cardEngine.classList.remove('selected');
+    }
+    if (cardLab) {
+        if (wizardSelectedModules.strategy_lab) cardLab.classList.add('selected');
+        else cardLab.classList.remove('selected');
+    }
+
+    const count = (wizardSelectedModules.trading_engine ? 1 : 0) + (wizardSelectedModules.strategy_lab ? 1 : 0);
+    if (btnSubmit) {
+        btnSubmit.disabled = (count < 1);
+    }
+    if (banner) {
+        if (count < 1) banner.classList.remove('wip-hidden');
+        else banner.classList.add('wip-hidden');
+    }
+}
+
+function confirmWizardEcosystem() {
+    const count = (wizardSelectedModules.trading_engine ? 1 : 0) + (wizardSelectedModules.strategy_lab ? 1 : 0);
+    if (count < 1) return;
+    
+    saveEcosystemModulesToStorage(wizardSelectedModules);
+    const modal = document.getElementById('ecosystem-onboarding-modal');
+    if (modal) modal.classList.add('wip-hidden');
+}
+
+function openEcosystemSettingsModal() {
+    settingsSelectedModules = { ...activeEcosystemModules };
+    updateSettingsUI();
+    const modal = document.getElementById('ecosystem-settings-modal');
+    if (modal) modal.classList.remove('wip-hidden');
+}
+
+function closeEcosystemSettingsModal() {
+    const modal = document.getElementById('ecosystem-settings-modal');
+    if (modal) modal.classList.add('wip-hidden');
+}
+
+function handleEcosystemBackdropClick(e) {
+    if (e.target && e.target.id === 'ecosystem-settings-modal') {
+        closeEcosystemSettingsModal();
+    }
+}
+
+function toggleSettingsModule(modKey) {
+    const next = !settingsSelectedModules[modKey];
+    const otherKey = modKey === 'trading_engine' ? 'strategy_lab' : 'trading_engine';
+    
+    if (!next && !settingsSelectedModules[otherKey]) {
+        const banner = document.getElementById('settings-error-banner');
+        if (banner) {
+            banner.classList.remove('wip-hidden');
+            banner.style.animation = 'none';
+            void banner.offsetWidth;
+            banner.style.animation = 'fadeIn 0.15s ease';
+        }
+        return;
+    }
+    
+    const banner = document.getElementById('settings-error-banner');
+    if (banner) banner.classList.add('wip-hidden');
+    
+    settingsSelectedModules[modKey] = next;
+    updateSettingsUI();
+}
+
+function updateSettingsUI() {
+    const cardEngine = document.getElementById('card-settings-engine');
+    const cardLab = document.getElementById('card-settings-lab');
+    const btnSave = document.getElementById('btn-settings-save');
+    const banner = document.getElementById('settings-error-banner');
+
+    if (cardEngine) {
+        if (settingsSelectedModules.trading_engine) cardEngine.classList.add('selected');
+        else cardEngine.classList.remove('selected');
+    }
+    if (cardLab) {
+        if (settingsSelectedModules.strategy_lab) cardLab.classList.add('selected');
+        else cardLab.classList.remove('selected');
+    }
+
+    const count = (settingsSelectedModules.trading_engine ? 1 : 0) + (settingsSelectedModules.strategy_lab ? 1 : 0);
+    if (btnSave) {
+        btnSave.disabled = (count < 1);
+    }
+    if (banner) {
+        if (count < 1) banner.classList.remove('wip-hidden');
+        else banner.classList.add('wip-hidden');
+    }
+}
+
+function saveEcosystemSettings() {
+    const count = (settingsSelectedModules.trading_engine ? 1 : 0) + (settingsSelectedModules.strategy_lab ? 1 : 0);
+    if (count < 1) return;
+
+    saveEcosystemModulesToStorage(settingsSelectedModules);
+    closeEcosystemSettingsModal();
+}
+
+function applyEcosystemModules(modules) {
+    const showEngine = modules.trading_engine !== false;
+    const showLab = modules.strategy_lab !== false;
+
+    // Sidebar navigation groups
+    const coreGroup = document.getElementById('nav-group-core');
+    const labGroup = document.getElementById('nav-group-research');
+    if (coreGroup) {
+        if (showEngine) coreGroup.classList.remove('wip-hidden');
+        else coreGroup.classList.add('wip-hidden');
+    }
+    if (labGroup) {
+        if (showLab) labGroup.classList.remove('wip-hidden');
+        else labGroup.classList.add('wip-hidden');
+    }
+
+    // Top status badges
+    const badgeEngine = document.getElementById('badge-engine');
+    const badgeMT5 = document.getElementById('badge-mt5');
+    const badgeLab = document.getElementById('badge-lab');
+    const badgeCB = document.getElementById('badge-cb');
+    const badgeAuto = document.getElementById('badge-autonomous');
+
+    if (badgeEngine) badgeEngine.style.display = showEngine ? 'inline-flex' : 'none';
+    if (badgeMT5) badgeMT5.style.display = showEngine ? 'inline-flex' : 'none';
+    if (badgeCB) badgeCB.style.display = showEngine ? 'inline-flex' : 'none';
+    if (badgeAuto) badgeAuto.style.display = showEngine ? 'inline-flex' : 'none';
+    if (badgeLab) badgeLab.style.display = showLab ? 'inline-flex' : 'none';
+
+    // Auto-switch tab if current active section belongs to a disabled module
+    const currentActiveSec = document.querySelector('.dash-content > div:not(.wip-hidden)');
+    const currentTab = currentActiveSec ? currentActiveSec.id.replace('tab-sec-', '') : '';
+    
+    if (!showEngine && (currentTab === 'overview' || currentTab === 'positions' || currentTab === 'signals')) {
+        switchDashTab('research');
+    } else if (!showLab && currentTab === 'research') {
+        switchDashTab('overview');
     }
 }

@@ -18,7 +18,7 @@ import { SettingsProvider } from "@/context/SettingsContext";
 import { TradingProvider } from "@/context/TradingContext";
 import { setupNotificationListeners } from "@/services/notifications";
 import { PinAuthModal } from "@/components/PinAuthModal";
-
+import { EcosystemOnboardingModal } from "@/components/EcosystemOnboardingModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -81,6 +81,7 @@ export default function RootLayout() {
                 <KeyboardProvider>
                   <RootLayoutNav />
                   <PinAuthModal />
+                  <EcosystemOnboardingModal />
                 </KeyboardProvider>
               </GestureHandlerRootView>
             </TradingProvider>

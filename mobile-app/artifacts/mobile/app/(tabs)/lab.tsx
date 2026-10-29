@@ -22,7 +22,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 
 import { useColors } from "@/hooks/useColors";
@@ -72,12 +72,16 @@ const FRIENDLY_STATUS_MAP: Record<string, { label: string; bg: string; text: str
 };
 
 export default function LabScreen() {
+  const { settings, apiOverrides } = useSettings();
+  if (settings.ecosystemModules && !settings.ecosystemModules.strategyLab && settings.ecosystemModules.tradingEngine) {
+    return <Redirect href="/" />;
+  }
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, language } = useTranslation();
   const isEs = language === "es";
-  const { settings, apiOverrides } = useSettings();
+  // settings resolved above
   const { currencySymbol } = useTrading();
 
   // Sub-Pestaña Activa

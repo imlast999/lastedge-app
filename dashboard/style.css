@@ -1847,3 +1847,273 @@ kbd {
 .custom-toggle-switch.active .custom-toggle-thumb {
     transform: translateX(14px);
 }
+
+
+/* ==========================================================================
+   Ecosystem Onboarding & Settings Modals
+   ========================================================================== */
+
+.ecosystem-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 20px;
+    animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ecosystem-dialog {
+    width: 100%;
+    max-width: 680px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-border);
+    border-radius: 16px;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ecosystem-dialog-header {
+    padding: 28px 32px 18px 32px;
+    border-bottom: 1px solid var(--border-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ecosystem-badge-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 4px 10px;
+    border-radius: 9999px;
+    width: fit-content;
+}
+
+.ecosystem-dialog-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-foreground);
+    margin: 4px 0 0 0;
+}
+
+.ecosystem-dialog-desc {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.ecosystem-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 24px 32px;
+}
+
+@media (max-width: 640px) {
+    .ecosystem-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ecosystem-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 2px solid var(--border-border);
+    border-radius: 12px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    user-select: none;
+}
+
+.ecosystem-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.ecosystem-card.selected {
+    border-color: var(--color-primary);
+    background: rgba(16, 185, 129, 0.06);
+    box-shadow: 0 4px 20px -2px rgba(16, 185, 129, 0.18);
+}
+
+.ecosystem-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ecosystem-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.ecosystem-card-icon.engine-accent {
+    background: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.ecosystem-card-icon.lab-accent {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.ecosystem-card-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 2px solid var(--border-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: transparent;
+    transition: all 0.15s ease;
+}
+
+.ecosystem-card.selected .ecosystem-card-checkbox {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #ffffff;
+}
+
+.ecosystem-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-foreground);
+    margin-bottom: 2px;
+}
+
+.ecosystem-card-port {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.ecosystem-card-text {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.ecosystem-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 32px 16px 32px;
+    padding: 10px 14px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 12.5px;
+    font-weight: 600;
+    animation: fadeIn 0.15s ease;
+}
+
+.ecosystem-dialog-footer {
+    padding: 18px 32px 24px 32px;
+    border-top: 1px solid var(--border-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.ecosystem-footer-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-subtle);
+    max-width: 320px;
+}
+
+.btn-ecosystem-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-primary);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-ecosystem-confirm:hover:not(:disabled) {
+    background: var(--color-primary-hover, #059669);
+    transform: translateY(-1px);
+}
+
+.btn-ecosystem-confirm:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-ecosystem-cancel {
+    background: transparent;
+    border: 1px solid var(--border-border);
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-ecosystem-cancel:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-foreground);
+}
+
+.modal-close-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-icon-btn:hover {
+    color: var(--text-foreground);
+    background: rgba(255, 255, 255, 0.05);
+}

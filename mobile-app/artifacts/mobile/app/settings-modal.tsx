@@ -57,7 +57,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { status, loading, refresh, lastSyncAt, usingMockData } = useTrading();
-  const { settings, updateSetting, resetSettings, apiOverrides } = useSettings();
+  const { settings, updateSetting, updateEcosystemModules, resetSettings, apiOverrides } = useSettings();
   const isEs = settings.language === "es";
 
   const [testing, setTesting] = useState(false);
@@ -280,6 +280,53 @@ export default function SettingsScreen() {
             outline
           />
         </View>
+      </SettingsSection>
+
+      {/* ── Ecosistema LastEdge ── */}
+      <SettingsSection title={isEs ? "Ecosistema LastEdge" : "LastEdge Ecosystem"}>
+        <SettingsToggle
+          icon="zap"
+          label="Trading Engine"
+          description={isEs ? "Ejecución MT5, posiciones, señales y riesgo (:8081)" : "MT5 execution, positions, signals & risk (:8081)"}
+          value={settings.ecosystemModules?.tradingEngine !== false}
+          onValueChange={(v) => {
+            if (!v && (!settings.ecosystemModules || !settings.ecosystemModules.strategyLab)) {
+              Alert.alert(
+                isEs ? "Ecosistema LastEdge" : "LastEdge Ecosystem",
+                isEs
+                  ? "Debes mantener al menos 1 servicio activo (Trading Engine o Strategy Lab) para que la app tenga utilidad."
+                  : "You must keep at least 1 service active (Trading Engine or Strategy Lab)."
+              );
+              return;
+            }
+            updateEcosystemModules({
+              tradingEngine: v,
+              strategyLab: settings.ecosystemModules?.strategyLab !== false,
+            });
+          }}
+        />
+        <SettingsToggle
+          icon="activity"
+          label="Strategy Lab"
+          description={isEs ? "Research cuantitativo, backtest vela a vela y 6 Pilares (:8082)" : "Quantitative research, backtesting & 6 Pillars (:8082)"}
+          value={settings.ecosystemModules?.strategyLab !== false}
+          onValueChange={(v) => {
+            if (!v && (!settings.ecosystemModules || !settings.ecosystemModules.tradingEngine)) {
+              Alert.alert(
+                isEs ? "Ecosistema LastEdge" : "LastEdge Ecosystem",
+                isEs
+                  ? "Debes mantener al menos 1 servicio activo (Trading Engine o Strategy Lab) para que la app tenga utilidad."
+                  : "You must keep at least 1 service active (Trading Engine or Strategy Lab)."
+              );
+              return;
+            }
+            updateEcosystemModules({
+              tradingEngine: settings.ecosystemModules?.tradingEngine !== false,
+              strategyLab: v,
+            });
+          }}
+          isLast
+        />
       </SettingsSection>
 
       {/* ── Actualización ── */}

@@ -98,11 +98,9 @@ interface TradingContextValue {
   usingMockData: boolean;
   acceptSignal: (id: string) => Promise<void>;
   rejectSignal: (id: string) => Promise<void>;
-  refresh: () => void;
+  refresh: () => Promise<void>;
   lastSyncAt: Date | null;
 }
-
-// ── API URL ───────────────────────────────────────────────────────────────────
 
 const TradingContext = createContext<TradingContextValue | null>(null);
 
@@ -110,6 +108,7 @@ const TradingContext = createContext<TradingContextValue | null>(null);
 
 export function TradingProvider({ children }: { children: React.ReactNode }) {
   const { settings, shouldNotify, apiOverrides } = useSettings();
+
   const [status, setStatus] = useState<BotStatus | null>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -120,35 +119,29 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const [usingMockData, setUsingMockData] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
 
+  // References to detect transitions for notifications
   const prevStatus = useRef<BotStatus | null>(null);
   const prevSignals = useRef<Signal[]>([]);
   const prevTrades = useRef<Trade[]>([]);
 
-  // Derived stats
-  const dailyPnL = trades
-    .filter((t) => new Date(t.closedAt).getTime() > Date.now() - 86400000)
-    .reduce((sum, t) => sum + t.profit, 0);
-  const totalTrades = trades.length;
-  const winningTrades = trades.filter((t) => t.profit > 0).length;
-  const winrate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
-  const openPositions = positions.length > 0 ? positions.length : signals.filter((s) => s.status === "active" || s.status === "executed").length;
-  const pendingSignals = signals.filter((s) => s.status === "pending").length;
-  const currencySymbol = (status?.currency || "USD").toUpperCase() === "EUR" ? "€" : "$";
-
-  // ── Fetch helpers ───────────────────────────────────────────────────────────
+  // ── Network fetch helper (single-attempt, propagates errors to trigger mock fallback)
 
   const safeFetch = useCallback(
-    async <T,>(path: string): Promise<T | null> => {
+    async <T,>(path: string): Promise<T> => {
       const { url: apiUrl, token: apiSecret } = resolveApiConfig(apiOverrides);
-      if (!apiUrl) return null;
-      const res = await fetch(`${apiUrl}${path}`, {
-        headers: apiSecret
-          ? {
-              Authorization: `Bearer ${apiSecret}`,
-              "X-Api-Key": apiSecret,
-            }
-          : {},
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      let res: Response;
+      try {
+        res = await fetch(`${apiUrl}${path}`, {
+          signal: controller.signal,
+          headers: apiSecret
+            ? { Authorization: `Bearer ${apiSecret}`, "X-Api-Key": apiSecret }
+            : {},
+        });
+      } finally {
+        clearTimeout(timer);
+      }
       if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
       return (await res.json()) as T;
     },
@@ -156,7 +149,14 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fetchAllData = useCallback(async () => {
-    const { url: apiUrl, token: apiSecret } = resolveApiConfig(apiOverrides);
+    // If trading engine is disabled in ecosystem modules, do not poll or set errors!
+    if (settings.ecosystemModules && !settings.ecosystemModules.tradingEngine) {
+      setLoading(false);
+      setApiError(null);
+      return;
+    }
+
+    const { url: apiUrl } = resolveApiConfig(apiOverrides);
     if (!apiUrl) {
       setApiError("EXPO_PUBLIC_API_URL no configurada — especifica la URL en Ajustes");
       setLoading(false);
@@ -226,7 +226,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             sendLocalNotification(
               "TRADE_CLOSE",
               `✅ Operación cerrada en ${trade.symbol}`,
-              `${trade.closeReason === "TAKE_PROFIT" ? "Take Profit 🎯" : "Stop Loss 🛡️"} (${sign}${currencySymbol}${trade.profit})`
+              `${trade.closeReason === "TAKE_PROFIT" ? "Take Profit 🎯" : "Stop Loss 🛡️"} (${sign}${trade.profit})`
             );
           }
         });
@@ -255,14 +255,19 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [safeFetch, status, shouldNotify, apiOverrides]);
+  }, [safeFetch, shouldNotify, apiOverrides, settings.ecosystemModules]);
 
   useEffect(() => {
+    if (settings.ecosystemModules && !settings.ecosystemModules.tradingEngine) {
+      setLoading(false);
+      setApiError(null);
+      return;
+    }
     fetchAllData();
     if (!settings.autoRefresh) return;
     const interval = setInterval(fetchAllData, settings.pollIntervalMs);
     return () => clearInterval(interval);
-  }, [fetchAllData, settings.autoRefresh, settings.pollIntervalMs, apiOverrides.url, apiOverrides.token]);
+  }, [fetchAllData, settings.autoRefresh, settings.pollIntervalMs, settings.ecosystemModules?.tradingEngine, apiOverrides.url, apiOverrides.token]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -284,11 +289,11 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         if (data.ok) {
           await fetchAllData();
         } else {
-          alert(`Error al ejecutar señal: ${data.message ?? "Desconocido"}`);
+          throw new Error(data.error ?? "Failed to accept signal");
         }
-      } catch (error) {
-        console.error("Error accepting signal:", error);
-        alert("Error de conexión al aceptar la señal.");
+      } catch (e) {
+        console.warn("Error accepting signal:", e);
+        throw e;
       } finally {
         setLoading(false);
       }
@@ -314,11 +319,11 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         if (data.ok) {
           await fetchAllData();
         } else {
-          alert("Error al rechazar la señal.");
+          throw new Error(data.error ?? "Failed to reject signal");
         }
-      } catch (error) {
-        console.error("Error rejecting signal:", error);
-        alert("Error de conexión al rechazar la señal.");
+      } catch (e) {
+        console.warn("Error rejecting signal:", e);
+        throw e;
       } finally {
         setLoading(false);
       }
@@ -329,33 +334,41 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     await fetchAllData();
-    setLoading(false);
   }, [fetchAllData]);
 
+  // ── Derived metrics ──────────────────────────────────────────────────────────
+
+  const dailyPnL = trades.reduce((sum, t) => sum + (t.profit || 0), 0);
+  const winrate =
+    trades.length > 0
+      ? (trades.filter((t) => t.profit > 0).length / trades.length) * 100
+      : 0;
+  const openPositions = positions.length;
+  const pendingSignals = signals.filter((s) => s.status === "pending").length;
+  const currencySymbol = status?.currency ? status.currency + " " : "$";
+
+  const value = {
+    status,
+    signals,
+    positions,
+    trades,
+    equityHistory,
+    dailyPnL,
+    winrate,
+    openPositions,
+    pendingSignals,
+    currencySymbol,
+    loading,
+    apiError,
+    usingMockData,
+    acceptSignal,
+    rejectSignal,
+    refresh,
+    lastSyncAt,
+  };
+
   return (
-    <TradingContext.Provider
-      value={{
-        status,
-        signals,
-        positions,
-        trades,
-        equityHistory,
-        dailyPnL,
-        winrate,
-        openPositions,
-        pendingSignals,
-        currencySymbol,
-        loading,
-        apiError,
-        usingMockData,
-        acceptSignal,
-        rejectSignal,
-        refresh,
-        lastSyncAt,
-      }}
-    >
-      {children}
-    </TradingContext.Provider>
+    <TradingContext.Provider value={value}>{children}</TradingContext.Provider>
   );
 }
 

@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
+import { useSettings } from "@/context/SettingsContext";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useTrading } from "@/context/TradingContext";
@@ -21,6 +22,10 @@ import RiskWidget from "@/components/RiskWidget";
 import { BrokerQualityWidget } from "@/components/BrokerQualityWidget";
 
 export default function DashboardScreen() {
+  const { settings } = useSettings();
+  if (settings.ecosystemModules && !settings.ecosystemModules.tradingEngine && settings.ecosystemModules.strategyLab) {
+    return <Redirect href="/lab" />;
+  }
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
