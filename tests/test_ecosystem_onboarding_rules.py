@@ -6,11 +6,11 @@ Enforces:
 3. Cross-version persistence keys and adaptive modular UI controls.
 """
 from pathlib import Path
-import re
 
 
 def test_web_dashboard_ecosystem_elements():
-    dash_dir = Path(r"C:\LastEdge\LastEdge App\dashboard")
+    repo_root = Path(__file__).resolve().parent.parent
+    dash_dir = repo_root / "dashboard"
     index_html = (dash_dir / "index.html").read_text(encoding="utf-8")
     style_css = (dash_dir / "style.css").read_text(encoding="utf-8")
     script_js = (dash_dir / "script.js").read_text(encoding="utf-8")
@@ -44,7 +44,8 @@ def test_web_dashboard_ecosystem_elements():
 
 
 def test_mobile_app_ecosystem_elements():
-    mobile_dir = Path(r"C:\LastEdge\LastEdge App\mobile-app\artifacts\mobile")
+    repo_root = Path(__file__).resolve().parent.parent
+    mobile_dir = repo_root / "mobile-app" / "artifacts" / "mobile"
     settings_ctx = (mobile_dir / "context" / "SettingsContext.tsx").read_text(encoding="utf-8")
     onboarding_modal = (mobile_dir / "components" / "EcosystemOnboardingModal.tsx").read_text(encoding="utf-8")
     tab_layout = (mobile_dir / "app" / "(tabs)" / "_layout.tsx").read_text(encoding="utf-8")
