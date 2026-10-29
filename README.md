@@ -6,7 +6,7 @@
 
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
-[![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.54-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/actions/runs/40590182509)
+[![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.55-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/actions/runs/40590182509)
 [![Tests](https://img.shields.io/badge/Tests-39%2F39%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
@@ -32,7 +32,7 @@
 - **Ecosystem Onboarding Wizard & Adaptive Modular UI**: Institutional setup dialog prompted on first launch (Web Dashboard & Mobile App) querying active ecosystem components (⚡ `Trading Engine`, 🧪 `Strategy Lab`). Strict validation enforces minimum 1 active module. The interface dynamically adapts navigation tabs and suppresses irrelevant offline alerts, persisting preferences across app updates via `localStorage` and `AsyncStorage` (`@lastedge_ecosystem_modules_v1`).
 - **Web Dashboard (Bento Grid 2.0)**: Modern, responsive glassmorphism dashboard running on port `8080` (`services/dashboard_server.py`) with real-time Chart.js equity tracking, embedded TradingView Lightweight Charts, and educational financial tooltips.
 - **Mobile Native Application (React Native / Expo 54)**: Production-ready Android & iOS client featuring biometric authentication, 1-tap MT5 signal approval, live 1-second countdown tickers, and a 3-section Trades manager (`Abiertas`, `Por aceptar`, `Cerradas`).
-- **Direct APK Release**: Automated GitHub Actions workflow compiling signed release APKs: [**`LastEdge-v1.1.54.apk`**](https://github.com/imlast999/lastedge-app/actions/runs/40590182509).
+- **Direct APK Release**: Automated GitHub Actions workflow compiling signed release APKs: [**`LastEdge-v1.1.55.apk`**](https://github.com/imlast999/lastedge-app/actions/runs/40590182509).
 - **Confidence-Aware Signal Hub**: Coordinates with Trading Engine's multi-tier scoring matrix to route auto-executed trades (`HIGH`/`VERY_HIGH` $\ge 0.67$) directly to live positions, while holding discretionary setups (`MEDIUM` $0.60 - 0.66$) in the 1-click approval queue.
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
 - **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are temporarily offline.
