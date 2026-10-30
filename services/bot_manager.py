@@ -22,12 +22,65 @@ import json
 import asyncio
 import logging
 import threading
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set
+import discord
 
 from services.clients.trading_client import get_trading_client
 from services.clients.research_client import get_research_client
 
 logger = logging.getLogger(__name__)
+
+
+class DiscordSignalView(discord.ui.View):
+    """Botones interactivos para aprobar o descartar señales directamente desde Discord."""
+
+    def __init__(self, signal_id: int, authorized_user_ids: Set[int], trading_client: Any, timeout: float = 3600.0):
+        super().__init__(timeout=timeout)
+        self.signal_id = signal_id
+        self.authorized_user_ids = authorized_user_ids
+        self.trading_client = trading_client
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not self.authorized_user_ids or interaction.user.id not in self.authorized_user_ids:
+            await interaction.response.send_message("⛔ Acceso denegado: No tienes permisos para operar con señales.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Aprobar", style=discord.ButtonStyle.success, emoji="✅")
+    async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        res = await asyncio.to_thread(self.trading_client.approve_signal, self.signal_id)
+        for child in self.children:
+            child.disabled = True
+        if interaction.message and interaction.message.embeds:
+            emb = interaction.message.embeds[0]
+            if res.get("ok"):
+                emb.title = f"🟢 SEÑAL #{self.signal_id} APROBADA Y EJECUTADA"
+                emb.color = 0x10b981
+                emb.set_footer(text=f"Aprobada en MT5 por @{interaction.user.display_name}")
+            else:
+                emb.title = f"⚠️ ERROR AL EJECUTAR #{self.signal_id}"
+                emb.color = 0xef4444
+                emb.set_footer(text=f"Fallo en ejecución: {res.get('message', 'Desconocido')}")
+            await interaction.message.edit(embed=emb, view=self)
+        if res.get("ok"):
+            await interaction.followup.send(f"✅ Señal #{self.signal_id} ejecutada en MT5 exitosamente.", ephemeral=True)
+        else:
+            await interaction.followup.send(f"❌ Error al ejecutar señal #{self.signal_id}: {res.get('message', 'Fallo')}", ephemeral=True)
+
+    @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.danger, emoji="❌")
+    async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        res = await asyncio.to_thread(self.trading_client.reject_signal, self.signal_id)
+        for child in self.children:
+            child.disabled = True
+        if interaction.message and interaction.message.embeds:
+            emb = interaction.message.embeds[0]
+            emb.title = f"🔴 SEÑAL #{self.signal_id} DESCARTADA"
+            emb.color = 0x6b7280
+            emb.set_footer(text=f"Descartada por @{interaction.user.display_name}")
+            await interaction.message.edit(embed=emb, view=self)
+        await interaction.followup.send(f"🗑️ Señal #{self.signal_id} descartada.", ephemeral=True)
 
 
 class BotManager:
@@ -38,7 +91,11 @@ class BotManager:
         self.discord_channel_id = os.getenv("DISCORD_CHANNEL_ID") or "1458605750392852530"
         self.telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
         self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
-        self.authorized_user_id = os.getenv("AUTHORIZED_USER_ID", "0")
+        auth_raw = os.getenv("AUTHORIZED_USER_IDS") or os.getenv("AUTHORIZED_USER_ID") or ""
+        self.authorized_user_ids: Set[int] = {
+            int(x.strip()) for x in auth_raw.split(",") if x.strip().isdigit() and int(x.strip()) != 0
+        }
+        self.authorized_user_id = str(next(iter(self.authorized_user_ids))) if self.authorized_user_ids else "0"
 
         self.trading_client = get_trading_client()
         self._notified_signals: set = set()
@@ -126,6 +183,7 @@ class BotManager:
 
                 config = {
                     "AUTHORIZED_USER_ID": int(self.authorized_user_id) if self.authorized_user_id.isdigit() else 0,
+                    "AUTHORIZED_USER_IDS": self.authorized_user_ids,
                     "DISCORD_CHANNEL_ID": self.discord_channel_id,
                     "GUILD_ID": os.getenv("GUILD_ID")
                 }
@@ -148,6 +206,20 @@ class BotManager:
                         await bot.tree.sync()
                     except Exception as sync_err:
                         logger.warning(f"Error sincronizando comandos Discord: {sync_err}")
+                    try:
+                        from services.notification_dispatcher import get_notification_dispatcher
+                        async def _discord_broadcast(text: str):
+                            try:
+                                cid = self.discord_channel_id or os.getenv("DISCORD_CHANNEL_ID")
+                                if cid and self.discord_bot:
+                                    ch = self.discord_bot.get_channel(int(cid)) or await self.discord_bot.fetch_channel(int(cid))
+                                    if ch:
+                                        await ch.send(text)
+                            except Exception as b_err:
+                                logger.error(f"[Discord Broadcast] Error enviando mensaje: {b_err}")
+                        get_notification_dispatcher().register_discord_handler(_discord_broadcast)
+                    except Exception as nd_err:
+                        logger.debug(f"[Discord Bot] No se pudo registrar broadcast handler: {nd_err}")
 
                 async def _run_discord():
                     try:
@@ -543,8 +615,13 @@ class BotManager:
                     embed.add_field(name="⚖️ R:R Ratio", value=f"1:{rr:.2f}", inline=True)
                     embed.add_field(name="⭐ Confidence", value=str(confidence), inline=True)
                     embed.add_field(name="⚙️ Strategy", value=str(strategy), inline=True)
-                    embed.set_footer(text="Aprobación requerida vía Dashboard")
-                    await channel.send(embed=embed)
+                    embed.set_footer(text="Acción autorizada solo para el usuario configurado")
+                    view = DiscordSignalView(
+                        signal_id=int(signal_id),
+                        authorized_user_ids=self.authorized_user_ids,
+                        trading_client=self.trading_client
+                    )
+                    await channel.send(embed=embed, view=view)
             except Exception as e:
                 logger.error(f"[Bot Manager] Error enviando alerta Discord: {e}")
 

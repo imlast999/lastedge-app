@@ -56,7 +56,12 @@ class TestDiscordCommandsService(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.svc._is_authorized(99999))
 
         svc_no_auth = CommandsService(bot=self.mock_bot, config={"AUTHORIZED_USER_ID": 0})
-        self.assertTrue(svc_no_auth._is_authorized(99999))
+        self.assertFalse(svc_no_auth._is_authorized(99999))
+
+        svc_multi = CommandsService(bot=self.mock_bot, config={"AUTHORIZED_USER_IDS": {12345, 67890}})
+        self.assertTrue(svc_multi._is_authorized(12345))
+        self.assertTrue(svc_multi._is_authorized(67890))
+        self.assertFalse(svc_multi._is_authorized(99999))
 
     def test_build_status_embed(self):
         """Verifies status embed creation."""
@@ -95,6 +100,41 @@ class TestDiscordCommandsService(unittest.IsolatedAsyncioTestCase):
         embed = self.svc._build_autosignals_embed(res)
         self.assertIn("Auto-Ejecución", embed.title)
         self.assertIn("ACTIVADA", embed.description)
+
+    def test_build_signals_embed(self):
+        """Verifies signals history embed creation."""
+        empty_embed = self.svc._build_signals_embed({"signals": []})
+        self.assertIn("No hay señales registradas", empty_embed.description)
+
+        data = {
+            "signals": [
+                {"id": "41", "symbol": "XAUUSD", "type": "SELL", "entry": 3950.0, "takeProfit": 3870.0, "stopLoss": 3980.0, "status": "open", "rrRatio": 2.5, "timestamp": "2026-10-30 13:00", "strategy": "xauusd_partial"}
+            ]
+        }
+        embed = self.svc._build_signals_embed(data)
+        self.assertIn("Últimas Señales", embed.title)
+        self.assertEqual(len(embed.fields), 1)
+        self.assertIn("XAUUSD", embed.fields[0].name)
+
+    def test_build_risk_embed_dynamic_currency(self):
+        """Verifies risk embed formatting and currency."""
+        res = {
+            "ok": True,
+            "can_trade": True,
+            "circuit_breaker": {"can_trade": True, "consecutive_losses": 0, "consecutive_wins": 0, "risk_multiplier": 1.0},
+            "open_positions_count": 1,
+            "total_exposure_lots": 0.01,
+            "total_floating_pnl": 15.50,
+            "margin_level_pct": 3500.0,
+            "portfolio_risk_pct": 0.5,
+            "max_portfolio_risk_pct": 3.0,
+            "remaining_capacity_pct": 2.5
+        }
+        embed = self.svc._build_risk_embed(res, currency="USD")
+        self.assertIn("Risk Engine v2", embed.title)
+        pnl_field = [f for f in embed.fields if f.name == "P&L Flotante Total"][0]
+        self.assertIn("+15.50 USD", pnl_field.value)
+        self.assertNotIn("€", pnl_field.value)
 
 
 if __name__ == "__main__":

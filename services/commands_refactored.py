@@ -9,9 +9,10 @@ Comandos Disponibles (vía /comando o !comando):
   /help           - Muestra la lista de comandos disponibles e instrucciones
   /status         - Estado unificado del bot, uptime, MT5, Circuit Breaker y noticias
   /positions      - Posiciones abiertas en MT5 con P&L flotante en vivo
-  /close_position - Cierra una posición por número de ticket (/close_position <ticket> o !close <ticket>)
+  /signals        - Historial de señales de trading recientes y estado de ejecución
+  /close_position - Cierra una posición con confirmación interactiva (/close_position <ticket>)
   /equity         - Balance, equity, margen y nivel de margen
-  /risk           - Telemetría de Risk Engine v2 y Circuit Breaker
+  /risk           - Telemetría de Risk Engine v2, salvaguardas de broker y Circuit Breaker
   /journal        - Métricas de calidad de ejecución (30 días)
   /research       - Ficha de la Research Database e investigaciones
   /autosignals    - Estado y control de auto-ejecución (on/off/status)
@@ -29,7 +30,7 @@ import sys
 import logging
 import asyncio
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, Set
 import discord
 from discord.ext import commands
 
@@ -37,6 +38,47 @@ from services.clients.trading_client import get_trading_client, TradingClient
 from services.clients.research_client import get_research_client, ResearchClient
 
 logger = logging.getLogger(__name__)
+
+
+# ── Interactive Discord UI Views ───────────────────────────────────────────────
+
+class ClosePositionConfirmView(discord.ui.View):
+    """Vista interactiva con botones para confirmar o cancelar el cierre forzado de una orden MT5."""
+
+    def __init__(self, ticket: int, authorized_user_ids: Set[int], trading_client: TradingClient, timeout: float = 60.0):
+        super().__init__(timeout=timeout)
+        self.ticket = ticket
+        self.authorized_user_ids = authorized_user_ids
+        self.trading_client = trading_client
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not self.authorized_user_ids or interaction.user.id not in self.authorized_user_ids:
+            await interaction.response.send_message("⛔ Acceso denegado: No tienes permisos para operar.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Confirmar Cierre", style=discord.ButtonStyle.danger, emoji="⚠️")
+    async def confirm_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        for child in self.children:
+            child.disabled = True
+        res = await asyncio.to_thread(self.trading_client.close_position, self.ticket)
+        if res.get("ok"):
+            msg = f"✅ Posición **#{self.ticket}** cerrada exitosamente en MT5 por @{interaction.user.display_name}."
+        else:
+            msg = f"❌ Error al cerrar posición #{self.ticket}: {res.get('message', 'Fallo en broker MT5')}"
+        if interaction.message:
+            await interaction.message.edit(content=msg, view=self)
+        else:
+            await interaction.followup.send(msg)
+
+    @discord.ui.button(label="Cancelar", style=discord.ButtonStyle.secondary, emoji="✖️")
+    async def cancel_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            child.disabled = True
+        if interaction.message:
+            await interaction.message.edit(content=f"Operación cancelada. La posición **#{self.ticket}** sigue abierta.", view=self)
+        await interaction.response.send_message("Cierre cancelado.", ephemeral=True)
 
 
 class CommandsService:
@@ -53,15 +95,37 @@ class CommandsService:
         self.bot = bot
         self.state = state
         self.config = config or {}
-        self.AUTHORIZED_USER_ID = self.config.get('AUTHORIZED_USER_ID', 0)
+
+        # Parse authorized user IDs (Fail-Safe: default to empty set -> deny all until configured)
+        raw_auth = self.config.get("AUTHORIZED_USER_IDS")
+        if isinstance(raw_auth, set):
+            self.authorized_user_ids: Set[int] = raw_auth
+        elif isinstance(raw_auth, (list, tuple)):
+            self.authorized_user_ids = {int(x) for x in raw_auth if str(x).isdigit() and int(x) != 0}
+        else:
+            single = self.config.get("AUTHORIZED_USER_ID", 0)
+            self.authorized_user_ids = {int(single)} if single and int(single) != 0 else set()
+
+        self.AUTHORIZED_USER_ID = next(iter(self.authorized_user_ids)) if self.authorized_user_ids else 0
         self.trading_client = trading_client or get_trading_client()
         self.research_client = research_client or get_research_client()
 
     def _is_authorized(self, user_id: int) -> bool:
-        """Verifica si el usuario está autorizado para operar el bot."""
-        if not self.AUTHORIZED_USER_ID or self.AUTHORIZED_USER_ID == 0:
-            return True
-        return user_id == self.AUTHORIZED_USER_ID
+        """Verifica si el usuario está autorizado para operar el bot (Fail-safe: denegado si no hay IDs)."""
+        if not self.authorized_user_ids:
+            logger.warning(f"[Discord Auth] Bloqueado intento de comando: no hay usuarios autorizados configurados (User ID: {user_id})")
+            return False
+        return int(user_id) in self.authorized_user_ids
+
+    def _get_account_currency(self) -> str:
+        """Obtiene la divisa de la cuenta de trading (USD, EUR, etc.) desde MT5."""
+        try:
+            eq = self.trading_client.get_equity()
+            if eq and eq.get("ok"):
+                return eq.get("equity", {}).get("currency", "USD")
+        except Exception:
+            pass
+        return "USD"
 
     def setup_commands(self):
         """Registra Slash Commands y Comandos de Texto tradicional (!comando)."""
@@ -94,14 +158,19 @@ class CommandsService:
         embed.set_footer(text=f"Servidor: {st.get('server') or 'FXLiveCapital-Server'}")
         return embed
 
-    def _build_positions_embed(self, pos_data: Dict[str, Any]) -> Tuple[Optional[discord.Embed], Optional[str]]:
+    def _build_positions_embed(self, pos_data: Dict[str, Any], currency: Optional[str] = None) -> Tuple[Optional[discord.Embed], Optional[str]]:
         positions = pos_data.get("positions", [])
         if not positions:
             return None, "ℹ️ No hay posiciones abiertas actualmente en MT5."
 
+        curr = currency or self._get_account_currency()
+        total_pnl = sum(p.get("profit", 0.0) for p in positions)
+        total_pnl_emoji = "🟢" if total_pnl >= 0 else "🔴"
+
         embed = discord.Embed(
             title=f"📊 Posiciones Abiertas en MT5 ({len(positions)})",
-            color=0x10b981,
+            description=f"**P&L Total Flotante:** {total_pnl_emoji} **{total_pnl:+.2f} {curr}**",
+            color=0x10b981 if total_pnl >= 0 else 0xef4444,
             timestamp=datetime.now(timezone.utc)
         )
         for p in positions:
@@ -109,7 +178,7 @@ class CommandsService:
             pnl_emoji = "🟢" if profit >= 0 else "🔴"
             val_str = (
                 f"Lotes: `{p.get('volume', 0.0):.2f}` | Entrada: `{p.get('open_price', 0.0):.5f}` | Actual: `{p.get('current_price', 0.0):.5f}`\n"
-                f"P&L: {pnl_emoji} **{profit:+.2f} €** | SL: `{p.get('sl') or '—'}` | TP: `{p.get('tp') or '—'}`"
+                f"P&L: {pnl_emoji} **{profit:+.2f} {curr}** | SL: `{p.get('sl') or '—'}` | TP: `{p.get('tp') or '—'}`"
             )
             embed.add_field(name=f"#{p.get('ticket')} — {p.get('symbol')} ({p.get('type')})", value=val_str, inline=False)
         return embed, None
@@ -121,7 +190,7 @@ class CommandsService:
 
         pnl = acc.get("floating_pnl", 0.0)
         pnl_emoji = "🟢" if pnl >= 0 else "🔴"
-        curr = acc.get("currency", "EUR")
+        curr = acc.get("currency", "USD")
 
         embed = discord.Embed(
             title="💰 Balance & Equity — MT5 Account",
@@ -137,23 +206,84 @@ class CommandsService:
         embed.set_footer(text=f"Cuenta: {acc.get('account', 'N/A')} | Apalancamiento: 1:{acc.get('leverage', 'N/A')}")
         return embed, None
 
-    def _build_risk_embed(self, res: Dict[str, Any]) -> discord.Embed:
-        metrics = res.get("metrics", {})
-        cb = metrics.get("circuit_breaker", {})
-        can_trade = cb.get("can_trade", True)
+    def _build_risk_embed(self, res: Dict[str, Any], currency: Optional[str] = None) -> discord.Embed:
+        curr = currency or self._get_account_currency()
+        cb = res.get("circuit_breaker", {})
+        can_trade = res.get("can_trade", cb.get("can_trade", True))
         status_str = "🟢 OPERATIVO" if can_trade else "🔴 PAUSADO (Circuit Breaker)"
 
         embed = discord.Embed(
             title="🛡️ Risk Engine v2 — Telemetría de Riesgo",
-            color=0xf59e0b if not can_trade else 0x10b981,
+            color=0x10b981 if can_trade else 0xef4444,
             timestamp=datetime.now(timezone.utc)
         )
         embed.add_field(name="Estado de Trading", value=f"**{status_str}**", inline=False)
         embed.add_field(name="Multiplicador de Riesgo", value=f"`×{cb.get('risk_multiplier', 1.0):.1f}`", inline=True)
-        embed.add_field(name="Rachas", value=f"Perdidas: `{cb.get('consecutive_losses', 0)}` | Ganadas: `{cb.get('consecutive_wins', 0)}`", inline=True)
-        embed.add_field(name="Posiciones Abiertas", value=f"`{metrics.get('open_positions_count', 0)}`", inline=True)
-        embed.add_field(name="P&L Flotante Total", value=f"**{metrics.get('total_profit', 0.0):+.2f} €**", inline=True)
-        embed.add_field(name="Win Rate", value=f"`{metrics.get('win_rate', 0.0):.1f}%`", inline=True)
+        embed.add_field(name="Rachas", value=f"Pérdidas: `{cb.get('consecutive_losses', 0)}` | Ganadas: `{cb.get('consecutive_wins', 0)}`", inline=True)
+
+        port_risk = res.get("portfolio_risk_pct", 0.0)
+        max_risk = res.get("max_portfolio_risk_pct", 3.0)
+        rem_cap = res.get("remaining_capacity_pct", max(0.0, max_risk - port_risk))
+        embed.add_field(name="Riesgo de Cartera", value=f"`{port_risk:.2f}%` / `{max_risk:.1f}%` (Libre: `{rem_cap:.2f}%`)", inline=True)
+
+        open_cnt = res.get("open_positions_count", 0)
+        exp_lots = res.get("total_exposure_lots", 0.0)
+        embed.add_field(name="Posiciones / Exposición", value=f"`{open_cnt}` abiertas (`{exp_lots:.2f}` lotes)", inline=True)
+
+        tot_pnl = res.get("total_floating_pnl", 0.0)
+        pnl_emoji = "🟢" if tot_pnl >= 0 else "🔴"
+        embed.add_field(name="P&L Flotante Total", value=f"{pnl_emoji} **{tot_pnl:+.2f} {curr}**", inline=True)
+
+        margin_lvl = res.get("margin_level", res.get("margin_level_pct", 0.0))
+        embed.add_field(name="Nivel de Margen", value=f"`{margin_lvl:.1f}%`", inline=True)
+        embed.add_field(name="Broker Safeguards", value="`Max Margen/Símbolo: 10%` | `Max Spread: 3.5 p`", inline=False)
+        embed.set_footer(text="LastEdge Risk Engine v2 — FXLiveCapital Server")
+        return embed
+
+    def _build_signals_embed(self, res: Dict[str, Any]) -> discord.Embed:
+        signals = res.get("signals", [])
+        if not signals:
+            return discord.Embed(
+                title="📡 Señales de Trading — Historial",
+                description="ℹ️ No hay señales registradas recientemente.",
+                color=0x3b82f6,
+                timestamp=datetime.now(timezone.utc)
+            )
+
+        embed = discord.Embed(
+            title=f"📡 Últimas Señales de Trading ({min(len(signals), 5)} mostradas)",
+            color=0x3b82f6,
+            timestamp=datetime.now(timezone.utc)
+        )
+        for s in signals[:5]:
+            status = str(s.get("status", "unknown")).lower()
+            if status == "open":
+                st_icon = "🟡 PENDIENTE"
+            elif status == "executed":
+                st_icon = "🟢 EJECUTADA"
+            elif status == "expired":
+                st_icon = "⚪ EXPIRADA"
+            else:
+                st_icon = f"🔴 {status.upper()}"
+
+            side = s.get("type", "BUY").upper()
+            side_icon = "🟢" if side == "BUY" else "🔴"
+            sym = s.get("symbol", "N/A")
+            sig_id = s.get("id", "—")
+            entry = s.get("entry", 0.0)
+            sl = s.get("stopLoss", 0.0)
+            tp = s.get("takeProfit", 0.0)
+            rr = s.get("rrRatio", 0.0)
+            strat = s.get("strategy", "N/A")
+            ts = s.get("timestamp", "")
+
+            val = (
+                f"**Estado:** {st_icon} | **Entrada:** `{entry}`\n"
+                f"**SL:** `{sl}` | **TP:** `{tp}` | **R:R:** `1:{rr:.2f}`\n"
+                f"**Estrategia:** `{strat}` | `{ts}`"
+            )
+            embed.add_field(name=f"#{sig_id} — {side_icon} {side} {sym}", value=val, inline=False)
+        embed.set_footer(text="Usa /positions para consultar operaciones vivas.")
         return embed
 
     def _build_journal_embed(self, res: Dict[str, Any], days: int) -> discord.Embed:
@@ -227,13 +357,14 @@ class CommandsService:
     def _build_help_embed(self) -> discord.Embed:
         embed = discord.Embed(
             title="🤖 LastEdge Discord Bot — Comandos Disponibles",
-            description="Puedes utilizar comandos tanto con slash (`/status`) como con prefijo tradicional (`!status`).",
+            description="Puedes utilizar comandos tanto con barra slash (`/status`) como con prefijo tradicional (`!status`).",
             color=0x3b82f6
         )
-        embed.add_field(name="📊 Operativa", value="`/status`, `/positions`, `/equity`, `/risk`, `/close_position <ticket>`", inline=False)
+        embed.add_field(name="📊 Operativa", value="`/status`, `/positions`, `/signals`, `/equity`, `/risk`, `/close_position <ticket>`", inline=False)
         embed.add_field(name="⚙️ Control y Señales", value="`/autosignals [on|off|status]`, `/journal [días]`, `/research`", inline=False)
         embed.add_field(name="🩺 Diagnóstico y Red", value="`/health`, `/version`, `/ping`, `/logs`, `/discord`", inline=False)
-        embed.set_footer(text="LastEdge Quantitative Trading Platform")
+        auth_preview = f"`{next(iter(self.authorized_user_ids))}`" if self.authorized_user_ids else "Ninguno"
+        embed.set_footer(text=f"LastEdge Quantitative Trading Platform • Usuario Autorizado: {auth_preview}")
         return embed
 
     # ── 1. Slash Commands Registration ────────────────────────────────────────
@@ -244,7 +375,7 @@ class CommandsService:
         @bot.tree.command(name="help", description="Muestra el menú de ayuda con todos los comandos disponibles.")
         async def slash_help(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=False)
             embed = self._build_help_embed()
@@ -253,7 +384,7 @@ class CommandsService:
         @bot.tree.command(name="status", description="Estado unificado del bot, uptime, MT5, Circuit Breaker y noticias.")
         async def slash_status(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
@@ -267,12 +398,13 @@ class CommandsService:
         @bot.tree.command(name="positions", description="Posiciones abiertas en tiempo real en MetaTrader 5.")
         async def slash_positions(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
                 pos_data = await asyncio.to_thread(self.trading_client.get_positions)
-                embed, err_msg = self._build_positions_embed(pos_data)
+                curr = await asyncio.to_thread(self._get_account_currency)
+                embed, err_msg = self._build_positions_embed(pos_data, currency=curr)
                 if embed:
                     await interaction.followup.send(embed=embed)
                 else:
@@ -281,25 +413,41 @@ class CommandsService:
                 logger.error(f"[Discord Slash] Error en positions: {e}")
                 await interaction.followup.send(f"⚠️ Error obteniendo posiciones: {e}")
 
+        @bot.tree.command(name="signals", description="Consulta las últimas señales de trading generadas y su estado.")
+        async def slash_signals(interaction: discord.Interaction):
+            if not self._is_authorized(interaction.user.id):
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
+                return
+            await interaction.response.defer(thinking=True)
+            try:
+                res = await asyncio.to_thread(self.trading_client.get_signals)
+                embed = self._build_signals_embed(res)
+                await interaction.followup.send(embed=embed)
+            except Exception as e:
+                logger.error(f"[Discord Slash] Error en signals: {e}")
+                await interaction.followup.send(f"⚠️ Error al consultar señales: {e}")
+
         @bot.tree.command(name="close_position", description="Cierra una posición abierta especificando su número de Ticket.")
         @discord.app_commands.describe(ticket="Número de ticket de la posición a cerrar")
         async def slash_close_position(interaction: discord.Interaction, ticket: int):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
-                res = await asyncio.to_thread(self.trading_client.close_position, ticket)
-                msg = f"✅ {res.get('message', 'Posición cerrada exitosamente')}" if res.get("ok") else f"❌ {res.get('message', 'Error al cerrar posición')}"
-                await interaction.followup.send(msg)
+                view = ClosePositionConfirmView(ticket, self.authorized_user_ids, self.trading_client)
+                await interaction.followup.send(
+                    f"⚠️ **Confirmación de Seguridad**\n¿Estás seguro de que deseas forzar el cierre de la posición **#{ticket}** en MT5?",
+                    view=view
+                )
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en close_position: {e}")
-                await interaction.followup.send(f"⚠️ Error al cerrar posición: {e}")
+                await interaction.followup.send(f"⚠️ Error al preparar cierre de posición: {e}")
 
         @bot.tree.command(name="equity", description="Balance, equity, margen y métricas de la cuenta MT5.")
         async def slash_equity(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
@@ -313,15 +461,16 @@ class CommandsService:
                 logger.error(f"[Discord Slash] Error en equity: {e}")
                 await interaction.followup.send(f"⚠️ Error al consultar equity: {e}")
 
-        @bot.tree.command(name="risk", description="Telemetría de Risk Engine v2 y estado del Circuit Breaker.")
+        @bot.tree.command(name="risk", description="Telemetría de Risk Engine v2, salvaguardas y estado del Circuit Breaker.")
         async def slash_risk(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
-                res = await asyncio.to_thread(self.trading_client.get_metrics)
-                embed = self._build_risk_embed(res)
+                res = await asyncio.to_thread(self.trading_client.get_risk)
+                curr = await asyncio.to_thread(self._get_account_currency)
+                embed = self._build_risk_embed(res, currency=curr)
                 await interaction.followup.send(embed=embed)
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en risk: {e}")
@@ -331,7 +480,7 @@ class CommandsService:
         @discord.app_commands.describe(days="Días de historial a evaluar (por defecto: 30)")
         async def slash_journal(interaction: discord.Interaction, days: int = 30):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
@@ -340,12 +489,12 @@ class CommandsService:
                 await interaction.followup.send(embed=embed)
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en journal: {e}")
-                await interaction.followup.send(f"⚠️ Error al consultar diario de trading: {e}")
+                await interaction.followup.send(f"⚠️ Error al consultar diario: {e}")
 
         @bot.tree.command(name="research", description="Resumen de la Research Database y experimentos.")
         async def slash_research(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
@@ -354,13 +503,13 @@ class CommandsService:
                 await interaction.followup.send(embed=embed)
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en research: {e}")
-                await interaction.followup.send(f"⚠️ Error al consultar Research Database: {e}")
+                await interaction.followup.send(f"⚠️ Error al consultar research: {e}")
 
         @bot.tree.command(name="autosignals", description="Consulta o cambia el estado de auto-ejecución de señales.")
         @discord.app_commands.describe(action="Acción: status, on, off")
         async def slash_autosignals(interaction: discord.Interaction, action: str = "status"):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
@@ -375,7 +524,7 @@ class CommandsService:
         @bot.tree.command(name="health", description="Diagnóstico técnico de salud e infraestructura de la plataforma.")
         async def slash_health(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=True)
             try:
@@ -385,16 +534,15 @@ class CommandsService:
                 await interaction.followup.send(embed=embed)
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en health: {e}")
-                await interaction.followup.send(f"⚠️ Error en health check: {e}")
+                await interaction.followup.send(f"⚠️ Error al diagnosticar salud: {e}")
 
         @bot.tree.command(name="version", description="Información de la versión desplegada y build.")
         async def slash_version(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
-            await interaction.response.defer(thinking=False)
             embed = self._build_version_embed()
-            await interaction.followup.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
         @bot.tree.command(name="ping", description="Comprueba la latencia del bot en Discord.")
         async def slash_ping(interaction: discord.Interaction):
@@ -404,7 +552,7 @@ class CommandsService:
         @bot.tree.command(name="logs", description="Muestra los últimos eventos o advertencias del log.")
         async def slash_logs(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=False)
             await interaction.followup.send("📋 Los logs del sistema se encuentran activos en `LastEdge App/logs/`.")
@@ -412,7 +560,7 @@ class CommandsService:
         @bot.tree.command(name="discord", description="Metadata técnica de registro y sincronización del bot en Discord.")
         async def slash_discord(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
-                await interaction.response.send_message("⛔ No autorizado", ephemeral=True)
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=False)
             app_id = self.bot.application_id or (self.bot.user.id if self.bot.user else "—")
@@ -436,7 +584,7 @@ class CommandsService:
         @bot.command(name="help", aliases=["ayuda"])
         async def cmd_help(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             embed = self._build_help_embed()
             await ctx.send(embed=embed)
@@ -444,7 +592,7 @@ class CommandsService:
         @bot.command(name="status", aliases=["estado"])
         async def cmd_status(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
@@ -458,12 +606,13 @@ class CommandsService:
         @bot.command(name="positions", aliases=["pos", "posiciones"])
         async def cmd_positions(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
                     pos_data = await asyncio.to_thread(self.trading_client.get_positions)
-                    embed, err_msg = self._build_positions_embed(pos_data)
+                    curr = await asyncio.to_thread(self._get_account_currency)
+                    embed, err_msg = self._build_positions_embed(pos_data, currency=curr)
                     if embed:
                         await ctx.send(embed=embed)
                     else:
@@ -472,24 +621,39 @@ class CommandsService:
                     logger.error(f"[Discord Prefix] Error en positions: {e}")
                     await ctx.send(f"⚠️ Error obteniendo posiciones: {e}")
 
-        @bot.command(name="close_position", aliases=["close", "cerrar"])
-        async def cmd_close_position(ctx, ticket: int):
+        @bot.command(name="signals", aliases=["senales"])
+        async def cmd_signals(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
-                    res = await asyncio.to_thread(self.trading_client.close_position, ticket)
-                    msg = f"✅ {res.get('message', 'Posición cerrada exitosamente')}" if res.get("ok") else f"❌ {res.get('message', 'Error al cerrar posición')}"
-                    await ctx.send(msg)
+                    res = await asyncio.to_thread(self.trading_client.get_signals)
+                    embed = self._build_signals_embed(res)
+                    await ctx.send(embed=embed)
                 except Exception as e:
-                    logger.error(f"[Discord Prefix] Error en close_position: {e}")
-                    await ctx.send(f"⚠️ Error al cerrar posición: {e}")
+                    logger.error(f"[Discord Prefix] Error en signals: {e}")
+                    await ctx.send(f"⚠️ Error al consultar señales: {e}")
+
+        @bot.command(name="close_position", aliases=["close", "cerrar"])
+        async def cmd_close_position(ctx, ticket: int):
+            if not self._is_authorized(ctx.author.id):
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
+                return
+            try:
+                view = ClosePositionConfirmView(ticket, self.authorized_user_ids, self.trading_client)
+                await ctx.send(
+                    f"⚠️ **Confirmación de Seguridad**\n¿Estás seguro de que deseas forzar el cierre de la posición **#{ticket}** en MT5?",
+                    view=view
+                )
+            except Exception as e:
+                logger.error(f"[Discord Prefix] Error en close_position: {e}")
+                await ctx.send(f"⚠️ Error al cerrar posición: {e}")
 
         @bot.command(name="equity", aliases=["balance", "cuenta"])
         async def cmd_equity(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
@@ -506,12 +670,13 @@ class CommandsService:
         @bot.command(name="risk", aliases=["riesgo"])
         async def cmd_risk(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
-                    res = await asyncio.to_thread(self.trading_client.get_metrics)
-                    embed = self._build_risk_embed(res)
+                    res = await asyncio.to_thread(self.trading_client.get_risk)
+                    curr = await asyncio.to_thread(self._get_account_currency)
+                    embed = self._build_risk_embed(res, currency=curr)
                     await ctx.send(embed=embed)
                 except Exception as e:
                     logger.error(f"[Discord Prefix] Error en risk: {e}")
@@ -520,7 +685,7 @@ class CommandsService:
         @bot.command(name="journal", aliases=["diario"])
         async def cmd_journal(ctx, days: int = 30):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
@@ -534,7 +699,7 @@ class CommandsService:
         @bot.command(name="research", aliases=["lab"])
         async def cmd_research(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
@@ -545,10 +710,10 @@ class CommandsService:
                     logger.error(f"[Discord Prefix] Error en research: {e}")
                     await ctx.send(f"⚠️ Error al consultar research: {e}")
 
-        @bot.command(name="autosignals", aliases=["senales", "signals"])
+        @bot.command(name="autosignals", aliases=["autosignal", "auto"])
         async def cmd_autosignals(ctx, action: str = "status"):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
@@ -563,7 +728,7 @@ class CommandsService:
         @bot.command(name="health", aliases=["salud"])
         async def cmd_health(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             async with ctx.typing():
                 try:
@@ -573,12 +738,12 @@ class CommandsService:
                     await ctx.send(embed=embed)
                 except Exception as e:
                     logger.error(f"[Discord Prefix] Error en health: {e}")
-                    await ctx.send(f"⚠️ Error en health check: {e}")
+                    await ctx.send(f"⚠️ Error al diagnosticar salud: {e}")
 
         @bot.command(name="version", aliases=["v"])
         async def cmd_version(ctx):
             if not self._is_authorized(ctx.author.id):
-                await ctx.send("⛔ No autorizado")
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
             embed = self._build_version_embed()
             await ctx.send(embed=embed)
