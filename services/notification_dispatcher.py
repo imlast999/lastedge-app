@@ -71,7 +71,8 @@ class NotificationDispatcher:
             tasks.append(_send_discord())
 
         # 2. Enviar a Telegram si están configuradas las credenciales
-        if self.telegram_token and self.telegram_chat_id:
+        tg_active = os.getenv("ACTIVATE_TELEGRAM_BOT", "on").lower() not in ("off", "0", "false", "no", "disabled")
+        if tg_active and self.telegram_token and self.telegram_chat_id:
             async def _send_telegram():
                 try:
                     url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"

@@ -83,10 +83,24 @@ class DiscordSignalView(discord.ui.View):
         await interaction.followup.send(f"🗑️ Señal #{self.signal_id} descartada.", ephemeral=True)
 
 
+def _parse_bot_switch(val: Optional[str], default: bool = True) -> bool:
+    """Parsea una variable de entorno ('on', 'off', 'true', 'false', etc.) a booleano."""
+    if val is None:
+        return default
+    v = str(val).strip().lower()
+    if v in ("off", "0", "false", "no", "disabled", "disable"):
+        return False
+    if v in ("on", "1", "true", "yes", "enabled", "enable"):
+        return True
+    return default
+
+
 class BotManager:
     """Manages background Discord and Telegram bot adapters."""
 
     def __init__(self):
+        self.activate_discord = _parse_bot_switch(os.getenv("ACTIVATE_DISCORD_BOT"), default=True)
+        self.activate_telegram = _parse_bot_switch(os.getenv("ACTIVATE_TELEGRAM_BOT"), default=True)
         self.discord_token = os.getenv("DISCORD_BOT_TOKEN") or os.getenv("DISCORD_TOKEN")
         self.discord_channel_id = os.getenv("DISCORD_CHANNEL_ID") or "1458605750392852530"
         self.telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -137,10 +151,21 @@ class BotManager:
         except Exception as e:
             logger.debug(f"[Bot Manager] Error guardando mensajes pendientes: {e}")
 
+    def is_discord_enabled(self) -> bool:
+        """Indica si Discord Bot está activado por switch Y configurado con token."""
+        return self.activate_discord and bool(self.discord_token and len(self.discord_token.strip()) > 10)
+
+    def is_telegram_enabled(self) -> bool:
+        """Indica si Telegram Bot está activado por switch Y configurado con token."""
+        return self.activate_telegram and bool(self.telegram_token and len(self.telegram_token.strip()) > 10)
+
     def is_any_bot_configured(self) -> bool:
-        has_discord = bool(self.discord_token and len(self.discord_token.strip()) > 10)
-        has_telegram = bool(self.telegram_token and len(self.telegram_token.strip()) > 10)
-        return has_discord or has_telegram
+        return self.is_discord_enabled() or self.is_telegram_enabled()
+
+
+
+
+
 
     def start(self):
         """Starts configured bots in a dedicated daemon thread with its own asyncio loop."""
@@ -148,7 +173,10 @@ class BotManager:
             return
 
         if not self.is_any_bot_configured():
-            logger.info("ℹ️ [Bot Manager] Bots en Standby (DISCORD_BOT_TOKEN / TELEGRAM_BOT_TOKEN no configurados)")
+            if not self.activate_discord and not self.activate_telegram:
+                logger.info("ℹ️ [Bot Manager] Ambos bots desactivados por configuración (ACTIVATE_DISCORD_BOT=off, ACTIVATE_TELEGRAM_BOT=off)")
+            else:
+                logger.info("ℹ️ [Bot Manager] Bots en Standby (tokens no configurados o bots desactivados)")
             return
 
         self.is_running = True
@@ -166,7 +194,7 @@ class BotManager:
         tasks.append(self._run_signals_watcher())
 
         # 1. Setup Discord Bot
-        if self.discord_token and len(self.discord_token.strip()) > 10:
+        if self.is_discord_enabled():
             try:
                 import discord
                 from discord.ext import commands
@@ -261,9 +289,11 @@ class BotManager:
                 tasks.append(_run_discord())
             except Exception as e:
                 logger.error(f"❌ [Discord Bot] Error inicializando adaptador: {e}")
+        elif not self.activate_discord:
+            logger.info("⏸️ [Discord Bot] Desactivado por configuración (ACTIVATE_DISCORD_BOT=off)")
 
         # 2. Setup Telegram Bot
-        if self.telegram_token and len(self.telegram_token.strip()) > 10:
+        if self.is_telegram_enabled():
             try:
                 from services.telegram_adapter import TelegramAdapter
                 adapter = TelegramAdapter(
@@ -288,6 +318,8 @@ class BotManager:
                 tasks.append(_run_telegram())
             except Exception as e:
                 logger.error(f"❌ [Telegram Bot] Error inicializando adaptador: {e}")
+        elif not self.activate_telegram:
+            logger.info("⏸️ [Telegram Bot] Desactivado por configuración (ACTIVATE_TELEGRAM_BOT=off)")
 
         if tasks:
             try:
@@ -399,12 +431,16 @@ class BotManager:
     def get_status(self) -> Dict[str, Any]:
         return {
             "discord": {
+                "active": self.activate_discord,
                 "configured": bool(self.discord_token and len(self.discord_token.strip()) > 10),
+                "enabled": self.is_discord_enabled(),
                 "connected": self._discord_connected,
                 "bot_user": str(self.discord_bot.user) if (self.discord_bot and self.discord_bot.user) else None
             },
             "telegram": {
+                "active": self.activate_telegram,
                 "configured": bool(self.telegram_token and len(self.telegram_token.strip()) > 10),
+                "enabled": self.is_telegram_enabled(),
                 "running": self._telegram_running
             }
         }
@@ -482,7 +518,7 @@ class BotManager:
         signal_id = signal_data.get("id") or signal_data.get("signal_id", "0")
 
         # 1. Telegram
-        if self.telegram_token and self.telegram_chat_id:
+        if self.is_telegram_enabled() and self.telegram_chat_id:
             try:
                 import aiohttp
                 from services.telegram_adapter import get_chat_language
@@ -594,7 +630,7 @@ class BotManager:
 
         # 2. Discord
         discord_cid = self.discord_channel_id or os.getenv("DISCORD_CHANNEL_ID") or "1458605750392852530"
-        if self.discord_bot and self._discord_connected and discord_cid:
+        if self.is_discord_enabled() and self.discord_bot and self._discord_connected and discord_cid:
             try:
                 import discord
                 channel = self.discord_bot.get_channel(int(discord_cid))

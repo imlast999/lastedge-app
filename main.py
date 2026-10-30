@@ -56,8 +56,20 @@ def main():
     bot_mgr = start_bot_manager()
     status_bots = bot_mgr.get_status()
 
-    discord_st = "🟢 Conectando..." if status_bots["discord"]["configured"] else "⚪ Standby (DISCORD_BOT_TOKEN no configurado)"
-    telegram_st = "🟢 Conectando..." if status_bots["telegram"]["configured"] else "⚪ Standby (TELEGRAM_BOT_TOKEN no configurado)"
+    disc_info = status_bots.get("discord", {})
+    if not disc_info.get("active", True):
+        discord_st = "⏸️ Desactivado (ACTIVATE_DISCORD_BOT=off)"
+    elif disc_info.get("configured"):
+        discord_st = "🟢 Conectando..."
+    else:
+        discord_st = "⚪ Standby (DISCORD_BOT_TOKEN no configurado)"
+    tg_info = status_bots.get("telegram", {})
+    if not tg_info.get("active", True):
+        telegram_st = "⏸️ Desactivado (ACTIVATE_TELEGRAM_BOT=off)"
+    elif tg_info.get("configured"):
+        telegram_st = "🟢 Conectando..."
+    else:
+        telegram_st = "⚪ Standby (TELEGRAM_BOT_TOKEN no configurado)"
 
     print(f"🤖 Discord Bot:            {discord_st}")
     print(f"✈️  Telegram Bot:           {telegram_st}")
