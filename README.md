@@ -7,12 +7,12 @@
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
 [![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.55-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/actions/runs/40590182509)
-[![Tests](https://img.shields.io/badge/Tests-39%2F39%20Passed-success)](https://github.com/imlast999/lastedge-app)
+[![Tests](https://img.shields.io/badge/Tests-43%2F43%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
-> **Tests:** 39 / 39 Passed (100% Green)  
+> **Tests:** 43 / 43 Passed (100% Green)  
 
 </div>
 
@@ -36,7 +36,7 @@
 - **Confidence-Aware Signal Hub**: Coordinates with Trading Engine's multi-tier scoring matrix to route auto-executed trades (`HIGH`/`VERY_HIGH` $\ge 0.67$) directly to live positions, while holding discretionary setups (`MEDIUM` $0.60 - 0.66$) in the 1-click approval queue.
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
 - **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are temporarily offline.
-- **Messaging Adapters & Control Center**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`) with native command autocomplete (`setMyCommands`) in English and Spanish.
+- **Messaging Adapters & Granular Bot Controls**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`) with independent `.env` switches (`ACTIVATE_DISCORD_BOT=on|off`, `ACTIVATE_TELEGRAM_BOT=on|off`), fail-safe security whitelist, dynamic currency detection, and interactive UI views for signal approvals.
 - **Visual Technical Chart Engine**: TradingView-styled dark mode (`#090d16`) chart generator (`services/chart_helper.py`, `services/charts.py`) with 80 H1 candles, dynamic Y-axis scaling (+8% padding ensuring Entry, SL & TP are in frame), EMA50/EMA200, and shaded Risk/Reward zone boxes.
 - **Deep Linking & On-Demand Position Charts**: Direct bot triggers (`t.me/LastEdgeBot?start=chart_{ticket}`) and `/chart_{ticket}` commands for instant visual chart generation from open MT5 positions.
 - **Interactive Flow Modals**: Live Trade Flow modals inside the Bento Grid and Mobile App with real-time candle feeds, Entry/SL/TP horizontal overlays, and live tick polling.
@@ -113,7 +113,7 @@ LastEdge App/
 # Run all LastEdge App tests locally
 python -m pytest tests/ -v
 ```
-Current test suite status: **37 / 37 passed (100% Green)**.
+Current test suite status: **43 / 43 passed (100% Green)**.
 
 ### CI / Continuous Integration:
 - **App & Control Plane CI**: Automated on every push and pull request via [GitHub Actions](.github/workflows/ci.yml).
