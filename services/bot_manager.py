@@ -42,11 +42,11 @@ class DiscordSignalView(discord.ui.View):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not self.authorized_user_ids or interaction.user.id not in self.authorized_user_ids:
-            await interaction.response.send_message("⛔ Acceso denegado: No tienes permisos para operar con señales.", ephemeral=True)
+            await interaction.response.send_message("⛔ Access denied: You do not have permissions to manage signals.", ephemeral=True)
             return False
         return True
 
-    @discord.ui.button(label="Aprobar", style=discord.ButtonStyle.success, emoji="✅")
+    @discord.ui.button(label="Approve & Execute", style=discord.ButtonStyle.success, emoji="✅")
     async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         res = await asyncio.to_thread(self.trading_client.approve_signal, self.signal_id)
@@ -55,20 +55,20 @@ class DiscordSignalView(discord.ui.View):
         if interaction.message and interaction.message.embeds:
             emb = interaction.message.embeds[0]
             if res.get("ok"):
-                emb.title = f"🟢 SEÑAL #{self.signal_id} APROBADA Y EJECUTADA"
+                emb.title = f"🟢 SIGNAL #{self.signal_id} APPROVED & EXECUTED"
                 emb.color = 0x10b981
-                emb.set_footer(text=f"Aprobada en MT5 por @{interaction.user.display_name}")
+                emb.set_footer(text=f"Approved in MT5 by @{interaction.user.display_name}")
             else:
-                emb.title = f"⚠️ ERROR AL EJECUTAR #{self.signal_id}"
+                emb.title = f"⚠️ EXECUTION FAILED #{self.signal_id}"
                 emb.color = 0xef4444
-                emb.set_footer(text=f"Fallo en ejecución: {res.get('message', 'Desconocido')}")
+                emb.set_footer(text=f"Execution error: {res.get('message', 'Unknown error')}")
             await interaction.message.edit(embed=emb, view=self)
         if res.get("ok"):
-            await interaction.followup.send(f"✅ Señal #{self.signal_id} ejecutada en MT5 exitosamente.", ephemeral=True)
+            await interaction.followup.send(f"✅ Signal #{self.signal_id} executed successfully in MT5.", ephemeral=True)
         else:
-            await interaction.followup.send(f"❌ Error al ejecutar señal #{self.signal_id}: {res.get('message', 'Fallo')}", ephemeral=True)
+            await interaction.followup.send(f"❌ Error executing signal #{self.signal_id}: {res.get('message', 'Failure')}", ephemeral=True)
 
-    @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.danger, emoji="❌")
+    @discord.ui.button(label="Discard", style=discord.ButtonStyle.danger, emoji="❌")
     async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         res = await asyncio.to_thread(self.trading_client.reject_signal, self.signal_id)
@@ -76,11 +76,11 @@ class DiscordSignalView(discord.ui.View):
             child.disabled = True
         if interaction.message and interaction.message.embeds:
             emb = interaction.message.embeds[0]
-            emb.title = f"🔴 SEÑAL #{self.signal_id} DESCARTADA"
+            emb.title = f"🔴 SIGNAL #{self.signal_id} DISCARDED"
             emb.color = 0x6b7280
-            emb.set_footer(text=f"Descartada por @{interaction.user.display_name}")
+            emb.set_footer(text=f"Discarded by @{interaction.user.display_name}")
             await interaction.message.edit(embed=emb, view=self)
-        await interaction.followup.send(f"🗑️ Señal #{self.signal_id} descartada.", ephemeral=True)
+        await interaction.followup.send(f"🗑️ Signal #{self.signal_id} discarded.", ephemeral=True)
 
 
 def _parse_bot_switch(val: Optional[str], default: bool = True) -> bool:

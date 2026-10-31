@@ -1348,7 +1348,7 @@ class TelegramAdapter:
                     markup = {
                         "inline_keyboard": [
                             [
-                                {"text": t.get("btn_refresh_chart", "🔄 Refrescar Gráfico"), "callback_data": f"refresh_chart_{ticket}"},
+                                {"text": t.get("btn_refresh_chart", "🔄 Refresh Chart"), "callback_data": f"refresh_chart_{ticket}"},
                                 {"text": t["btn_view_positions"], "callback_data": "nav_positions"}
                             ]
                         ]
@@ -1361,7 +1361,7 @@ class TelegramAdapter:
         elif data.startswith("refresh_chart_"):
             target_str = data.replace("refresh_chart_", "")
             if cq_id:
-                refresh_toast = t.get("chart_refreshing", "🔄 Actualizando gráfico en vivo...")
+                refresh_toast = t.get("chart_refreshing", "🔄 Refreshing live chart...")
                 await self._answer_callback_query(session, cq_id, refresh_toast)
 
             from services.chart_helper import get_chart_for_position, get_chart_for_signal
@@ -1399,7 +1399,7 @@ class TelegramAdapter:
                 markup = {
                     "inline_keyboard": [
                         [
-                            {"text": t.get("btn_refresh_chart", "🔄 Refrescar Gráfico"), "callback_data": cb_data},
+                            {"text": t.get("btn_refresh_chart", "🔄 Refresh Chart"), "callback_data": cb_data},
                             {"text": t["btn_view_positions"], "callback_data": "nav_positions"}
                         ]
                     ]
@@ -1411,7 +1411,7 @@ class TelegramAdapter:
                     await self.send_photo(session, chat_id, chart_path, caption=caption, reply_markup=markup)
             else:
                 if ticket:
-                    closed_msg = t.get("chart_pos_closed", f"ℹ️ La posición #{ticket} ya no se encuentra abierta en MT5.").format(ticket=ticket)
+                    closed_msg = t.get("chart_pos_closed", f"ℹ️ Position #{ticket} is no longer open in MT5.").format(ticket=ticket)
                     await self._send_response(session, chat_id, closed_msg, lang=lang)
                 else:
                     await self._send_response(session, chat_id, t["chart_error"], lang=lang)
@@ -1733,7 +1733,7 @@ class TelegramAdapter:
             markup = {
                 "inline_keyboard": [
                     [
-                        {"text": t.get("btn_refresh_chart", "🔄 Refrescar Gráfico"), "callback_data": chart_cb},
+                        {"text": t.get("btn_refresh_chart", "🔄 Refresh Chart"), "callback_data": chart_cb},
                         {"text": t["btn_view_positions"], "callback_data": "nav_positions"}
                     ]
                 ]

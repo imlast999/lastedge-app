@@ -142,13 +142,43 @@ class TestDiscordCommandsService(unittest.IsolatedAsyncioTestCase):
         import asyncio
         async def _test():
             from services.commands_refactored import ChartRefreshView
-            view = ChartRefreshView(target="11777738", is_ticket=True, authorized_user_ids={739198540177473667}, trading_client=self.mock_trading_client)
-            self.assertEqual(view.target, "11777738")
-            self.assertTrue(view.is_ticket)
-            self.assertEqual(len(view.children), 1)
-            btn = view.children[0]
-            self.assertEqual(btn.label, "Refrescar Gráfico")
+            view_en = ChartRefreshView(target="11777738", is_ticket=True, authorized_user_ids={739198540177473667}, trading_client=self.mock_trading_client, lang="en")
+            self.assertEqual(view_en.target, "11777738")
+            self.assertTrue(view_en.is_ticket)
+            self.assertEqual(len(view_en.children), 1)
+            self.assertEqual(view_en.children[0].label, "Refresh Chart")
+
+            view_es = ChartRefreshView(target="11777738", is_ticket=True, authorized_user_ids={739198540177473667}, trading_client=self.mock_trading_client, lang="es")
+            self.assertEqual(view_es.children[0].label, "Refrescar Gráfico")
         asyncio.run(_test())
+
+
+    def test_discord_language_prefs_and_bilingual_embed(self):
+        """Verifies Discord language preference persistence and English embed rendering."""
+        from services.commands_refactored import set_discord_language, get_discord_language
+        set_discord_language(739198540177473667, "en")
+        self.assertEqual(get_discord_language(739198540177473667), "en")
+
+        st = {
+            "status": "ONLINE",
+            "uptime": "2h 30m",
+            "mt5_connected": True,
+            "account_number": "123456",
+            "circuit_breaker": {"can_trade": True, "risk_multiplier": 1.0},
+            "autosignals_enabled": True,
+            "monitored_symbols": ["EURUSD", "XAUUSD"],
+            "news_indicator": "🟢 Clean"
+        }
+        embed_en = self.svc._build_status_embed(st, lang="en")
+        self.assertEqual(embed_en.title, "⚡ LastEdge — System General Status")
+        field_names = [f.name for f in embed_en.fields]
+        self.assertIn("Bot Status", field_names)
+        self.assertIn("MT5 Broker", field_names)
+
+        set_discord_language(739198540177473667, "es")
+        self.assertEqual(get_discord_language(739198540177473667), "es")
+        embed_es = self.svc._build_status_embed(st, lang="es")
+        self.assertEqual(embed_es.title, "⚡ LastEdge — Estado General del Sistema")
 
 
 if __name__ == "__main__":

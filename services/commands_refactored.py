@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
+import json
 import logging
 import asyncio
 from datetime import datetime, timezone
@@ -39,50 +41,98 @@ from services.clients.research_client import get_research_client, ResearchClient
 
 logger = logging.getLogger(__name__)
 
+APP_DIR = Path(__file__).resolve().parent.parent
+DISCORD_PREFS_PATH = APP_DIR / "logs" / "discord_prefs.json"
+
+def _load_discord_prefs() -> Dict[str, Any]:
+    try:
+        if DISCORD_PREFS_PATH.exists():
+            with open(DISCORD_PREFS_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_discord_prefs(data: Dict[str, Any]) -> None:
+    try:
+        DISCORD_PREFS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(DISCORD_PREFS_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"[DiscordCommands] Error saving prefs: {e}")
+
+def get_discord_language(user_id: Any) -> str:
+    """Returns 'en' or 'es' for user_id. Defaults to 'en'."""
+    prefs = _load_discord_prefs()
+    return prefs.get(str(user_id), {}).get("language", "en")
+
+def set_discord_language(user_id: Any, lang: str) -> str:
+    clean_lang = "es" if str(lang).lower().startswith("es") else "en"
+    prefs = _load_discord_prefs()
+    if str(user_id) not in prefs:
+        prefs[str(user_id)] = {}
+    prefs[str(user_id)]["language"] = clean_lang
+    _save_discord_prefs(prefs)
+    return clean_lang
+
 
 # ── Interactive Discord UI Views ───────────────────────────────────────────────
 
 class ClosePositionConfirmView(discord.ui.View):
-    """Vista interactiva con botones para confirmar o cancelar el cierre forzado de una orden MT5."""
+    """Interactive confirmation dialog for MT5 emergency position close (Bilingual: en / es)."""
 
-    def __init__(self, ticket: int, authorized_user_ids: Set[int], trading_client: TradingClient, timeout: float = 60.0):
+    def __init__(
+        self,
+        ticket: int,
+        authorized_user_ids: Set[int],
+        trading_client: TradingClient,
+        lang: str = "en",
+        timeout: float = 60.0
+    ):
         super().__init__(timeout=timeout)
         self.ticket = ticket
         self.authorized_user_ids = authorized_user_ids
         self.trading_client = trading_client
+        self.lang = lang
+        if len(self.children) >= 2:
+            self.children[0].label = "Confirm Close" if lang == "en" else "Confirmar Cierre"
+            self.children[1].label = "Cancel" if lang == "en" else "Cancelar"
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not self.authorized_user_ids or interaction.user.id not in self.authorized_user_ids:
-            await interaction.response.send_message("⛔ Acceso denegado: No tienes permisos para operar.", ephemeral=True)
+            denied = "⛔ Access denied: Unauthorized user." if self.lang == "en" else "⛔ Acceso denegado: No tienes permisos para operar."
+            await interaction.response.send_message(denied, ephemeral=True)
             return False
         return True
 
-    @discord.ui.button(label="Confirmar Cierre", style=discord.ButtonStyle.danger, emoji="⚠️")
+    @discord.ui.button(label="Confirm Close", style=discord.ButtonStyle.danger, emoji="⚠️")
     async def confirm_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         for child in self.children:
             child.disabled = True
         res = await asyncio.to_thread(self.trading_client.close_position, self.ticket)
         if res.get("ok"):
-            msg = f"✅ Posición **#{self.ticket}** cerrada exitosamente en MT5 por @{interaction.user.display_name}."
+            msg = f"✅ Position **#{self.ticket}** closed successfully in MT5 by @{interaction.user.display_name}." if self.lang == "en" else f"✅ Posición **#{self.ticket}** cerrada exitosamente en MT5 por @{interaction.user.display_name}."
         else:
-            msg = f"❌ Error al cerrar posición #{self.ticket}: {res.get('message', 'Fallo en broker MT5')}"
+            msg = f"❌ Error closing position #{self.ticket}: {res.get('message', 'MT5 broker failure')}" if self.lang == "en" else f"❌ Error al cerrar posición #{self.ticket}: {res.get('message', 'Fallo en broker MT5')}"
         if interaction.message:
             await interaction.message.edit(content=msg, view=self)
         else:
             await interaction.followup.send(msg)
 
-    @discord.ui.button(label="Cancelar", style=discord.ButtonStyle.secondary, emoji="✖️")
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         for child in self.children:
             child.disabled = True
+        cancel_text = f"Action cancelled. Position **#{self.ticket}** remains active in MT5." if self.lang == "en" else f"Operación cancelada. La posición **#{self.ticket}** sigue abierta."
         if interaction.message:
-            await interaction.message.edit(content=f"Operación cancelada. La posición **#{self.ticket}** sigue abierta.", view=self)
-        await interaction.response.send_message("Cierre cancelado.", ephemeral=True)
+            await interaction.message.edit(content=cancel_text, view=self)
+        resp_msg = "Close cancelled." if self.lang == "en" else "Cierre cancelado."
+        await interaction.response.send_message(resp_msg, ephemeral=True)
 
 
 class ChartRefreshView(discord.ui.View):
-    """Vista interactiva con botón para refrescar el gráfico técnico in-place en Discord."""
+    """Interactive Discord view with in-place chart refresh button (Bilingual: en / es)."""
 
     def __init__(
         self,
@@ -90,6 +140,7 @@ class ChartRefreshView(discord.ui.View):
         is_ticket: bool,
         authorized_user_ids: Set[int],
         trading_client: TradingClient,
+        lang: str = "en",
         timeout: float = 300.0
     ):
         super().__init__(timeout=timeout)
@@ -97,14 +148,18 @@ class ChartRefreshView(discord.ui.View):
         self.is_ticket = is_ticket
         self.authorized_user_ids = authorized_user_ids
         self.trading_client = trading_client
+        self.lang = lang
+        if self.children:
+            self.children[0].label = "Refresh Chart" if lang == "en" else "Refrescar Gráfico"
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not self.authorized_user_ids or interaction.user.id not in self.authorized_user_ids:
-            await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
+            denied = "⛔ Access denied: Unauthorized user." if self.lang == "en" else "⛔ Acceso denegado: Usuario no autorizado."
+            await interaction.response.send_message(denied, ephemeral=True)
             return False
         return True
 
-    @discord.ui.button(label="Refrescar Gráfico", style=discord.ButtonStyle.primary, emoji="🔄")
+    @discord.ui.button(label="Refresh Chart", style=discord.ButtonStyle.primary, emoji="🔄")
     async def refresh_chart(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         try:
@@ -117,11 +172,13 @@ class ChartRefreshView(discord.ui.View):
 
             if chart_path and os.path.exists(chart_path):
                 now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+                title = f"📊 MT5 Technical Chart — {self.target}" if self.lang == "en" else f"📊 Gráfico Técnico MT5 — {self.target}"
                 embed = interaction.message.embeds[0] if (interaction.message and interaction.message.embeds) else discord.Embed(
-                    title="📊 Gráfico Técnico MT5",
+                    title=title,
                     color=discord.Color.from_rgb(0, 163, 255)
                 )
-                embed.set_footer(text=f"LastEdge Terminal • Refrescado: {now_str}")
+                footer_text = f"LastEdge Terminal • Refreshed: {now_str}" if self.lang == "en" else f"LastEdge Terminal • Refrescado: {now_str}"
+                embed.set_footer(text=footer_text)
                 file = discord.File(chart_path, filename="chart.png")
                 embed.set_image(url="attachment://chart.png")
                 if interaction.message:
@@ -129,11 +186,12 @@ class ChartRefreshView(discord.ui.View):
                 else:
                     await interaction.edit_original_response(attachments=[file], embed=embed, view=self)
             else:
-                msg = f"ℹ️ La posición #{self.target} ya no se encuentra abierta en MT5." if self.is_ticket else "⚠️ No se pudo regenerar el gráfico actualizado."
+                msg = f"ℹ️ Position #{self.target} is no longer open in MT5." if self.lang == "en" else f"ℹ️ La posición #{self.target} ya no se encuentra abierta en MT5."
                 await interaction.followup.send(msg, ephemeral=True)
         except Exception as e:
-            logger.error(f"[Discord ChartView] Error refrescando gráfico: {e}")
-            await interaction.followup.send(f"❌ Error al refrescar gráfico: {e}", ephemeral=True)
+            logger.error(f"[Discord ChartView] Error refreshing chart: {e}")
+            err_msg = f"❌ Error refreshing chart: {e}" if self.lang == "en" else f"❌ Error al refrescar gráfico: {e}"
+            await interaction.followup.send(err_msg, ephemeral=True)
 
 
 class CommandsService:
@@ -189,7 +247,31 @@ class CommandsService:
 
     # ── Embed Builders ─────────────────────────────────────────────────────────
 
-    def _build_status_embed(self, st: Dict[str, Any]) -> discord.Embed:
+    def _build_status_embed(self, st: Dict[str, Any], lang: str = "es") -> discord.Embed:
+        if lang == "en":
+            mt5_st = "🟢 Connected" if st.get("mt5_connected") else "🔴 Disconnected"
+            cb = st.get("circuit_breaker", {})
+            cb_st = "🟢 Active" if cb.get("can_trade", True) else "🔴 Paused"
+
+            embed = discord.Embed(
+                title="⚡ LastEdge — System General Status",
+                color=0x3b82f6 if st.get("mt5_connected") else 0xef4444,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.add_field(name="Bot Status", value=f"`{st.get('status', 'ONLINE')}`", inline=True)
+            embed.add_field(name="Uptime", value=f"`{st.get('uptime', '0h 0m')}`", inline=True)
+            embed.add_field(name="MT5 Broker", value=mt5_st, inline=True)
+            embed.add_field(name="MT5 Account", value=f"`{st.get('account_number') or '—'}`", inline=True)
+            embed.add_field(name="Circuit Breaker", value=f"{cb_st} (×{cb.get('risk_multiplier', 1.0):.1f})", inline=True)
+            embed.add_field(name="Autosignals", value="✅ Active" if st.get("autosignals_enabled") else "⏸ Disabled", inline=True)
+
+            pairs = st.get("monitored_symbols", [])
+            pairs_str = ", ".join(pairs) if pairs else "EURUSD, XAUUSD, BTCEUR"
+            embed.add_field(name="Monitored Pairs", value=f"`{pairs_str}`", inline=False)
+            embed.add_field(name="News Guard", value=st.get("news_indicator", "🟢 Clean / No High Impact"), inline=False)
+            embed.set_footer(text=f"Server: {st.get('server') or 'FXLiveCapital-Server'} • Language: English 🇬🇧")
+            return embed
+
         mt5_st = "🟢 Conectado" if st.get("mt5_connected") else "🔴 Desconectado"
         cb = st.get("circuit_breaker", {})
         cb_st = "🟢 Activo" if cb.get("can_trade", True) else "🔴 Pausado"
@@ -213,18 +295,22 @@ class CommandsService:
         embed.set_footer(text=f"Servidor: {st.get('server') or 'FXLiveCapital-Server'}")
         return embed
 
-    def _build_positions_embed(self, pos_data: Dict[str, Any], currency: Optional[str] = None) -> Tuple[Optional[discord.Embed], Optional[str]]:
+    def _build_positions_embed(self, pos_data: Dict[str, Any], currency: Optional[str] = None, lang: str = "es") -> Tuple[Optional[discord.Embed], Optional[str]]:
         positions = pos_data.get("positions", [])
         if not positions:
-            return None, "ℹ️ No hay posiciones abiertas actualmente en MT5."
+            empty_msg = "ℹ️ No open positions in MetaTrader 5." if lang == "en" else "ℹ️ No hay posiciones abiertas actualmente en MT5."
+            return None, empty_msg
 
         curr = currency or self._get_account_currency()
         total_pnl = sum(p.get("profit", 0.0) for p in positions)
         total_pnl_emoji = "🟢" if total_pnl >= 0 else "🔴"
 
+        title = f"📊 Open Positions in MT5 ({len(positions)})" if lang == "en" else f"📊 Posiciones Abiertas en MT5 ({len(positions)})"
+        desc = f"**Total Floating P&L:** {total_pnl_emoji} **{total_pnl:+.2f} {curr}**" if lang == "en" else f"**P&L Total Flotante:** {total_pnl_emoji} **{total_pnl:+.2f} {curr}**"
+
         embed = discord.Embed(
-            title=f"📊 Posiciones Abiertas en MT5 ({len(positions)})",
-            description=f"**P&L Total Flotante:** {total_pnl_emoji} **{total_pnl:+.2f} {curr}**",
+            title=title,
+            description=desc,
             color=0x10b981 if total_pnl >= 0 else 0xef4444,
             timestamp=datetime.now(timezone.utc)
         )
@@ -409,14 +495,27 @@ class CommandsService:
         embed.add_field(name="Arquitectura", value="`Clean Architecture + Risk v2`", inline=True)
         return embed
 
-    def _build_help_embed(self) -> discord.Embed:
+    def _build_help_embed(self, lang: str = "es") -> discord.Embed:
+        if lang == "en":
+            embed = discord.Embed(
+                title="🤖 LastEdge Discord Bot — Available Commands",
+                description="You can use either modern slash commands (`/status`) or traditional prefix commands (`!status`).",
+                color=0x3b82f6
+            )
+            embed.add_field(name="📊 Operations", value="`/status`, `/positions`, `/signals`, `/chart [ticket|sym]`, `/equity`, `/risk`, `/close_position <ticket>`", inline=False)
+            embed.add_field(name="⚙️ Control & Configuration", value="`/autosignals [on|off|status]`, `/journal [days]`, `/research`, `/lang [en|es]`", inline=False)
+            embed.add_field(name="🩺 Diagnostics & Platform", value="`/health`, `/version`, `/ping`, `/logs`, `/discord`", inline=False)
+            auth_preview = f"`{next(iter(self.authorized_user_ids))}`" if self.authorized_user_ids else "None"
+            embed.set_footer(text=f"LastEdge Quantitative Trading Platform • Operator: {auth_preview} • Default: English 🇬🇧")
+            return embed
+
         embed = discord.Embed(
             title="🤖 LastEdge Discord Bot — Comandos Disponibles",
             description="Puedes utilizar comandos tanto con barra slash (`/status`) como con prefijo tradicional (`!status`).",
             color=0x3b82f6
         )
         embed.add_field(name="📊 Operativa", value="`/status`, `/positions`, `/signals`, `/chart [ticket|sym]`, `/equity`, `/risk`, `/close_position <ticket>`", inline=False)
-        embed.add_field(name="⚙️ Control y Señales", value="`/autosignals [on|off|status]`, `/journal [días]`, `/research`", inline=False)
+        embed.add_field(name="⚙️ Control y Señales", value="`/autosignals [on|off|status]`, `/journal [días]`, `/research`, `/lang [en|es]`", inline=False)
         embed.add_field(name="🩺 Diagnóstico y Red", value="`/health`, `/version`, `/ping`, `/logs`, `/discord`", inline=False)
         auth_preview = f"`{next(iter(self.authorized_user_ids))}`" if self.authorized_user_ids else "Ninguno"
         embed.set_footer(text=f"LastEdge Quantitative Trading Platform • Usuario Autorizado: {auth_preview}")
@@ -427,13 +526,28 @@ class CommandsService:
     def _setup_slash_commands(self):
         bot = self.bot
 
+        @bot.tree.command(name="lang", description="Switch Discord bot language preference (en / es).")
+        @discord.app_commands.describe(language="Select 'en' for English or 'es' for Spanish")
+        @discord.app_commands.choices(language=[
+            discord.app_commands.Choice(name="English 🇬🇧", value="en"),
+            discord.app_commands.Choice(name="Español 🇪🇸", value="es")
+        ])
+        async def slash_lang(interaction: discord.Interaction, language: str):
+            if not self._is_authorized(interaction.user.id):
+                await interaction.response.send_message("⛔ Access denied: Unauthorized user.", ephemeral=True)
+                return
+            new_lang = set_discord_language(interaction.user.id, language)
+            resp = "🇬🇧 Language switched to English." if new_lang == "en" else "🇪🇸 Idioma cambiado a Español."
+            await interaction.response.send_message(resp, ephemeral=True)
+
         @bot.tree.command(name="help", description="Muestra el menú de ayuda con todos los comandos disponibles.")
         async def slash_help(interaction: discord.Interaction):
             if not self._is_authorized(interaction.user.id):
                 await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
                 return
             await interaction.response.defer(thinking=False)
-            embed = self._build_help_embed()
+            user_lang = get_discord_language(interaction.user.id)
+            embed = self._build_help_embed(lang=user_lang)
             await interaction.followup.send(embed=embed)
 
         @bot.tree.command(name="status", description="Estado unificado del bot, uptime, MT5, Circuit Breaker y noticias.")
@@ -444,7 +558,8 @@ class CommandsService:
             await interaction.response.defer(thinking=True)
             try:
                 st = await asyncio.to_thread(self.trading_client.get_status)
-                embed = self._build_status_embed(st)
+                user_lang = get_discord_language(interaction.user.id)
+                embed = self._build_status_embed(st, lang=user_lang)
                 await interaction.followup.send(embed=embed)
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en status: {e}")
@@ -459,7 +574,8 @@ class CommandsService:
             try:
                 pos_data = await asyncio.to_thread(self.trading_client.get_positions)
                 curr = await asyncio.to_thread(self._get_account_currency)
-                embed, err_msg = self._build_positions_embed(pos_data, currency=curr)
+                user_lang = get_discord_language(interaction.user.id)
+                embed, err_msg = self._build_positions_embed(pos_data, currency=curr, lang=user_lang)
                 if embed:
                     await interaction.followup.send(embed=embed)
                 else:
@@ -699,12 +815,23 @@ class CommandsService:
     def _setup_prefix_commands(self):
         bot = self.bot
 
+        @bot.command(name="lang", aliases=["language", "idioma"])
+        async def cmd_lang(ctx, language: Optional[str] = None):
+            if not self._is_authorized(ctx.author.id):
+                await ctx.reply("⛔ Access denied: Unauthorized user.")
+                return
+            target_lang = "es" if language and language.lower().startswith("es") else "en"
+            new_lang = set_discord_language(ctx.author.id, target_lang)
+            resp = "🇬🇧 Language switched to English." if new_lang == "en" else "🇪🇸 Idioma cambiado a Español."
+            await ctx.reply(resp)
+
         @bot.command(name="help", aliases=["ayuda"])
         async def cmd_help(ctx):
             if not self._is_authorized(ctx.author.id):
                 await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
                 return
-            embed = self._build_help_embed()
+            user_lang = get_discord_language(ctx.author.id)
+            embed = self._build_help_embed(lang=user_lang)
             await ctx.send(embed=embed)
 
         @bot.command(name="status", aliases=["estado"])
@@ -714,8 +841,9 @@ class CommandsService:
                 return
             async with ctx.typing():
                 try:
+                    user_lang = get_discord_language(ctx.author.id)
                     st = await asyncio.to_thread(self.trading_client.get_status)
-                    embed = self._build_status_embed(st)
+                    embed = self._build_status_embed(st, lang=user_lang)
                     await ctx.send(embed=embed)
                 except Exception as e:
                     logger.error(f"[Discord Prefix] Error en status: {e}")
@@ -728,9 +856,10 @@ class CommandsService:
                 return
             async with ctx.typing():
                 try:
+                    user_lang = get_discord_language(ctx.author.id)
                     pos_data = await asyncio.to_thread(self.trading_client.get_positions)
                     curr = await asyncio.to_thread(self._get_account_currency)
-                    embed, err_msg = self._build_positions_embed(pos_data, currency=curr)
+                    embed, err_msg = self._build_positions_embed(pos_data, currency=curr, lang=user_lang)
                     if embed:
                         await ctx.send(embed=embed)
                     else:
