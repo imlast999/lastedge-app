@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Moderna",
   },
   scoreBadge: {
     paddingHorizontal: 7,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     fontSize: 11,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   metricsGrid: {
@@ -157,12 +157,12 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Lokeya",
     marginBottom: 4,
   },
   metricValue: {
     fontSize: 13,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
 });

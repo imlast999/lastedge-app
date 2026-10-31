@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   wrap: { gap: 8 },
   title: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Moderna",
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginLeft: 4,

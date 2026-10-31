@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   deltaBadge: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   deltaText: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   emptyChart: {
@@ -190,6 +190,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
 });

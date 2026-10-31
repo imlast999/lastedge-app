@@ -375,19 +375,19 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 13,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
   },
   workspaceMeta: {
     flexDirection: "column",
   },
   workspaceTitle: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Moderna",
     lineHeight: 16,
   },
   workspaceSub: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
     lineHeight: 14,
   },
   headerActions: {
@@ -427,20 +427,20 @@ const styles = StyleSheet.create({
   },
   equityLabel: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Lokeya",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   equityValue: {
     fontSize: 28,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
     lineHeight: 32,
     letterSpacing: -0.5,
   },
   currencySymbol: {
     fontSize: 18,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
   equityRight: {
     alignItems: "flex-end",
@@ -453,12 +453,12 @@ const styles = StyleSheet.create({
   },
   floatingText: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   balanceValue: {
     fontSize: 11,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   chartContainer: {
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
   footerLegend: {
     flexDirection: "row",
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Lokeya",
   },
   statsGrid: {
     flexDirection: "row",
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   },
   accountTitle: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Moderna",
     letterSpacing: 0.2,
   },
   accountRow: {
@@ -613,11 +613,11 @@ const styles = StyleSheet.create({
   },
   accountLabel: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
   accountValue: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
 });

@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   tradeNumRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   tradeNum: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Lokeya",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   newHighText: {
     fontSize: 8,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     letterSpacing: 0.5,
   },
   resultBadge: {
@@ -265,18 +265,18 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     letterSpacing: 0.5,
   },
 
   pnl: {
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   equity: {
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
 
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   quickStatText: {
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
 
   // Detalle expandible
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   maeMfeLabel: {
     fontSize: 9,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     textTransform: "uppercase",
     letterSpacing: 0.4,
     width: 28,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   maeMfeVal: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
     width: 44,
     textAlign: "right",
@@ -337,6 +337,6 @@ const styles = StyleSheet.create({
   },
   contextLabel: {
     fontSize: 9,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
 });

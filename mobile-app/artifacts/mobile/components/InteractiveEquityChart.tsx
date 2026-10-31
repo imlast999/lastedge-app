@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     left:       2,
     width:      PADDING_LEFT - 6,
     fontSize:   9,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
     textAlign:  "right",
   },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   tooltipTrade: {
     fontSize:   10,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   },
   tooltipResultText: {
     fontSize:   9,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     letterSpacing: 0.5,
   },
   tooltipRow: {
@@ -530,11 +530,11 @@ const styles = StyleSheet.create({
   },
   tooltipKey: {
     fontSize:   10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Lokeya",
   },
   tooltipVal: {
     fontSize:   11,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Lokeya",
     fontVariant: ["tabular-nums"],
   },
   tooltipDivider: {
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   },
   tooltipNewHigh: {
     fontSize:   9,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Lokeya",
     marginTop:  2,
     textAlign:  "center",
   },
@@ -562,12 +562,12 @@ const styles = StyleSheet.create({
   },
   headerVal: {
     fontSize:   16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Moderna",
     fontVariant: ["tabular-nums"],
   },
   headerKey: {
     fontSize:   9,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Moderna",
     textTransform: "uppercase",
     letterSpacing:  0.4,
   },
