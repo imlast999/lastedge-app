@@ -72,6 +72,7 @@ The Discord adapter interacts via modern Discord Slash Commands (`/`) and tradit
 | `/positions` | `!positions`, `!pos` | Open positions with dynamic account currency and total P&L | `TradingClient.get_positions()` |
 | `/signals` | `!signals`, `!senales` | Recent trading signals, confidence, execution status, and R:R | `TradingClient.get_signals()` |
 | `/chart` | `!chart`, `!grafico`, `!c` | Interactive live candlestick chart with in-place refresh button | `get_chart_for_position()` / `get_chart_for_signal()` |
+| `/lang` | `!lang`, `!language`, `!idioma` | Switch bot language preference (`en` / `es`) with user persistence | `get_discord_language()` / `set_discord_language()` |
 | `/close_position` | `!close`, `!cerrar` | Emergency close with interactive confirmation view | `TradingClient.close_position()` |
 | `/equity` | `!equity`, `!balance` | Account balance, equity, free margin, margin level | `TradingClient.get_equity()` |
 | `/risk` | `!risk`, `!riesgo` | Risk Engine v2 telemetry, portfolio capacity, broker safeguards | `TradingClient.get_risk()` |
@@ -88,10 +89,16 @@ The Discord adapter interacts via modern Discord Slash Commands (`/`) and tradit
 - **Fail-Safe Whitelist**: Restricted to user IDs specified in `AUTHORIZED_USER_ID` or `AUTHORIZED_USER_IDS` (comma-separated list).
 - **Default Deny**: If no authorized user is configured in `.env`, all commands are automatically rejected with `⛔ Acceso denegado: Usuario no autorizado.`.
 
+### Bilingual Architecture (English-First 🇬🇧):
+Both Discord and Telegram share an identical bilingual engine:
+- **Default Language**: English (`en`) for all command embeds, status reports, and button views.
+- **Persistent Preferences**: User language preferences are stored independently (`logs/discord_prefs.json` and `logs/telegram_prefs.json`).
+- **Dynamic Localization**: Switching language (`/lang es`) immediately localizes all embeds, buttons, confirmation dialogs, and error alerts.
+
 ### Interactive UI Components:
-- **`ClosePositionConfirmView`**: Two-button confirmation (`[⚠️ Confirmar Cierre]` and `[✖️ Cancelar]`) prevents accidental trade closures from typos.
-- **`DiscordSignalView`**: Real-time signal alert embeds include inline `[✅ Aprobar]` and `[❌ Rechazar]` buttons for 1-click execution into MT5.
-- **`ChartRefreshView`**: Attaches an interactive `[🔄 Refrescar Gráfico]` button. When clicked, it generates a fresh MT5 candle chart and updates the original message attachment in-place without polluting the Discord channel with duplicate images.
+- **`ClosePositionConfirmView`**: Two-button confirmation dialog (`[⚠️ Confirm Close]` / `[✖️ Cancel]`) localized to user's language preference.
+- **`DiscordSignalView`**: Real-time signal alert embeds with inline `[✅ Approve & Execute]` and `[❌ Discard]` buttons for 1-click MT5 execution.
+- **`ChartRefreshView`**: Attaches an interactive `[🔄 Refresh Chart]` / `[🔄 Refrescar Gráfico]` button. When clicked, it generates fresh MT5 candles and updates the attachment in-place without polluting the channel with duplicate images.
 
 ---
 
@@ -101,6 +108,7 @@ Runs non-blocking async long polling with rich Markdown formatting, bilingual su
 
 ### Supported Commands:
 - `/start`, `/help` — Interactive help menu with operational inline buttons.
+- `/lang [en|es]` — Toggle bot language preference (persisted in `logs/telegram_prefs.json`).
 - `/status` — Engine health, MT5 connection, uptime, and active trading mode.
 - `/autonomous` (aliases: `/autonomo`, `/handsfree`) — Toggle 100% Autonomous Hands-Free mode vs. Hybrid Review mode.
 - `/positions` — Open positions table with live floating P&L and inline chart buttons.
