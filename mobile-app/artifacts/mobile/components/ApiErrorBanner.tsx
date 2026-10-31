@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   icon: { marginRight: 6 },
   text: {
     fontSize: 12,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     color: "#09090b",
     flex: 1,
   },

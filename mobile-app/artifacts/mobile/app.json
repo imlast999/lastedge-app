@@ -2,7 +2,7 @@
   "expo": {
     "name": "LastEdge",
     "slug": "lastedge",
-    "version": "1.1.64",
+    "version": "1.1.65",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lastedge",
@@ -20,7 +20,7 @@
       "backgroundColor": "#09090b",
       "package": "com.lastedge.app",
       "usesCleartextTraffic": true,
-      "versionCode": 64
+      "versionCode": 65
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -31,8 +31,11 @@
         "expo-font",
         {
           "fonts": [
-            "./assets/fonts/Lokeya.ttf",
-            "./assets/fonts/Moderna.ttf"
+            "./assets/fonts/Nexa.ttf",
+            "./assets/fonts/PlusJakartaSans-Regular.ttf",
+            "./assets/fonts/PlusJakartaSans-Medium.ttf",
+            "./assets/fonts/PlusJakartaSans-SemiBold.ttf",
+            "./assets/fonts/PlusJakartaSans-Bold.ttf"
           ]
         }
       ],

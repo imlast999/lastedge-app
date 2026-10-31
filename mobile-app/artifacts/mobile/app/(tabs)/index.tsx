@@ -375,19 +375,19 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 13,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   workspaceMeta: {
     flexDirection: "column",
   },
   workspaceTitle: {
     fontSize: 13,
-    fontFamily: "Moderna",
+    fontFamily: "Nexa",
     lineHeight: 16,
   },
   workspaceSub: {
     fontSize: 11,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     lineHeight: 14,
   },
   headerActions: {
@@ -427,20 +427,20 @@ const styles = StyleSheet.create({
   },
   equityLabel: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   equityValue: {
     fontSize: 28,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
     lineHeight: 32,
     letterSpacing: -0.5,
   },
   currencySymbol: {
     fontSize: 18,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   equityRight: {
     alignItems: "flex-end",
@@ -453,12 +453,12 @@ const styles = StyleSheet.create({
   },
   floatingText: {
     fontSize: 11,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
   },
   balanceValue: {
     fontSize: 11,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
   },
   chartContainer: {
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   footerLegend: {
     flexDirection: "row",
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   statsGrid: {
     flexDirection: "row",
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   },
   accountTitle: {
     fontSize: 13,
-    fontFamily: "Moderna",
+    fontFamily: "Nexa",
     letterSpacing: 0.2,
   },
   accountRow: {
@@ -613,11 +613,11 @@ const styles = StyleSheet.create({
   },
   accountLabel: {
     fontSize: 12,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   accountValue: {
     fontSize: 12,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
   },
 });

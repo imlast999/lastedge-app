@@ -68,6 +68,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   body: { flex: 1, gap: 2 },
-  label: { fontSize: 15, fontFamily: "Lokeya" },
-  desc: { fontSize: 12, fontFamily: "Lokeya", lineHeight: 16 },
+  label: { fontSize: 15, fontFamily: "PlusJakartaSans_500Medium" },
+  desc: { fontSize: 12, fontFamily: "PlusJakartaSans_500Medium", lineHeight: 16 },
 });

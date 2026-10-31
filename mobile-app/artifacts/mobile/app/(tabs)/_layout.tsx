@@ -36,7 +36,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontFamily: "Lokeya",
+          fontFamily: "PlusJakartaSans_500Medium",
           marginTop: -2,
         },
         tabBarBackground: () =>

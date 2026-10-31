@@ -1,19 +1,20 @@
 /**
  * LastEdge Mobile Typography System
- * Primary Font: Lokeya (Modern, clean, sans-serif)
- * Title/Heading Font: Moderna (Minimalist headings and display titles)
+ * Primary Font: Plus Jakarta Sans (Clean, geometric, robust fintech sans)
+ * Title/Heading Font: Nexa (Futuristic, high-impact display titles)
  */
 export const Fonts = {
   // Title / Heading Font
-  title: "Moderna",
-  heading: "Moderna",
+  title: "Nexa",
+  heading: "Nexa",
 
-  // Main / Body Font
-  main: "Lokeya",
-  body: "Lokeya",
-  regular: "Lokeya",
-  medium: "Lokeya",
-  bold: "Lokeya",
+  // Main / Body Fonts by Weight
+  main: "PlusJakartaSans_400Regular",
+  body: "PlusJakartaSans_400Regular",
+  regular: "PlusJakartaSans_400Regular",
+  medium: "PlusJakartaSans_500Medium",
+  semiBold: "PlusJakartaSans_600SemiBold",
+  bold: "PlusJakartaSans_700Bold",
 
   // Numeric / Monospace
   mono: "System",

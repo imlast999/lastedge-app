@@ -56,11 +56,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     letterSpacing: 0.4,
   },
   uptime: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
 });

@@ -489,7 +489,7 @@ function SubTabButton({
             styles.subTabLabel,
             {
               color: active ? colors.foreground : colors.mutedForeground,
-              fontFamily: "Lokeya",
+              fontFamily: "PlusJakartaSans_500Medium",
             },
           ]}
         >
@@ -559,14 +559,14 @@ const styles = StyleSheet.create({
   },
   breadcrumb: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     letterSpacing: 0.6,
   },
   breadcrumbSep: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
-  title: { fontSize: 20, fontFamily: "Moderna" },
+  title: { fontSize: 20, fontFamily: "Nexa" },
   settingsButton: {
     width: 36,
     height: 36,
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   },
   subTabBadgeText: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
 
   // Listas
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
   },
   posSymbol: {
     fontSize: 15,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   posTypeBadge: {
     paddingHorizontal: 6,
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   },
   posTypeText: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   posTicket: {
     fontSize: 11,
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   },
   posPnlText: {
     fontSize: 13,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   posMetricsRow: {
     flexDirection: "row",
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   posMetricLabel: {
     fontSize: 9,
     color: "#94a3b8",
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     textTransform: "uppercase",
   },
   posMetricValue: {
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   viewFlowButtonText: {
     color: "#00ff88",
     fontSize: 12,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
 
   // Sección de Expiradas
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   },
   expiredSectionTitle: {
     fontSize: 12,
-    fontFamily: "Moderna",
+    fontFamily: "Nexa",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   },
   expiredSymbol: {
     fontSize: 13,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   expiredBadge: {
     paddingHorizontal: 6,
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
   expiredBadgeText: {
     fontSize: 9,
     color: "#ef4444",
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
   expiredDetail: {
     fontSize: 11,
@@ -764,12 +764,12 @@ const styles = StyleSheet.create({
   summaryItem: { flex: 1, alignItems: "center", gap: 3 },
   summaryValue: {
     fontSize: 15,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
   },
   summaryLabel: {
     fontSize: 9,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -786,10 +786,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyTitle: { fontSize: 15, fontFamily: "Moderna" },
+  emptyTitle: { fontSize: 15, fontFamily: "Nexa" },
   emptyText: {
     fontSize: 12,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     textAlign: "center",
     paddingHorizontal: 32,
   },

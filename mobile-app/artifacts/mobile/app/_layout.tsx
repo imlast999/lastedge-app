@@ -55,8 +55,11 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    Lokeya: require("@/assets/fonts/Lokeya.ttf"),
-    Moderna: require("@/assets/fonts/Moderna.ttf"),
+    Nexa: require("@/assets/fonts/Nexa.ttf"),
+    PlusJakartaSans_400Regular: require("@/assets/fonts/PlusJakartaSans-Regular.ttf"),
+    PlusJakartaSans_500Medium: require("@/assets/fonts/PlusJakartaSans-Medium.ttf"),
+    PlusJakartaSans_600SemiBold: require("@/assets/fonts/PlusJakartaSans-SemiBold.ttf"),
+    PlusJakartaSans_700Bold: require("@/assets/fonts/PlusJakartaSans-Bold.ttf"),
   });
 
   useEffect(() => {

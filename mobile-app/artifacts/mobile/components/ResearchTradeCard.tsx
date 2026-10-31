@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   tradeNumRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   tradeNum: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   newHighText: {
     fontSize: 8,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     letterSpacing: 0.5,
   },
   resultBadge: {
@@ -265,18 +265,18 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     letterSpacing: 0.5,
   },
 
   pnl: {
     fontSize: 16,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
   },
   equity: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
   },
 
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   quickStatText: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
 
   // Detalle expandible
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   maeMfeLabel: {
     fontSize: 9,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.4,
     width: 28,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   maeMfeVal: {
     fontSize: 10,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
     width: 44,
     textAlign: "right",
@@ -337,6 +337,6 @@ const styles = StyleSheet.create({
   },
   contextLabel: {
     fontSize: 9,
-    fontFamily: "Lokeya",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
 });
