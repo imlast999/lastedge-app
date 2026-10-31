@@ -7,12 +7,12 @@
 [![App & Control Plane CI](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imlast999/lastedge-app/actions/workflows/ci.yml)
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
 [![Download APK](https://img.shields.io/badge/Download%20APK-v1.1.55-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/actions/runs/40590182509)
-[![Tests](https://img.shields.io/badge/Tests-43%2F43%20Passed-success)](https://github.com/imlast999/lastedge-app)
+[![Tests](https://img.shields.io/badge/Tests-49%2F49%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
 > **Status:** Production Ready  
-> **Tests:** 43 / 43 Passed (100% Green)  
+> **Tests:** 49 / 49 Passed (100% Green)  
 
 </div>
 
@@ -113,7 +113,7 @@ LastEdge App/
 # Run all LastEdge App tests locally
 python -m pytest tests/ -v
 ```
-Current test suite status: **43 / 43 passed (100% Green)**.
+Current test suite status: **49 / 49 passed (100% Green)**.
 
 ### CI / Continuous Integration:
 - **App & Control Plane CI**: Automated on every push and pull request via [GitHub Actions](.github/workflows/ci.yml).

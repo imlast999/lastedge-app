@@ -134,6 +134,9 @@ I18N = {
         "chart_levels": "• *Key Levels:* 🟩 Entry | 🟥 Stop Loss | 🟦 Take Profit",
         "chart_select": "📈 *Select a position to view live chart:*",
         "chart_error": "⚠️ Could not generate the requested chart.",
+        "btn_refresh_chart": "🔄 Refresh Chart",
+        "chart_refreshing": "🔄 Refreshing live chart...",
+        "chart_pos_closed": "ℹ️ Position #{ticket} is no longer open in MT5.",
 
         "close_usage": "⚠️ *Usage:* `/close_position <ticket>`",
         "close_success": "✅ *Position Closed in MT5* | Ticket #{ticket} closed successfully.",
@@ -257,6 +260,9 @@ I18N = {
         "chart_levels": "• *Niveles:* 🟩 Entrada | 🟥 Stop Loss | 🟦 Take Profit",
         "chart_select": "📈 *Selecciona la posición para ver su gráfico:*",
         "chart_error": "⚠️ No se pudo generar el gráfico solicitado.",
+        "btn_refresh_chart": "🔄 Refrescar Gráfico",
+        "chart_refreshing": "🔄 Actualizando gráfico en vivo...",
+        "chart_pos_closed": "ℹ️ La posición #{ticket} ya no se encuentra abierta en MT5.",
 
         "close_usage": "⚠️ *Uso:* `/close_position <ticket>`",
         "close_success": "✅ *Posición Cerrada en MT5* | Ticket #{ticket} cerrado con éxito.",
@@ -582,6 +588,65 @@ class TelegramAdapter:
                 return False
         except Exception as e:
             logger.error(f"[TelegramAdapter] Error enviando imagen: {e}")
+            return False
+
+    async def edit_message_photo(
+        self,
+        session: aiohttp.ClientSession,
+        chat_id: int,
+        message_id: int,
+        photo_path: str,
+        caption: Optional[str] = None,
+        reply_markup: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Edita la foto y pie de un mensaje existente en Telegram via editMessageMedia."""
+        if not self.token or not os.path.exists(photo_path):
+            return False
+
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/editMessageMedia"
+            form = aiohttp.FormData()
+            form.add_field("chat_id", str(chat_id))
+            form.add_field("message_id", str(message_id))
+
+            media_payload: Dict[str, Any] = {
+                "type": "photo",
+                "media": "attach://chart_photo"
+            }
+            if caption:
+                media_payload["caption"] = caption
+                media_payload["parse_mode"] = "Markdown"
+            form.add_field("media", json.dumps(media_payload))
+            if reply_markup is not None:
+                form.add_field("reply_markup", json.dumps(reply_markup))
+
+            with open(photo_path, "rb") as f:
+                form.add_field("chart_photo", f.read(), filename=os.path.basename(photo_path), content_type="image/png")
+
+            client_timeout = aiohttp.ClientTimeout(total=15)
+            async with session.post(url, data=form, timeout=client_timeout) as resp:
+                if resp.status == 200:
+                    return True
+                resp_text = await resp.text()
+                if "message is not modified" in resp_text.lower():
+                    return True
+                # Si falló por parsing Markdown en caption, reintentar sin parse_mode
+                if caption and ("can't parse entities" in resp_text.lower() or "parsing" in resp_text.lower()):
+                    form_retry = aiohttp.FormData()
+                    form_retry.add_field("chat_id", str(chat_id))
+                    form_retry.add_field("message_id", str(message_id))
+                    media_payload.pop("parse_mode", None)
+                    form_retry.add_field("media", json.dumps(media_payload))
+                    if reply_markup is not None:
+                        form_retry.add_field("reply_markup", json.dumps(reply_markup))
+                    with open(photo_path, "rb") as f:
+                        form_retry.add_field("chart_photo", f.read(), filename=os.path.basename(photo_path), content_type="image/png")
+                    async with session.post(url, data=form_retry, timeout=client_timeout) as r2:
+                        return r2.status == 200
+                logger.warning(f"[TelegramAdapter] editMessageMedia warning (HTTP {resp.status}): {resp_text}")
+                return False
+        except Exception as e:
+            logger.error(f"[TelegramAdapter] Error editando imagen en mensaje #{message_id}: {e}")
             return False
 
     # ── Cards & Renderers ────────────────────────────────────────────────────
@@ -1280,7 +1345,74 @@ class TelegramAdapter:
                         f"{CARD_LINE}\n"
                         f"⏰ `{now_str}`"
                     )
-                    await self.send_photo(session, chat_id, chart_path, caption=caption)
+                    markup = {
+                        "inline_keyboard": [
+                            [
+                                {"text": t.get("btn_refresh_chart", "🔄 Refrescar Gráfico"), "callback_data": f"refresh_chart_{ticket}"},
+                                {"text": t["btn_view_positions"], "callback_data": "nav_positions"}
+                            ]
+                        ]
+                    }
+                    await self.send_photo(session, chat_id, chart_path, caption=caption, reply_markup=markup)
+                else:
+                    await self._send_response(session, chat_id, t["chart_error"], lang=lang)
+
+        # ── Refrescar Gráfico Técnico In-Place ───────────────────────────────
+        elif data.startswith("refresh_chart_"):
+            target_str = data.replace("refresh_chart_", "")
+            if cq_id:
+                refresh_toast = t.get("chart_refreshing", "🔄 Actualizando gráfico en vivo...")
+                await self._answer_callback_query(session, cq_id, refresh_toast)
+
+            from services.chart_helper import get_chart_for_position, get_chart_for_signal
+            chart_path = None
+            target_label = ""
+            ticket = None
+            sym = None
+
+            if target_str.startswith("sym_"):
+                sym = target_str.replace("sym_", "").upper()
+                target_label = f"{sym} (H1)"
+                chart_path = await asyncio.to_thread(get_chart_for_signal, sym)
+                cb_data = f"refresh_chart_sym_{sym}"
+            elif target_str.isdigit():
+                ticket = int(target_str)
+                target_label = f"#{ticket}"
+                chart_path = await asyncio.to_thread(get_chart_for_position, ticket)
+                cb_data = f"refresh_chart_{ticket}"
+            else:
+                sym = target_str.upper()
+                target_label = f"{sym} (H1)"
+                chart_path = await asyncio.to_thread(get_chart_for_signal, sym)
+                cb_data = f"refresh_chart_sym_{sym}"
+
+            if chart_path and os.path.exists(chart_path):
+                now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+                caption = (
+                    f"{t['chart_title'].format(target=target_label)}\n"
+                    f"{CARD_LINE}\n"
+                    f"{t['chart_tf']}\n"
+                    f"{t['chart_levels']}\n"
+                    f"{CARD_LINE}\n"
+                    f"⏰ `{now_str}`"
+                )
+                markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": t.get("btn_refresh_chart", "🔄 Refrescar Gráfico"), "callback_data": cb_data},
+                            {"text": t["btn_view_positions"], "callback_data": "nav_positions"}
+                        ]
+                    ]
+                }
+                edited = await self.edit_message_photo(
+                    session, chat_id, message_id, chart_path, caption=caption, reply_markup=markup
+                )
+                if not edited:
+                    await self.send_photo(session, chat_id, chart_path, caption=caption, reply_markup=markup)
+            else:
+                if ticket:
+                    closed_msg = t.get("chart_pos_closed", f"ℹ️ La posición #{ticket} ya no se encuentra abierta en MT5.").format(ticket=ticket)
+                    await self._send_response(session, chat_id, closed_msg, lang=lang)
                 else:
                     await self._send_response(session, chat_id, t["chart_error"], lang=lang)
 
@@ -1597,7 +1729,16 @@ class TelegramAdapter:
                 f"{CARD_LINE}\n"
                 f"⏰ `{now_str}`"
             )
-            await self.send_photo(session, chat_id, chart_path, caption=caption)
+            chart_cb = f"refresh_chart_{ticket}" if (target.isdigit() or (len(positions) == 1 and not target)) else f"refresh_chart_sym_{target if target in ('EURUSD', 'XAUUSD', 'BTCEUR', 'BTCUSDT', 'GOLD') else ('XAUUSD' if target == 'GOLD' else 'EURUSD')}"
+            markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": t.get("btn_refresh_chart", "🔄 Refrescar Gráfico"), "callback_data": chart_cb},
+                        {"text": t["btn_view_positions"], "callback_data": "nav_positions"}
+                    ]
+                ]
+            }
+            await self.send_photo(session, chat_id, chart_path, caption=caption, reply_markup=markup)
         else:
             await self._send_response(session, chat_id, t["chart_error"], lang=user_lang)
 

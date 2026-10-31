@@ -137,5 +137,19 @@ class TestDiscordCommandsService(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("€", pnl_field.value)
 
 
+    def test_chart_refresh_view_initialization(self):
+        """Verifies ChartRefreshView initializes with target and is_ticket flag."""
+        import asyncio
+        async def _test():
+            from services.commands_refactored import ChartRefreshView
+            view = ChartRefreshView(target="11777738", is_ticket=True, authorized_user_ids={739198540177473667}, trading_client=self.mock_trading_client)
+            self.assertEqual(view.target, "11777738")
+            self.assertTrue(view.is_ticket)
+            self.assertEqual(len(view.children), 1)
+            btn = view.children[0]
+            self.assertEqual(btn.label, "Refrescar Gráfico")
+        asyncio.run(_test())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -81,6 +81,61 @@ class ClosePositionConfirmView(discord.ui.View):
         await interaction.response.send_message("Cierre cancelado.", ephemeral=True)
 
 
+class ChartRefreshView(discord.ui.View):
+    """Vista interactiva con botón para refrescar el gráfico técnico in-place en Discord."""
+
+    def __init__(
+        self,
+        target: str,
+        is_ticket: bool,
+        authorized_user_ids: Set[int],
+        trading_client: TradingClient,
+        timeout: float = 300.0
+    ):
+        super().__init__(timeout=timeout)
+        self.target = target
+        self.is_ticket = is_ticket
+        self.authorized_user_ids = authorized_user_ids
+        self.trading_client = trading_client
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not self.authorized_user_ids or interaction.user.id not in self.authorized_user_ids:
+            await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Refrescar Gráfico", style=discord.ButtonStyle.primary, emoji="🔄")
+    async def refresh_chart(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        try:
+            from services.chart_helper import get_chart_for_position, get_chart_for_signal
+            chart_path = None
+            if self.is_ticket:
+                chart_path = await asyncio.to_thread(get_chart_for_position, int(self.target))
+            else:
+                chart_path = await asyncio.to_thread(get_chart_for_signal, self.target)
+
+            if chart_path and os.path.exists(chart_path):
+                now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+                embed = interaction.message.embeds[0] if (interaction.message and interaction.message.embeds) else discord.Embed(
+                    title="📊 Gráfico Técnico MT5",
+                    color=discord.Color.from_rgb(0, 163, 255)
+                )
+                embed.set_footer(text=f"LastEdge Terminal • Refrescado: {now_str}")
+                file = discord.File(chart_path, filename="chart.png")
+                embed.set_image(url="attachment://chart.png")
+                if interaction.message:
+                    await interaction.message.edit(attachments=[file], embed=embed, view=self)
+                else:
+                    await interaction.edit_original_response(attachments=[file], embed=embed, view=self)
+            else:
+                msg = f"ℹ️ La posición #{self.target} ya no se encuentra abierta en MT5." if self.is_ticket else "⚠️ No se pudo regenerar el gráfico actualizado."
+                await interaction.followup.send(msg, ephemeral=True)
+        except Exception as e:
+            logger.error(f"[Discord ChartView] Error refrescando gráfico: {e}")
+            await interaction.followup.send(f"❌ Error al refrescar gráfico: {e}", ephemeral=True)
+
+
 class CommandsService:
     """Adaptador de Comandos Discord desacoplado consumiendo APIs REST."""
 
@@ -360,7 +415,7 @@ class CommandsService:
             description="Puedes utilizar comandos tanto con barra slash (`/status`) como con prefijo tradicional (`!status`).",
             color=0x3b82f6
         )
-        embed.add_field(name="📊 Operativa", value="`/status`, `/positions`, `/signals`, `/equity`, `/risk`, `/close_position <ticket>`", inline=False)
+        embed.add_field(name="📊 Operativa", value="`/status`, `/positions`, `/signals`, `/chart [ticket|sym]`, `/equity`, `/risk`, `/close_position <ticket>`", inline=False)
         embed.add_field(name="⚙️ Control y Señales", value="`/autosignals [on|off|status]`, `/journal [días]`, `/research`", inline=False)
         embed.add_field(name="🩺 Diagnóstico y Red", value="`/health`, `/version`, `/ping`, `/logs`, `/discord`", inline=False)
         auth_preview = f"`{next(iter(self.authorized_user_ids))}`" if self.authorized_user_ids else "Ninguno"
@@ -412,6 +467,69 @@ class CommandsService:
             except Exception as e:
                 logger.error(f"[Discord Slash] Error en positions: {e}")
                 await interaction.followup.send(f"⚠️ Error obteniendo posiciones: {e}")
+
+        @bot.tree.command(name="chart", description="Genera el gráfico técnico en vivo de una posición o símbolo con botón de refresco.")
+        @discord.app_commands.describe(target="Ticket de posición (ej: 11777738) o símbolo (ej: EURUSD, XAUUSD, BTCEUR)")
+        async def slash_chart(interaction: discord.Interaction, target: Optional[str] = None):
+            if not self._is_authorized(interaction.user.id):
+                await interaction.response.send_message("⛔ Acceso denegado: Usuario no autorizado.", ephemeral=True)
+                return
+            await interaction.response.defer(thinking=True)
+            try:
+                from services.chart_helper import get_chart_for_position, get_chart_for_signal
+                tgt = (target or "").strip().upper()
+                is_ticket = False
+                resolved_ticket = None
+                resolved_sym = None
+                chart_path = None
+
+                if tgt.isdigit():
+                    is_ticket = True
+                    resolved_ticket = int(tgt)
+                    chart_path = await asyncio.to_thread(get_chart_for_position, resolved_ticket)
+                    title = f"📊 Gráfico Técnico MT5 — #{resolved_ticket}"
+                elif tgt in ("EURUSD", "XAUUSD", "BTCEUR", "BTCUSDT", "GOLD", "BTC"):
+                    sym = "XAUUSD" if tgt == "GOLD" else ("BTCEUR" if tgt == "BTC" else tgt)
+                    resolved_sym = sym
+                    chart_path = await asyncio.to_thread(get_chart_for_signal, sym)
+                    title = f"📊 Gráfico Técnico MT5 — {sym} (H1)"
+                elif not tgt:
+                    pos_data = await asyncio.to_thread(self.trading_client.get_positions)
+                    positions = pos_data.get("positions", []) if isinstance(pos_data, dict) else (pos_data if isinstance(pos_data, list) else [])
+                    if len(positions) == 1:
+                        is_ticket = True
+                        resolved_ticket = int(positions[0].get("ticket", 0))
+                        sym = positions[0].get("symbol", "EURUSD")
+                        chart_path = await asyncio.to_thread(get_chart_for_position, resolved_ticket)
+                        title = f"📊 Gráfico Técnico MT5 — #{resolved_ticket} ({sym})"
+                    else:
+                        resolved_sym = "EURUSD"
+                        chart_path = await asyncio.to_thread(get_chart_for_signal, resolved_sym)
+                        title = f"📊 Gráfico Técnico MT5 — {resolved_sym} (H1)"
+                else:
+                    resolved_sym = tgt
+                    chart_path = await asyncio.to_thread(get_chart_for_signal, resolved_sym)
+                    title = f"📊 Gráfico Técnico MT5 — {resolved_sym} (H1)"
+
+                if chart_path and os.path.exists(chart_path):
+                    embed = discord.Embed(
+                        title=title,
+                        description="Velas reales H1 de MT5 con niveles de Entrada, Stop Loss y Take Profit.",
+                        color=discord.Color.from_rgb(0, 163, 255)
+                    )
+                    now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+                    embed.set_footer(text=f"LastEdge Terminal • {now_str}")
+                    file = discord.File(chart_path, filename="chart.png")
+                    embed.set_image(url="attachment://chart.png")
+                    view_target = str(resolved_ticket) if is_ticket else (resolved_sym or "EURUSD")
+                    view = ChartRefreshView(view_target, is_ticket, self.authorized_user_ids, self.trading_client)
+                    await interaction.followup.send(file=file, embed=embed, view=view)
+                else:
+                    err_msg = f"ℹ️ La posición #{resolved_ticket} no está abierta en MT5." if is_ticket else "⚠️ No se pudo generar el gráfico solicitado."
+                    await interaction.followup.send(err_msg)
+            except Exception as e:
+                logger.error(f"[Discord Slash] Error en chart: {e}")
+                await interaction.followup.send(f"⚠️ Error generando gráfico: {e}")
 
         @bot.tree.command(name="signals", description="Consulta las últimas señales de trading generadas y su estado.")
         async def slash_signals(interaction: discord.Interaction):
@@ -620,6 +738,68 @@ class CommandsService:
                 except Exception as e:
                     logger.error(f"[Discord Prefix] Error en positions: {e}")
                     await ctx.send(f"⚠️ Error obteniendo posiciones: {e}")
+
+        @bot.command(name="chart", aliases=["grafico", "c"])
+        async def cmd_chart(ctx, target: Optional[str] = None):
+            if not self._is_authorized(ctx.author.id):
+                await ctx.reply("⛔ Acceso denegado: Usuario no autorizado.")
+                return
+            async with ctx.typing():
+                try:
+                    from services.chart_helper import get_chart_for_position, get_chart_for_signal
+                    tgt = (target or "").strip().upper()
+                    is_ticket = False
+                    resolved_ticket = None
+                    resolved_sym = None
+                    chart_path = None
+
+                    if tgt.isdigit():
+                        is_ticket = True
+                        resolved_ticket = int(tgt)
+                        chart_path = await asyncio.to_thread(get_chart_for_position, resolved_ticket)
+                        title = f"📊 Gráfico Técnico MT5 — #{resolved_ticket}"
+                    elif tgt in ("EURUSD", "XAUUSD", "BTCEUR", "BTCUSDT", "GOLD", "BTC"):
+                        sym = "XAUUSD" if tgt == "GOLD" else ("BTCEUR" if tgt == "BTC" else tgt)
+                        resolved_sym = sym
+                        chart_path = await asyncio.to_thread(get_chart_for_signal, sym)
+                        title = f"📊 Gráfico Técnico MT5 — {sym} (H1)"
+                    elif not tgt:
+                        pos_data = await asyncio.to_thread(self.trading_client.get_positions)
+                        positions = pos_data.get("positions", []) if isinstance(pos_data, dict) else (pos_data if isinstance(pos_data, list) else [])
+                        if len(positions) == 1:
+                            is_ticket = True
+                            resolved_ticket = int(positions[0].get("ticket", 0))
+                            sym = positions[0].get("symbol", "EURUSD")
+                            chart_path = await asyncio.to_thread(get_chart_for_position, resolved_ticket)
+                            title = f"📊 Gráfico Técnico MT5 — #{resolved_ticket} ({sym})"
+                        else:
+                            resolved_sym = "EURUSD"
+                            chart_path = await asyncio.to_thread(get_chart_for_signal, resolved_sym)
+                            title = f"📊 Gráfico Técnico MT5 — {resolved_sym} (H1)"
+                    else:
+                        resolved_sym = tgt
+                        chart_path = await asyncio.to_thread(get_chart_for_signal, resolved_sym)
+                        title = f"📊 Gráfico Técnico MT5 — {resolved_sym} (H1)"
+
+                    if chart_path and os.path.exists(chart_path):
+                        embed = discord.Embed(
+                            title=title,
+                            description="Velas reales H1 de MT5 con niveles de Entrada, Stop Loss y Take Profit.",
+                            color=discord.Color.from_rgb(0, 163, 255)
+                        )
+                        now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+                        embed.set_footer(text=f"LastEdge Terminal • {now_str}")
+                        file = discord.File(chart_path, filename="chart.png")
+                        embed.set_image(url="attachment://chart.png")
+                        view_target = str(resolved_ticket) if is_ticket else (resolved_sym or "EURUSD")
+                        view = ChartRefreshView(view_target, is_ticket, self.authorized_user_ids, self.trading_client)
+                        await ctx.send(file=file, embed=embed, view=view)
+                    else:
+                        err_msg = f"ℹ️ La posición #{resolved_ticket} no está abierta en MT5." if is_ticket else "⚠️ No se pudo generar el gráfico solicitado."
+                        await ctx.send(err_msg)
+                except Exception as e:
+                    logger.error(f"[Discord Prefix] Error en chart: {e}")
+                    await ctx.send(f"⚠️ Error generando gráfico: {e}")
 
         @bot.command(name="signals", aliases=["senales"])
         async def cmd_signals(ctx):

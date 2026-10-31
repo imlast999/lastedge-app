@@ -270,5 +270,75 @@ class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("language_code", payloads[0])
         self.assertEqual(payloads[1].get("language_code"), "es")
 
+    async def test_edit_message_photo_calls_telegram_api(self):
+        """Verifica que edit_message_photo realiza POST a editMessageMedia con FormData."""
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tf:
+            tf.write(b"dummy_png_bytes")
+            tf_path = tf.name
+
+        try:
+            mock_session, mock_post = self._create_mock_session()
+            success = await self.adapter.edit_message_photo(
+                mock_session,
+                chat_id=12345,
+                message_id=888,
+                photo_path=tf_path,
+                caption="Test Refresh Caption",
+                reply_markup={"inline_keyboard": []}
+            )
+            self.assertTrue(success)
+            self.assertEqual(mock_session.post.call_count, 1)
+            url = mock_session.post.call_args[0][0]
+            self.assertIn("editMessageMedia", url)
+        finally:
+            if os.path.exists(tf_path):
+                os.remove(tf_path)
+
+    async def test_refresh_chart_callback_triggers_edit_message_photo(self):
+        """Verifica que refresh_chart_<ticket> refresca la foto existente in-place."""
+        mock_session, mock_post = self._create_mock_session()
+        cq = {
+            "id": "cq_refresh_chart",
+            "data": "refresh_chart_11777738",
+            "message": {"message_id": 888, "chat": {"id": 12345}},
+            "from": {"id": "12345"}
+        }
+        with patch("services.chart_helper.get_chart_for_position", return_value="dummy_chart.png"), \
+             patch("os.path.exists", return_value=True), \
+             patch.object(self.adapter, "edit_message_photo", new_callable=AsyncMock) as mock_edit:
+            mock_edit.return_value = True
+            await self.adapter._process_callback_query(mock_session, cq)
+            mock_edit.assert_called_once()
+            args = mock_edit.call_args[0]
+            kwargs = mock_edit.call_args[1]
+            self.assertEqual(args[1], 12345)
+            self.assertEqual(args[2], 888)
+            markup = kwargs.get("reply_markup") or args[5]
+            all_cbs = [btn["callback_data"] for row in markup["inline_keyboard"] for btn in row]
+            self.assertIn("refresh_chart_11777738", all_cbs)
+
+    async def test_chart_callback_attaches_refresh_button(self):
+        """Verifica que al generar un chart se adjunta el boton de refrescar."""
+        mock_session, mock_post = self._create_mock_session()
+        cq = {
+            "id": "cq_chart",
+            "data": "chart_11777738",
+            "message": {"message_id": 777, "chat": {"id": 12345}},
+            "from": {"id": "12345"}
+        }
+        with patch("services.chart_helper.get_chart_for_position", return_value="dummy_chart.png"), \
+             patch("os.path.exists", return_value=True), \
+             patch.object(self.adapter, "send_photo", new_callable=AsyncMock) as mock_send:
+            mock_send.return_value = True
+            await self.adapter._process_callback_query(mock_session, cq)
+            mock_send.assert_called_once()
+            kwargs = mock_send.call_args[1]
+            markup = kwargs.get("reply_markup")
+            all_cbs = [btn["callback_data"] for row in markup["inline_keyboard"] for btn in row]
+            self.assertIn("refresh_chart_11777738", all_cbs)
+
+
 if __name__ == '__main__':
     unittest.main()
