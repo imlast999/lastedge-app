@@ -111,21 +111,23 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true'
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.prepare_apk.outputs.version }}
-          name: LastEdge v${{ steps.prepare_apk.outputs.version }}
+          name: LastEdge Mobile v${{ steps.prepare_apk.outputs.version }}
+          make_latest: true
           body: |
-            ## 🚀 LastEdge Mobile v${{ steps.prepare_apk.outputs.version }}
+            ## 📱 LastEdge Mobile v${{ steps.prepare_apk.outputs.version }}
 
-            - **Versión**: `${{ steps.prepare_apk.outputs.version }}`
+            - **Version**: `${{ steps.prepare_apk.outputs.version }}`
             - **Build Code**: `${{ steps.sync_version.outputs.VERSION_CODE }}`
             - **Commit**: `${{ github.sha }}`
-            - **Firma**: Keystore de producción (actualización in-place garantizada)
+            - **Signature**: Production Keystore (In-place updates supported)
+            - **Typography**: Nexa (Titles & Display) + Plus Jakarta Sans (Body & Metrics)
 
-            ### 📲 Descarga Directa del APK
-            Descarga `LastEdge-v${{ steps.prepare_apk.outputs.version }}.apk` e instálalo directamente sobre la versión anterior.
+            ### ⬇️ Direct APK Download
+            Download `LastEdge-v${{ steps.prepare_apk.outputs.version }}.apk` below and install it directly over your existing installation.
           files: ${{ steps.prepare_apk.outputs.apk_path }}
           draft: false
           prerelease: ${{ github.event.inputs.prerelease == true || github.event.inputs.prerelease == 'true' }}
