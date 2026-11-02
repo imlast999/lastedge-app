@@ -41,9 +41,9 @@ jobs:
 
       - name: Client & Adapter Verification
         run: |
-          python -c "from services.clients.trading_client import TradingClient; from services.clients.research_client import ResearchClient; print('App Clients & Adapters Verified')"
+          python -c "from services.clients.trading_client import TradingClient; from services.clients.research_client import ResearchClient; import services.chart_helper; print('App Clients & Adapters Verified')"
 
-      - name: Run Test Suite (11 Tests)
+      - name: Run Test Suite (50 Tests)
         env:
           PYTHONPATH: .
           LOG_LEVEL: ERROR

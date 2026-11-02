@@ -35,6 +35,8 @@ from .dashboard_server import (
     start_dashboard_server,
 )
 
+from . import chart_helper
+
 __all__ = [
     "IntelligentLogger",
     "get_intelligent_logger",
@@ -52,4 +54,5 @@ __all__ = [
     "AppDashboardServer",
     "get_dashboard_server",
     "start_dashboard_server",
+    "chart_helper",
 ]

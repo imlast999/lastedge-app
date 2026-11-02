@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import AsyncMock, patch, MagicMock
 from services.telegram_adapter import TelegramAdapter, set_chat_language, get_chat_language
 from services.notification_dispatcher import NotificationDispatcher
+import services.chart_helper
 
 class TestTelegramAdapter(unittest.IsolatedAsyncioTestCase):
 
