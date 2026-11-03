@@ -126,7 +126,19 @@ def sync_version():
     version_file.write_text(f"{version_str}\n", encoding="utf-8")
     print(f"✅ Archivo VERSION escrito: {version_str}")
 
-    # 6. GitHub Actions output environment
+    # 6. Synchronize README.md direct download link
+    readme_path = REPO_ROOT / "README.md"
+    if readme_path.exists():
+        readme_text = readme_path.read_text(encoding="utf-8")
+        # Replace or update direct APK download line
+        old_pattern = r'\* \*\*Direct APK Download\*\*:.*'
+        new_line = f'* **Direct APK Download**: [`LastEdge-v{version_str}.apk`](https://github.com/imlast999/lastedge-app/releases/download/v{version_str}/LastEdge-v{version_str}.apk) (or grab from [Latest Release](https://github.com/imlast999/lastedge-app/releases/latest))'
+        if re.search(old_pattern, readme_text):
+            readme_text = re.sub(old_pattern, new_line, readme_text)
+            readme_path.write_text(readme_text, encoding="utf-8")
+            print(f"✅ Actualizado enlace directo en README.md: v{version_str}")
+
+    # 7. GitHub Actions output environment
     github_output = os.getenv("GITHUB_OUTPUT")
     if github_output and os.path.exists(github_output):
         with open(github_output, "a", encoding="utf-8") as gh:

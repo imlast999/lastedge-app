@@ -110,6 +110,11 @@ jobs:
           path: ${{ steps.prepare_apk.outputs.apk_path }}
           retention-days: 30
 
+      - name: Generate Semantic Release Notes & Changelog
+        id: release_notes
+        run: |
+          python scripts/generate_release_notes.py
+
       - name: Publish GitHub Release
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true'
         uses: softprops/action-gh-release@v2
@@ -117,17 +122,34 @@ jobs:
           tag_name: v${{ steps.prepare_apk.outputs.version }}
           name: LastEdge Mobile v${{ steps.prepare_apk.outputs.version }}
           make_latest: true
-          body: |
-            ## 📱 LastEdge Mobile v${{ steps.prepare_apk.outputs.version }}
-
-            - **Version**: `${{ steps.prepare_apk.outputs.version }}`
-            - **Build Code**: `${{ steps.sync_version.outputs.VERSION_CODE }}`
-            - **Commit**: `${{ github.sha }}`
-            - **Signature**: Production Keystore (In-place updates supported)
-            - **Typography**: Nexa (Titles & Display) + Plus Jakarta Sans (Body & Metrics)
-
-            ### ⬇️ Direct APK Download
-            Download `LastEdge-v${{ steps.prepare_apk.outputs.version }}.apk` below and install it directly over your existing installation.
+          body_path: release_notes.md
           files: ${{ steps.prepare_apk.outputs.apk_path }}
           draft: false
           prerelease: ${{ github.event.inputs.prerelease == true || github.event.inputs.prerelease == 'true' }}
+
+      - name: Commit & Push README Version Updates
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md VERSION mobile-app/package.json mobile-app/artifacts/mobile/package.json mobile-app/artifacts/mobile/app.json mobile-app/artifacts/mobile/android/app/build.gradle
+          git diff --staged --quiet || git commit -m "chore(release): sync README and metadata for v${{ steps.prepare_apk.outputs.version }} [skip ci]"
+          git push origin main || echo "No changes to push or conflict avoided"
+
+      - name: Broadcast Release to Telegram & Discord
+        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true') && success()
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: |
+          python scripts/notify_bots.py \
+            --event release \
+            --version "${{ steps.prepare_apk.outputs.version }}" \
+            --apk-name "${{ steps.prepare_apk.outputs.apk_name }}" \
+            --download-url "https://github.com/${{ github.repository }}/releases/download/v${{ steps.prepare_apk.outputs.version }}/${{ steps.prepare_apk.outputs.apk_name }}" \
+            --release-url "https://github.com/${{ github.repository }}/releases/tag/v${{ steps.prepare_apk.outputs.version }}" \
+            --commit "${{ github.sha }}" \
+            --changelog "release_summary.txt"

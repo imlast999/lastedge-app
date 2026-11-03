@@ -49,3 +49,21 @@ jobs:
           LOG_LEVEL: ERROR
         run: |
           pytest tests/ -v --tb=short
+
+      - name: Alert CI Failure to Telegram & Discord
+        if: failure() && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: |
+          python scripts/notify_bots.py \
+            --event ci-failure \
+            --repo "${{ github.repository }}" \
+            --workflow "${{ github.workflow }} (Python ${{ matrix.python-version }})" \
+            --branch "${{ github.ref_name }}" \
+            --commit "${{ github.sha }}" \
+            --actor "${{ github.actor }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
