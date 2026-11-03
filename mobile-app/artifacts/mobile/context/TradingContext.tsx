@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { resolveApiConfig } from "@/lib/apiConfig";
+import { resolveApiConfig, getAppVersion } from "@/lib/apiConfig";
 import { useSettings } from "@/context/SettingsContext";
 import { sendLocalNotification } from "@/services/notifications";
 
@@ -20,6 +20,7 @@ export interface BotStatus {
   margin: number;
   freeMargin: number;
   currency?: string;
+  circuitBreakerActive?: boolean;
   executionQuality?: {
     avgLatency: number;
     avgSlippage: number;
@@ -38,6 +39,9 @@ export interface Signal {
   rrRatio: number;
   timestamp: string;
   lot: number;
+  score?: number;
+  confidence?: string;
+  autoExecuted?: boolean;
   strategy?: string;
 }
 
@@ -55,6 +59,7 @@ export interface Position {
   magic?: number;
   comment?: string;
   time?: string;
+  spread?: number;
 }
 
 export interface Trade {
@@ -65,9 +70,10 @@ export interface Trade {
   closePrice: number;
   pips: number;
   profit: number;
-  closeReason: "TAKE_PROFIT" | "STOP_LOSS" | "MANUAL";
+  closeReason: "TAKE_PROFIT" | "STOP_LOSS" | "MANUAL" | "PARTIAL_TP" | "WEEKEND_GUARD";
   closedAt: string;
   lot: number;
+  comment?: string;
   latencyMs?: number;
   slippagePips?: number;
 }
@@ -122,7 +128,13 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   // References to detect transitions for notifications
   const prevStatus = useRef<BotStatus | null>(null);
   const prevSignals = useRef<Signal[]>([]);
+  const prevPositions = useRef<Position[]>([]);
   const prevTrades = useRef<Trade[]>([]);
+  const beNotifiedTickets = useRef<Set<number>>(new Set());
+  const spreadSpikeTickets = useRef<Set<number>>(new Set());
+  const lastWeekendPreWarnDate = useRef<string | null>(null);
+  const lastDailyWrapDate = useRef<string | null>(null);
+  const checkedAppUpdate = useRef<boolean>(false);
 
   // ── Network fetch helper (single-attempt, propagates errors to trigger mock fallback)
 
@@ -167,17 +179,34 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
       // 1. Status
       const statusData = await safeFetch<BotStatus>("/api/status");
       if (statusData) {
-        if (
-          prevStatus.current?.connected &&
-          !statusData.connected &&
-          shouldNotify("CRITICAL_ERROR")
-        ) {
+        // 5.1 Desconexión / Reconexión MT5
+        if (prevStatus.current?.connected && !statusData.connected && shouldNotify("DISCONNECT")) {
           sendLocalNotification(
-            "CRITICAL_ERROR",
-            "🚨 Desconexión de MT5",
+            "DISCONNECT",
+            "🚨 Desconexión de MT5 / VPS",
             "El bot de trading ha perdido la conexión con el terminal MetaTrader 5."
           );
+        } else if (prevStatus.current && !prevStatus.current.connected && statusData.connected && shouldNotify("DISCONNECT")) {
+          sendLocalNotification(
+            "DISCONNECT",
+            "🟢 Conexión MT5 Restaurada",
+            "El enlace con MetaTrader 5 y VPS está de nuevo 100% operativo."
+          );
         }
+
+        // 3.4 Activación de Circuit Breaker
+        if (
+          statusData.circuitBreakerActive &&
+          !prevStatus.current?.circuitBreakerActive &&
+          shouldNotify("CIRCUIT_BREAKER")
+        ) {
+          sendLocalNotification(
+            "CIRCUIT_BREAKER",
+            "🚨 Circuit Breaker Activado",
+            "Trading pausado automáticamente por superar el límite de drawdown o racha de pérdidas."
+          );
+        }
+
         setStatus(statusData);
         prevStatus.current = statusData;
       }
@@ -191,14 +220,49 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         : [];
       if (signalsList.length > 0 || Array.isArray(rawSignals)) {
         signalsList.forEach((sig) => {
-          if (!prevSignals.current.find((s) => s.id === sig.id) && shouldNotify("NEW_SIGNAL")) {
-            sendLocalNotification(
-              "NEW_SIGNAL",
-              `🎯 Nueva señal ${sig.type} ${sig.symbol}`,
-              `Entrada: ${sig.entry} | TP: ${sig.takeProfit} | SL: ${sig.stopLoss}`
-            );
+          const isNew = !prevSignals.current.find((s) => s.id === sig.id);
+          if (isNew) {
+            // 1.2 Señal Auto-Ejecutada (Tier HIGH/VERY_HIGH >= 0.67 o autoExecuted)
+            if (sig.autoExecuted || (sig.score !== undefined && sig.score >= 0.67)) {
+              if (shouldNotify("AUTO_SIGNAL")) {
+                const pct = sig.score ? Math.round(sig.score * 100) : 85;
+                sendLocalNotification(
+                  "AUTO_SIGNAL",
+                  `⚡ Señal Auto-Ejecutada: ${sig.type} ${sig.symbol}`,
+                  `Score ${pct}% · Ejecutada automáticamente en MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})`
+                );
+              }
+            } else if (sig.status === "pending") {
+              // 1.1 Nueva Señal Discrecional (Modo Híbrido - TTL 10m)
+              if (shouldNotify("DISCRETIONARY_SIGNAL")) {
+                const pct = sig.score ? Math.round(sig.score * 100) : 60;
+                sendLocalNotification(
+                  "DISCRETIONARY_SIGNAL",
+                  `🎯 Señal Discrecional: ${sig.type} ${sig.symbol}`,
+                  `Score ${pct}% · Requiere confirmación manual antes de que expire el TTL (10m)`
+                );
+              }
+            }
           }
         });
+
+        // 1.3 Alerta de Tiempo Expirado (TTL 10m)
+        prevSignals.current.forEach((prevSig) => {
+          if (prevSig.status === "pending") {
+            const currentMatch = signalsList.find((s) => s.id === prevSig.id);
+            const isNowExpired =
+              (currentMatch && currentMatch.status === "expired") ||
+              (!currentMatch && Date.now() - new Date(prevSig.timestamp).getTime() > 600000);
+            if (isNowExpired && shouldNotify("EXPIRED_SIGNAL")) {
+              sendLocalNotification(
+                "EXPIRED_SIGNAL",
+                `⏳ Señal Expirada: ${prevSig.symbol}`,
+                `La señal ${prevSig.type} en ${prevSig.symbol} ha caducado por superar el límite de 10 minutos.`
+              );
+            }
+          }
+        });
+
         setSignals(signalsList);
         prevSignals.current = signalsList;
       }
@@ -210,7 +274,76 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         : Array.isArray(rawPositions?.positions)
         ? rawPositions.positions
         : [];
-      setPositions(positionsList);
+
+      if (positionsList.length > 0 || Array.isArray(rawPositions)) {
+        positionsList.forEach((pos) => {
+          // 2.1 Trailing Stop Activado / Break-Even Asegurado (Riesgo Cero)
+          const slVal = pos.sl;
+          const openVal = pos.open_price;
+          if (!beNotifiedTickets.current.has(pos.ticket) && slVal > 0 && openVal > 0) {
+            const isAtBE =
+              pos.comment?.toUpperCase().includes("BE") ||
+              pos.comment?.toUpperCase().includes("BREAK") ||
+              pos.comment?.toUpperCase().includes("TRAILING") ||
+              (pos.type === "BUY" && slVal >= openVal - 0.0001) ||
+              (pos.type === "SELL" && slVal <= openVal + 0.0001);
+
+            const prevPos = prevPositions.current.find((p) => p.ticket === pos.ticket);
+            const prevWasNotAtBE =
+              !prevPos ||
+              (pos.type === "BUY" ? prevPos.sl < openVal - 0.0001 : prevPos.sl > openVal + 0.0001);
+
+            if (isAtBE && prevWasNotAtBE) {
+              beNotifiedTickets.current.add(pos.ticket);
+              if (shouldNotify("BREAK_EVEN")) {
+                sendLocalNotification(
+                  "BREAK_EVEN",
+                  `🛡️ Break-Even Asegurado: ${pos.symbol}`,
+                  `SL movido a precio de entrada (${openVal}) · Posición protegida a Riesgo Cero.`
+                );
+              }
+            }
+          }
+
+          // 5.2 Alerta de Spread Anormal (> 4.0 pips / 40 points)
+          if (pos.spread && pos.spread > 40 && !spreadSpikeTickets.current.has(pos.ticket)) {
+            spreadSpikeTickets.current.add(pos.ticket);
+            if (shouldNotify("SPREAD_SPIKE")) {
+              sendLocalNotification(
+                "SPREAD_SPIKE",
+                `⚠️ Spread Anormal en ${pos.symbol}`,
+                `Spread elevado a ${(pos.spread / 10).toFixed(1)} pips. Nuevas órdenes bloqueadas preventivamente.`
+              );
+            }
+          }
+        });
+
+        // 3.1 Aviso Previo de Weekend Exposure Guard (Viernes 20:30 a 21:44 UTC)
+        const now = new Date();
+        const utcDay = now.getUTCDay(); // 5 = Viernes
+        const utcHour = now.getUTCHours();
+        const utcMin = now.getUTCMinutes();
+        const todayDateStr = now.toISOString().split("T")[0];
+
+        if (utcDay === 5 && ((utcHour === 20 && utcMin >= 30) || (utcHour === 21 && utcMin < 45))) {
+          const nonBtc = positionsList.filter(
+            (p) => !p.symbol.toUpperCase().includes("BTC") && !p.symbol.toUpperCase().includes("ETH")
+          );
+          if (nonBtc.length > 0 && lastWeekendPreWarnDate.current !== todayDateStr) {
+            lastWeekendPreWarnDate.current = todayDateStr;
+            if (shouldNotify("WEEKEND_GUARD_PRE")) {
+              sendLocalNotification(
+                "WEEKEND_GUARD_PRE",
+                "⚠️ Weekend Exposure Guard (Aviso Previo)",
+                `Quedan minutos para el cierre de mercado. ${nonBtc.length} posición(es) no-cripto serán cerradas a las 21:45 UTC.`
+              );
+            }
+          }
+        }
+
+        setPositions(positionsList);
+        prevPositions.current = positionsList;
+      }
 
       // 3. Trades
       const rawTrades = await safeFetch<any>("/api/trades");
@@ -221,17 +354,106 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         : [];
       if (tradesList.length > 0 || Array.isArray(rawTrades)) {
         tradesList.forEach((trade) => {
-          if (!prevTrades.current.find((t) => t.id === trade.id) && shouldNotify("TRADE_CLOSE")) {
-            const sign = trade.profit >= 0 ? "+" : "";
-            sendLocalNotification(
-              "TRADE_CLOSE",
-              `✅ Operación cerrada en ${trade.symbol}`,
-              `${trade.closeReason === "TAKE_PROFIT" ? "Take Profit 🎯" : "Stop Loss 🛡️"} (${sign}${trade.profit})`
-            );
+          if (!prevTrades.current.find((t) => t.id === trade.id)) {
+            // 3.2 Confirmación Liquidación de Fin de Semana (Weekend Guard)
+            if (
+              trade.closeReason === "WEEKEND_GUARD" ||
+              trade.comment?.toLowerCase().includes("weekend")
+            ) {
+              if (shouldNotify("WEEKEND_GUARD_EXEC")) {
+                sendLocalNotification(
+                  "WEEKEND_GUARD_EXEC",
+                  `🔒 Liquidación de Fin de Semana: ${trade.symbol}`,
+                  `Operación cerrada preventivamente por Weekend Exposure Guard.`
+                );
+              }
+            }
+            // 2.2 Take Profit Parcial Ejecutado (50% volumen)
+            else if (
+              trade.closeReason === "PARTIAL_TP" ||
+              trade.comment?.toLowerCase().includes("partial") ||
+              trade.comment?.toLowerCase().includes("tp1")
+            ) {
+              if (shouldNotify("PARTIAL_TP")) {
+                const sign = trade.profit >= 0 ? "+" : "";
+                sendLocalNotification(
+                  "PARTIAL_TP",
+                  `💰 Take Profit Parcial: ${trade.symbol}`,
+                  `50% de volumen asegurado (${sign}${trade.profit.toFixed(2)}$). Resto protegido en Trailing Stop.`
+                );
+              }
+            }
+            // 2.3 Cierre en Ganancia
+            else if (trade.profit >= 0) {
+              if (shouldNotify("TRADE_PROFIT")) {
+                sendLocalNotification(
+                  "TRADE_PROFIT",
+                  `🎯 Take Profit Alcanzado: ${trade.symbol}`,
+                  `Operación cerrada con balance positivo (+${trade.profit.toFixed(2)}$).`
+                );
+              }
+            }
+            // 2.4 Cierre en Stop Loss
+            else {
+              if (shouldNotify("TRADE_LOSS")) {
+                sendLocalNotification(
+                  "TRADE_LOSS",
+                  `🛡️ Stop Loss Ejecutado: ${trade.symbol}`,
+                  `Operación cerrada por límite de pérdida (-${Math.abs(trade.profit).toFixed(2)}$).`
+                );
+              }
+            }
           }
         });
         setTrades(tradesList);
         prevTrades.current = tradesList;
+      }
+
+      // 6.1 Resumen Diario de Cierre de Sesión (Daily Wrap-Up a las 22:00 UTC)
+      const nowWrap = new Date();
+      const utcWrapHour = nowWrap.getUTCHours();
+      const todayWrapStr = nowWrap.toISOString().split("T")[0];
+      if (utcWrapHour >= 22 && lastDailyWrapDate.current !== todayWrapStr) {
+        lastDailyWrapDate.current = todayWrapStr;
+        if (shouldNotify("DAILY_WRAPUP")) {
+          const todayTrades = tradesList.filter(
+            (t) => t.closedAt && t.closedAt.startsWith(todayWrapStr)
+          );
+          const dayPnl = todayTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+          const winCount = todayTrades.filter((t) => t.profit > 0).length;
+          const winRateStr =
+            todayTrades.length > 0
+              ? `${Math.round((winCount / todayTrades.length) * 100)}%`
+              : "N/A";
+          sendLocalNotification(
+            "DAILY_WRAPUP",
+            "📊 Resumen de Sesión Diaria",
+            `PnL hoy: ${dayPnl >= 0 ? "+" : ""}${dayPnl.toFixed(2)}$ | ${todayTrades.length} trades cerrados | Winrate: ${winRateStr}`
+          );
+        }
+      }
+
+      // 6.2 Nueva Versión de la App (APK Update Check 1 vez)
+      if (!checkedAppUpdate.current) {
+        checkedAppUpdate.current = true;
+        fetch("https://api.github.com/repos/imlast999/lastedge-app/releases/latest", {
+          headers: { Accept: "application/vnd.github.v3+json" },
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((rel) => {
+            if (rel && rel.tag_name) {
+              const currentVer = `v${getAppVersion()}`;
+              if (rel.tag_name !== currentVer && shouldNotify("APP_UPDATE")) {
+                sendLocalNotification(
+                  "APP_UPDATE",
+                  `🚀 Actualización Disponible (${rel.tag_name})`,
+                  `Nueva versión de LastEdge App disponible. Toca aquí para descargar e instalar el nuevo APK.`,
+                  { url: rel.html_url || "https://github.com/imlast999/lastedge-app/releases/latest" }
+                );
+              }
+            }
+          })
+          .catch(() => {});
       }
 
       // 4. Equity history (optional — server may return 500 if table is empty)

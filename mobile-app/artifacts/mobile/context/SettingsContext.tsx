@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { NotificationCategory } from "@/services/notifications";
 
 const STORAGE_KEY = "@bot_mt5_settings_v2";
 const ECOSYSTEM_STORAGE_KEY = "@lastedge_ecosystem_modules_v1";
@@ -27,9 +28,39 @@ export interface AppSettings {
   autoRefresh: boolean;
   pollIntervalMs: number;
   notificationsEnabled: boolean;
+
+  // ── Las 15 Notificaciones Seleccionadas ──
+  // 1. Señales y Ejecución
+  notifyDiscretionarySignals: boolean;     // 1.1 Nueva señal discrecional (TTL 10m)
+  notifyAutoExecutedSignals: boolean;      // 1.2 Señal auto-ejecutada (>= 0.67)
+  notifyExpiredSignals: boolean;           // 1.3 Alerta señal expirada por tiempo
+
+  // 2. Órdenes y Beneficios
+  notifyTrailingStopBreakEven: boolean;    // 2.1 Trailing stop / Break-Even asegurado
+  notifyPartialTakeProfit: boolean;        // 2.2 Take profit parcial ejecutado (50%)
+  notifyTradeCloseProfit: boolean;         // 2.3 Cierre en ganancia
+  notifyTradeCloseLoss: boolean;           // 2.4 Cierre en stop loss
+
+  // 3. Salvaguardas de Riesgo
+  notifyWeekendGuardPreWarning: boolean;   // 3.1 Aviso previo Weekend Guard (viernes)
+  notifyWeekendGuardExecution: boolean;    // 3.2 Confirmación liquidación fin de semana
+  notifyCircuitBreaker: boolean;           // 3.4 Activación de Circuit Breaker
+
+  // 4. Strategy Lab
+  notifyBacktestComplete: boolean;         // 4.2 Fin de optimización / backtest Lab
+
+  // 5. Broker y Conectividad
+  notifyDisconnect: boolean;               // 5.1 Pérdida/recuperación conexión MT5
+  notifySpreadSpike: boolean;              // 5.2 Alerta de spread anormal (>4 pips)
+
+  // 6. Rutina y Mantenimiento
+  notifyDailyWrapUp: boolean;              // 6.1 Resumen diario de sesión (22:00 UTC)
+  notifyAppUpdate: boolean;                // 6.2 Nueva versión del APK disponible
+
+  // Compatibilidad hacia atrás
   notifyNewSignals: boolean;
   notifyTradeClose: boolean;
-  notifyDisconnect: boolean;
+
   hapticsEnabled: boolean;
   /** Vacío = usar URL del APK */
   serverUrl: string;
@@ -52,9 +83,26 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoRefresh: true,
   pollIntervalMs: 5000,
   notificationsEnabled: true,
+
+  notifyDiscretionarySignals: true,
+  notifyAutoExecutedSignals: true,
+  notifyExpiredSignals: true,
+  notifyTrailingStopBreakEven: true,
+  notifyPartialTakeProfit: true,
+  notifyTradeCloseProfit: true,
+  notifyTradeCloseLoss: true,
+  notifyWeekendGuardPreWarning: true,
+  notifyWeekendGuardExecution: true,
+  notifyCircuitBreaker: true,
+  notifyBacktestComplete: true,
+  notifyDisconnect: true,
+  notifySpreadSpike: true,
+  notifyDailyWrapUp: true,
+  notifyAppUpdate: true,
+
   notifyNewSignals: true,
   notifyTradeClose: true,
-  notifyDisconnect: true,
+
   hapticsEnabled: true,
   serverUrl: "",
   serverToken: "",
@@ -69,7 +117,7 @@ interface SettingsContextValue {
   updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
   updateEcosystemModules: (modules: EcosystemModules) => Promise<boolean>;
   resetSettings: () => Promise<void>;
-  shouldNotify: (category: "NEW_SIGNAL" | "TRADE_CLOSE" | "CRITICAL_ERROR") => boolean;
+  shouldNotify: (category: NotificationCategory) => boolean;
   apiOverrides: { url: string; token: string };
 }
 
@@ -173,19 +221,64 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const shouldNotify = useCallback(
-    (category: "NEW_SIGNAL" | "TRADE_CLOSE" | "CRITICAL_ERROR") => {
+    (category: NotificationCategory) => {
       if (!settings.notificationsEnabled) return false;
       // If trading engine is disabled, suppress MT5 notifications
       if (settings.ecosystemModules && !settings.ecosystemModules.tradingEngine) {
-        return false;
+        if (category !== "BACKTEST_COMPLETE" && category !== "APP_UPDATE") {
+          return false;
+        }
       }
       switch (category) {
+        // 1. Señales y Ejecución
+        case "DISCRETIONARY_SIGNAL":
+          return settings.notifyDiscretionarySignals;
+        case "AUTO_SIGNAL":
+          return settings.notifyAutoExecutedSignals;
+        case "EXPIRED_SIGNAL":
+          return settings.notifyExpiredSignals;
+
+        // 2. Órdenes y Beneficios
+        case "BREAK_EVEN":
+          return settings.notifyTrailingStopBreakEven;
+        case "PARTIAL_TP":
+          return settings.notifyPartialTakeProfit;
+        case "TRADE_PROFIT":
+          return settings.notifyTradeCloseProfit;
+        case "TRADE_LOSS":
+          return settings.notifyTradeCloseLoss;
+
+        // 3. Salvaguardas de Riesgo
+        case "WEEKEND_GUARD_PRE":
+          return settings.notifyWeekendGuardPreWarning;
+        case "WEEKEND_GUARD_EXEC":
+          return settings.notifyWeekendGuardExecution;
+        case "CIRCUIT_BREAKER":
+          return settings.notifyCircuitBreaker;
+
+        // 4. Strategy Lab
+        case "BACKTEST_COMPLETE":
+          return settings.notifyBacktestComplete;
+
+        // 5. Broker y Conectividad
+        case "DISCONNECT":
+        case "CRITICAL_ERROR":
+          return settings.notifyDisconnect;
+        case "SPREAD_SPIKE":
+          return settings.notifySpreadSpike;
+
+        // 6. Rutina y Mantenimiento
+        case "DAILY_WRAPUP":
+          return settings.notifyDailyWrapUp;
+        case "APP_UPDATE":
+          return settings.notifyAppUpdate;
+
+        // Compatibilidad hacia atrás
         case "NEW_SIGNAL":
           return settings.notifyNewSignals;
         case "TRADE_CLOSE":
           return settings.notifyTradeClose;
-        case "CRITICAL_ERROR":
-          return settings.notifyDisconnect;
+
         default:
           return true;
       }

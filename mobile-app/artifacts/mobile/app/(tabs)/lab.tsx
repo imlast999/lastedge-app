@@ -28,6 +28,7 @@ import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useSettings } from "@/context/SettingsContext";
 import { useTrading } from "@/context/TradingContext";
+import { sendLocalNotification } from "@/services/notifications";
 import { ApiErrorBanner } from "@/components/ApiErrorBanner";
 import { useTranslation } from "@/hooks/useTranslation";
 import {
@@ -72,7 +73,7 @@ const FRIENDLY_STATUS_MAP: Record<string, { label: string; bg: string; text: str
 };
 
 export default function LabScreen() {
-  const { settings, apiOverrides } = useSettings();
+  const { settings, apiOverrides, shouldNotify } = useSettings();
   if (settings.ecosystemModules && !settings.ecosystemModules.strategyLab && settings.ecosystemModules.tradingEngine) {
     return <Redirect href="/" />;
   }
@@ -225,6 +226,17 @@ export default function LabScreen() {
       setBtResult(res);
       if (pRes && pRes.pillars) {
         setPillarAnalysis(pRes);
+      }
+      if (shouldNotify("BACKTEST_COMPLETE")) {
+        const pips = res.metrics?.net_profit_pips ?? 0;
+        const sign = pips >= 0 ? "+" : "";
+        const win = res.metrics?.win_rate_pct ?? 0;
+        const sharpe = res.metrics?.sharpe_ratio ?? 0;
+        sendLocalNotification(
+          "BACKTEST_COMPLETE",
+          `🔬 Simulación Lab Completada: ${FRIENDLY_STRATEGY_NAMES[btStrategy] || btStrategy}`,
+          `Resultado: ${sign}${pips.toFixed(1)} pips · Winrate: ${win.toFixed(0)}% · Sharpe: ${sharpe.toFixed(2)}`
+        );
       }
       await loadExperiments();
     } catch (e) {

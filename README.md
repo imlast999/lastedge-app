@@ -94,6 +94,30 @@ If either backend engine is offline, LastEdge App continues serving user request
 
 ---
 
+## 4. Granular Mobile Notification System (15 Selected Alert Categories)
+
+The mobile app includes a native local notification engine (`expo-notifications`) organized into 5 dedicated Android Notification Channels with granular user-configurable switches in Settings:
+
+| Category Code | Notification Name | Channel | Description / Trigger |
+| :--- | :--- | :--- | :--- |
+| **`1.1`** | **Nueva Señal Discrecional** | `signals` | Hybrid mode signal alert ($0.60 \le \text{Score} < 0.67$) with 10-minute approval TTL. |
+| **`1.2`** | **Señal Auto-Ejecutada** | `signals` | Autonomous mode trade execution ($\text{Score} \ge 0.67$) sent straight to MT5. |
+| **`1.3`** | **Alerta de Señal Expirada** | `signals` | Warning triggered when a pending signal exceeds the 10-minute TTL without approval. |
+| **`2.1`** | **Break-Even / Trailing Stop** | `trades` | Stop Loss moved to entry price (Zero Risk milestone achieved). |
+| **`2.2`** | **Take Profit Parcial (50%)** | `trades` | 50% position volume closed locking in gains; remainder protected with trailing stop. |
+| **`2.3`** | **Cierre en Ganancia (TP)** | `trades` | Trade closed with net positive profit (Take Profit hit). |
+| **`2.4`** | **Cierre en Stop Loss** | `trades` | Trade closed at maximum defined risk loss (Stop Loss hit). |
+| **`3.1`** | **Aviso Previo Weekend Guard** | `risk` | Friday warning (20:30–21:44 UTC) alerting of non-crypto trades before weekend close. |
+| **`3.2`** | **Liquidación Weekend Guard** | `critical` | Execution confirmation of non-crypto positions closed at 21:45 UTC to prevent gap risk. |
+| **`3.4`** | **Circuit Breaker Activado** | `critical` | Trading halted automatically due to drawdown limit or loss streak safeguard. |
+| **`4.2`** | **Fin de Backtest / Optimización** | `system` | Heavy simulation or Monte Carlo audit finished in Strategy Lab. |
+| **`5.1`** | **Desconexión / Reconexión MT5** | `critical` | Critical alert upon losing or regaining connectivity with MetaTrader 5 or VPS. |
+| **`5.2`** | **Alerta de Spread Anormal** | `risk` | Spread spike alert (>4.0 pips / 40 points) with preventive trade block. |
+| **`6.1`** | **Resumen Diario de Sesión** | `system` | Daily wrap-up delivered at 22:00 UTC summarizing today's P&L and closed trades. |
+| **`6.2`** | **Nueva Versión APK Compilada** | `system` | 1-tap update alert when a newer release APK is compiled and ready on GitHub. |
+
+---
+
 ## 5. Architecture & Directory Structure
 
 ```text

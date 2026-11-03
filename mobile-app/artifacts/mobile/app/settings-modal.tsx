@@ -42,6 +42,7 @@ import {
   sendLocalNotification,
 } from "@/services/notifications";
 import { lockApp } from "@/components/PinAuthModal";
+import { useTranslation } from "@/hooks/useTranslation";
 
 function formatLastSync(d: Date | null, isEs: boolean): string {
   if (!d) return isEs ? "Nunca" : "Never";
@@ -59,6 +60,7 @@ export default function SettingsScreen() {
   const { status, loading, refresh, lastSyncAt, usingMockData } = useTrading();
   const { settings, updateSetting, updateEcosystemModules, resetSettings, apiOverrides } = useSettings();
   const isEs = settings.language === "es";
+  const { t } = useTranslation();
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -110,9 +112,9 @@ export default function SettingsScreen() {
 
   const handleTestNotification = useCallback(async () => {
     await sendLocalNotification(
-      "NEW_SIGNAL",
-      "🔔 Notificación de prueba",
-      "Si ves esto, las alertas locales funcionan correctamente."
+      "DISCRETIONARY_SIGNAL",
+      "🔔 LastEdge: Notificación de Prueba",
+      "Alertas locales activas (15 categorías configuradas correctamente)."
     );
     if (settings.hapticsEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -374,38 +376,185 @@ export default function SettingsScreen() {
         </View>
       </SettingsSection>
 
-      {/* ── Notificaciones ── */}
-      <SettingsSection title={isEs ? "Notificaciones" : "Notifications"}>
+      {/* ── Notificaciones & Alertas (15 Categorías Granulares) ── */}
+      <SettingsSection title={isEs ? "Notificaciones & Alertas" : "Notifications & Alerts"}>
         <SettingsToggle
           icon="bell"
-          label="Notificaciones"
-          description={isEs ? "Alertas locales en el dispositivo" : "Local alerts on device"}
+          label={isEs ? "Notificaciones Globales" : "Global Notifications"}
+          description={isEs ? "Interruptor maestro de alertas en el dispositivo" : "Master alert switch on device"}
           value={settings.notificationsEnabled}
           onValueChange={(v) => updateSetting("notificationsEnabled", v)}
         />
+
+        {/* 1. Señales y Ejecución */}
+        <View style={[styles.subSectionHeader, { borderTopColor: colors.border, borderBottomColor: colors.border, backgroundColor: colors.secondary + "40" }]}>
+          <Feather name="zap" size={12} color={colors.primary} />
+          <Text style={[styles.subSectionTitle, { color: colors.foreground }]}>
+            {t("notifyGroupSignals")}
+          </Text>
+        </View>
         <SettingsToggle
-          icon="target"
-          label={isEs ? "Nuevas señales" : "New signals"}
-          value={settings.notifyNewSignals}
-          onValueChange={(v) => updateSetting("notifyNewSignals", v)}
+          icon="clock"
+          label={t("notifyDiscretionarySignalsLabel")}
+          description={t("notifyDiscretionarySignalsDesc")}
+          value={settings.notifyDiscretionarySignals}
+          onValueChange={(v) => updateSetting("notifyDiscretionarySignals", v)}
           disabled={!settings.notificationsEnabled}
         />
         <SettingsToggle
-          icon="check-circle"
-          label={isEs ? "Cierre de operaciones" : "Trade close"}
-          value={settings.notifyTradeClose}
-          onValueChange={(v) => updateSetting("notifyTradeClose", v)}
+          icon="zap"
+          label={t("notifyAutoExecutedSignalsLabel")}
+          description={t("notifyAutoExecutedSignalsDesc")}
+          value={settings.notifyAutoExecutedSignals}
+          onValueChange={(v) => updateSetting("notifyAutoExecutedSignals", v)}
           disabled={!settings.notificationsEnabled}
         />
         <SettingsToggle
-          icon="alert-triangle"
-          label={isEs ? "Desconexión MT5" : "MT5 disconnect"}
-          description={isEs ? "Alerta crítica si el bot pierde conexión" : "Critical alert if bot disconnects"}
+          icon="alert-circle"
+          label={t("notifyExpiredSignalsLabel")}
+          description={t("notifyExpiredSignalsDesc")}
+          value={settings.notifyExpiredSignals}
+          onValueChange={(v) => updateSetting("notifyExpiredSignals", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+
+        {/* 2. Órdenes y Beneficios */}
+        <View style={[styles.subSectionHeader, { borderTopColor: colors.border, borderBottomColor: colors.border, backgroundColor: colors.secondary + "40" }]}>
+          <Feather name="trending-up" size={12} color={colors.primary} />
+          <Text style={[styles.subSectionTitle, { color: colors.foreground }]}>
+            {t("notifyGroupOrders")}
+          </Text>
+        </View>
+        <SettingsToggle
+          icon="shield"
+          label={t("notifyTrailingStopBreakEvenLabel")}
+          description={t("notifyTrailingStopBreakEvenDesc")}
+          value={settings.notifyTrailingStopBreakEven}
+          onValueChange={(v) => updateSetting("notifyTrailingStopBreakEven", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="pie-chart"
+          label={t("notifyPartialTakeProfitLabel")}
+          description={t("notifyPartialTakeProfitDesc")}
+          value={settings.notifyPartialTakeProfit}
+          onValueChange={(v) => updateSetting("notifyPartialTakeProfit", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="trending-up"
+          label={t("notifyTradeCloseProfitLabel")}
+          description={t("notifyTradeCloseProfitDesc")}
+          value={settings.notifyTradeCloseProfit}
+          onValueChange={(v) => updateSetting("notifyTradeCloseProfit", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="trending-down"
+          label={t("notifyTradeCloseLossLabel")}
+          description={t("notifyTradeCloseLossDesc")}
+          value={settings.notifyTradeCloseLoss}
+          onValueChange={(v) => updateSetting("notifyTradeCloseLoss", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+
+        {/* 3. Salvaguardas de Riesgo */}
+        <View style={[styles.subSectionHeader, { borderTopColor: colors.border, borderBottomColor: colors.border, backgroundColor: colors.secondary + "40" }]}>
+          <Feather name="shield" size={12} color={colors.primary} />
+          <Text style={[styles.subSectionTitle, { color: colors.foreground }]}>
+            {t("notifyGroupRisk")}
+          </Text>
+        </View>
+        <SettingsToggle
+          icon="calendar"
+          label={t("notifyWeekendGuardPreWarningLabel")}
+          description={t("notifyWeekendGuardPreWarningDesc")}
+          value={settings.notifyWeekendGuardPreWarning}
+          onValueChange={(v) => updateSetting("notifyWeekendGuardPreWarning", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="lock"
+          label={t("notifyWeekendGuardExecutionLabel")}
+          description={t("notifyWeekendGuardExecutionDesc")}
+          value={settings.notifyWeekendGuardExecution}
+          onValueChange={(v) => updateSetting("notifyWeekendGuardExecution", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="slash"
+          label={t("notifyCircuitBreakerLabel")}
+          description={t("notifyCircuitBreakerDesc")}
+          value={settings.notifyCircuitBreaker}
+          onValueChange={(v) => updateSetting("notifyCircuitBreaker", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+
+        {/* 4. Strategy Lab */}
+        <View style={[styles.subSectionHeader, { borderTopColor: colors.border, borderBottomColor: colors.border, backgroundColor: colors.secondary + "40" }]}>
+          <Feather name="cpu" size={12} color={colors.primary} />
+          <Text style={[styles.subSectionTitle, { color: colors.foreground }]}>
+            {t("notifyGroupLab")}
+          </Text>
+        </View>
+        <SettingsToggle
+          icon="cpu"
+          label={t("notifyBacktestCompleteLabel")}
+          description={t("notifyBacktestCompleteDesc")}
+          value={settings.notifyBacktestComplete}
+          onValueChange={(v) => updateSetting("notifyBacktestComplete", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+
+        {/* 5. Broker y Conectividad */}
+        <View style={[styles.subSectionHeader, { borderTopColor: colors.border, borderBottomColor: colors.border, backgroundColor: colors.secondary + "40" }]}>
+          <Feather name="wifi" size={12} color={colors.primary} />
+          <Text style={[styles.subSectionTitle, { color: colors.foreground }]}>
+            {t("notifyGroupBroker")}
+          </Text>
+        </View>
+        <SettingsToggle
+          icon="wifi-off"
+          label={t("notifyDisconnectLabel")}
+          description={t("notifyDisconnectDesc")}
           value={settings.notifyDisconnect}
           onValueChange={(v) => updateSetting("notifyDisconnect", v)}
           disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="activity"
+          label={t("notifySpreadSpikeLabel")}
+          description={t("notifySpreadSpikeDesc")}
+          value={settings.notifySpreadSpike}
+          onValueChange={(v) => updateSetting("notifySpreadSpike", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+
+        {/* 6. Rutina y Mantenimiento */}
+        <View style={[styles.subSectionHeader, { borderTopColor: colors.border, borderBottomColor: colors.border, backgroundColor: colors.secondary + "40" }]}>
+          <Feather name="clock" size={12} color={colors.primary} />
+          <Text style={[styles.subSectionTitle, { color: colors.foreground }]}>
+            {t("notifyGroupRoutine")}
+          </Text>
+        </View>
+        <SettingsToggle
+          icon="file-text"
+          label={t("notifyDailyWrapUpLabel")}
+          description={t("notifyDailyWrapUpDesc")}
+          value={settings.notifyDailyWrapUp}
+          onValueChange={(v) => updateSetting("notifyDailyWrapUp", v)}
+          disabled={!settings.notificationsEnabled}
+        />
+        <SettingsToggle
+          icon="download-cloud"
+          label={t("notifyAppUpdateLabel")}
+          description={t("notifyAppUpdateDesc")}
+          value={settings.notifyAppUpdate}
+          onValueChange={(v) => updateSetting("notifyAppUpdate", v)}
+          disabled={!settings.notificationsEnabled}
           isLast={!permStatus}
         />
+
         {permStatus ? (
           <SettingsRow icon="info" label={isEs ? "Permisos" : "Permissions"} value={permStatus} isLast />
         ) : null}
@@ -625,6 +774,21 @@ const styles = StyleSheet.create({
   header: { marginBottom: 4 },
   title: { fontSize: 28, fontFamily: "Nexa" },
   subtitle: { fontSize: 13, fontFamily: "Nexa", marginTop: 2 },
+  subSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+  },
+  subSectionTitle: {
+    fontSize: 11,
+    fontFamily: "Nexa",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
   actions: {
     flexDirection: "row",
     gap: 10,
