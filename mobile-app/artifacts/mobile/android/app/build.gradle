@@ -97,8 +97,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Dynamic auto-incrementing versionCode (seconds since epoch) to allow seamless in-place APK updates without uninstalling
-        versionCode 68
-        versionName "1.1.68"
+        versionCode 69
+        versionName "1.1.69"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
 
