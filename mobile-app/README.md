@@ -1,103 +1,103 @@
-# LastEdge Mobile
-
-App móvil nativa (Android/iOS) para monitorizar y controlar remotamente el bot de trading algorítmico MT5 en Python, sustituyendo la necesidad de usar Discord.
-
-## Stack
-
-- **pnpm workspaces**, Node.js 24, TypeScript 5.9
-- **Frontend:** React Native con Expo (Expo Router)
-- **Estilos:** Dark Theme glassmorphism, NativeWind/Tailwind, `@expo/vector-icons`
-- **API:** Express 5 (Node.js)
-- **Base de datos:** PostgreSQL + Drizzle ORM
-- **Validación:** Zod (`zod/v4`), `drizzle-zod`
-- **Codegen de API:** Orval (desde spec OpenAPI)
-- **Build:** esbuild (bundle CJS)
-
-## Estructura del workspace
-
-```
-artifacts/
-  api-server/     — Servidor Express 5 (API REST)
-  mobile/         — App React Native / Expo
-  mockup-sandbox/ — Sandbox de UI con Vite + React (web)
-lib/
-  api-spec/       — Spec OpenAPI + config Orval
-  api-zod/        — Schemas Zod generados (contratos de API)
-  api-client-react/ — Hooks React Query generados
-  db/             — Schema Drizzle ORM + migraciones
-scripts/          — Scripts de utilidad del workspace
-```
-
-## Variables de entorno requeridas
-
-| Variable | Descripción |
-|---|---|
-| `DATABASE_URL` | Cadena de conexión PostgreSQL |
-
-## Comandos principales
-
-```bash
-# Instalar dependencias (requiere pnpm)
-pnpm install --ignore-scripts
-
-# Servidor de API (puerto 5000)
-pnpm --filter @workspace/api-server run dev
-
-# App móvil Expo
-pnpm --filter @workspace/mobile run dev
-
-# Sandbox UI web
-pnpm --filter @workspace/mockup-sandbox run dev
-
-# Typecheck completo (todos los paquetes)
-pnpm run typecheck
-
-# Build completo (typecheck + build)
-pnpm run build
-
-# Regenerar hooks y schemas Zod desde el spec OpenAPI
-pnpm --filter @workspace/api-spec run codegen
-
-# Aplicar cambios de schema a la BD (solo dev)
-pnpm --filter @workspace/db run push
-```
-
-## Compilar APK Android
-
-1. Instalar EAS CLI: `npm install -g eas-cli`
-2. Autenticarse: `eas login`
-3. Compilar APK de preview (distribución interna):
-   ```bash
-   cd artifacts/mobile
-   eas build --profile preview --platform android
-   ```
-4. Para build de producción:
-   ```bash
-   eas build --profile production --platform android
-   ```
-
-## Endpoints de la API del bot MT5
-
-| Endpoint | Método | Descripción |
-|---|---|---|
-| `/api/status` | GET | Estado MT5, uptime, balance de cuenta |
-| `/api/signals` | GET | Historial de señales y posiciones abiertas |
-| `/api/signals/{id}/action` | POST | Aceptar o rechazar señales pendientes |
-
-La app hace polling cada 5 segundos (o WebSocket) para actualización de equidad en tiempo real.
-
-## Notificaciones Push
-
-La app maneja 3 categorías de notificaciones vía Expo Push Service:
-
-- 🚨 **Errores críticos** — Desconexión MT5, error de margen (sonido fuerte)
-- 🔔 **Nuevas señales** — Señal detectada que requiere aprobación (abre pantalla de Señales)
-- 💰 **Cierres de operación** — Take Profit / Stop Loss alcanzado
-
-## Diseño UI
-
-- Fondo estricto Dark Theme (`#09090b` / `#121212`)
-- Verde neón `#4ade80` para ganancias y órdenes BUY
-- Rojo coral `#f87171` para pérdidas y órdenes SELL
-- Fuentes monospace para valores numéricos
-- Estética glassmorphism orientada a datos financieros
+# LastEdge Mobile
+
+Native mobile client (Android / iOS) for remote monitoring, telemetry, and execution control of the LastEdge MetaTrader 5 algorithmic trading engine in Python.
+
+## Technology Stack
+
+- **pnpm workspaces**, Node.js 24, TypeScript 5.9
+- **Frontend:** React Native with Expo (Expo Router)
+- **Styling:** Dark Theme glassmorphism, NativeWind / Tailwind CSS, `@expo/vector-icons`
+- **API:** Express 5 (Node.js)
+- **Database:** PostgreSQL + Drizzle ORM
+- **Validation:** Zod (`zod/v4`), `drizzle-zod`
+- **API Codegen:** Orval (from OpenAPI specification)
+- **Build:** esbuild (CommonJS bundle)
+
+## Workspace Architecture
+
+```
+artifacts/
+  api-server/     — Express 5 REST API gateway
+  mobile/         — React Native / Expo mobile application
+  mockup-sandbox/ — UI Sandbox with Vite + React (Web preview)
+lib/
+  api-spec/       — OpenAPI specification + Orval configuration
+  api-zod/        — Generated Zod schemas (API contracts)
+  api-client-react/ — Generated React Query hooks
+  db/             — Drizzle ORM schema + database migrations
+scripts/          — Workspace maintenance utilities
+```
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+
+## Primary Commands
+
+```bash
+# Install dependencies (requires pnpm)
+pnpm install --ignore-scripts
+
+# Launch API server (Port 5000)
+pnpm --filter @workspace/api-server run dev
+
+# Launch Expo mobile application
+pnpm --filter @workspace/mobile run dev
+
+# Launch Web UI sandbox
+pnpm --filter @workspace/mockup-sandbox run dev
+
+# Comprehensive typecheck (all packages)
+pnpm run typecheck
+
+# Full production build (typecheck + bundle)
+pnpm run build
+
+# Regenerate hooks and Zod schemas from OpenAPI spec
+pnpm --filter @workspace/api-spec run codegen
+
+# Apply schema migrations to database (development only)
+pnpm --filter @workspace/db run push
+```
+
+## Android APK Compilation
+
+1. Install EAS CLI: `npm install -g eas-cli`
+2. Authenticate: `eas login`
+3. Compile preview APK (internal testing distribution):
+   ```bash
+   cd artifacts/mobile
+   eas build --profile preview --platform android
+   ```
+4. Production release build:
+   ```bash
+   eas build --profile production --platform android
+   ```
+
+## Bot API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/status` | GET | MT5 terminal status, uptime, account balance & equity |
+| `/api/signals` | GET | Signal history and active open positions |
+| `/api/signals/{id}/action` | POST | Approve or discard pending proposed signals |
+
+The client polls every 5 seconds (or via WebSocket) for real-time equity and P&L updates.
+
+## Push Notifications
+
+The application handles 3 notification tiers via Expo Push Service:
+
+- 🚨 **Critical Alerts** — MT5 terminal disconnection, margin warnings (high-priority sound)
+- 🔔 **New Trading Signals** — Proposed trade requiring manual approval (opens Signals screen)
+- 💰 **Execution Exits** — Take Profit / Stop Loss / Trailing hit confirmation
+
+## UI & Design System
+
+- Strict Dark Theme canvas (`#09090b` / `#121212`)
+- Emerald Green `#4ade80` for profits and BUY executions
+- Coral Red `#f87171` for drawdowns and SELL executions
+- Monospace font styling for quantitative numeric readouts
+- High-contrast glassmorphism aesthetic tailored for financial telemetry

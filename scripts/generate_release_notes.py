@@ -8,11 +8,11 @@ and generates:
 1. An institutional Markdown release document (release_notes.md) for GitHub Releases.
 2. A concise summary (release_summary.txt) formatted for Telegram and Discord broadcast.
 3. Automatically categorizes commits into:
-   - 🚀 Features & Modules
-   - 🛡️ Risk & Protection Guards
-   - 🐛 Bug Fixes & Stability
+   - 🚀 Features & Enhancements
+   - 🛡️ Risk Management & Protection Guards
+   - 🐛 Bug Fixes & Hardening
    - 🎨 UI, Mobile & Typography (Nexa + Jakarta Sans)
-   - ⚡ CI/CD, Build & Infrastructure
+   - ⚡ Infrastructure, CI/CD & Maintenance
 """
 
 from __future__ import annotations
@@ -85,11 +85,11 @@ def get_commits_since_tag(tag: str | None) -> List[Tuple[str, str]]:
 def categorize_commits(commits: List[Tuple[str, str]]) -> Dict[str, List[Tuple[str, str]]]:
     """Sorts commits into semantic categories based on prefix and keywords."""
     categories: Dict[str, List[Tuple[str, str]]] = {
-        "🚀 Funcionalidades y Mejoras": [],
-        "🛡️ Gestión de Riesgo y Salvaguardas": [],
-        "🐛 Correcciones y Hardening": [],
-        "🎨 UI, Móvil y Tipografía": [],
-        "⚡ Infraestructura, CI/CD y Mantenimiento": []
+        "🚀 Features & Enhancements": [],
+        "🛡️ Risk Management & Protection Guards": [],
+        "🐛 Bug Fixes & Hardening": [],
+        "🎨 UI, Mobile & Typography": [],
+        "⚡ Infrastructure, CI/CD & Maintenance": []
     }
 
     for sha, msg in commits:
@@ -97,19 +97,19 @@ def categorize_commits(commits: List[Tuple[str, str]]) -> Dict[str, List[Tuple[s
 
         # Risk & Protection
         if any(k in low for k in ["risk", "guard", "weekend", "stop loss", "sl", "tp", "trailing", "breaker", "drawdown"]):
-            categories["🛡️ Gestión de Riesgo y Salvaguardas"].append((sha, msg))
+            categories["🛡️ Risk Management & Protection Guards"].append((sha, msg))
         # UI & Typography
         elif any(k in low for k in ["ui", "font", "nexa", "jakarta", "bento", "design", "css", "theme", "logo", "screen", "modal"]):
-            categories["🎨 UI, Móvil y Tipografía"].append((sha, msg))
+            categories["🎨 UI, Mobile & Typography"].append((sha, msg))
         # Bug Fixes
         elif any(k in low for k in ["fix", "bug", "patch", "repair", "resolv", "error", "crash", "missing"]):
-            categories["🐛 Correcciones y Hardening"].append((sha, msg))
+            categories["🐛 Bug Fixes & Hardening"].append((sha, msg))
         # Features
         elif any(k in low for k in ["feat", "feature", "add", "implement", "support", "endpoint", "client", "adapter"]):
-            categories["🚀 Funcionalidades y Mejoras"].append((sha, msg))
+            categories["🚀 Features & Enhancements"].append((sha, msg))
         # Infra / Maintenance
         else:
-            categories["⚡ Infraestructura, CI/CD y Mantenimiento"].append((sha, msg))
+            categories["⚡ Infrastructure, CI/CD & Maintenance"].append((sha, msg))
 
     return categories
 
@@ -120,22 +120,22 @@ def generate_notes(version: str, version_code: str, output_path: Path, summary_p
     categorized = categorize_commits(commits)
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    # 1. Full Markdown Release Notes
+    # 1. Full Markdown Release Notes (100% English)
     md_lines = [
         f"## 📱 LastEdge Mobile v{version}",
         "",
-        f"- **Versión:** `{version}`",
+        f"- **Version:** `{version}`",
         f"- **Build Code:** `{version_code}`",
-        f"- **Fecha de Compilación:** `{now_str}`",
-        f"- **Firma:** Keystore de Producción (Soporta instalación directa / in-place update)",
-        f"- **Tipografía Oficial:** Nexa (Títulos & Display) + Plus Jakarta Sans (Cuerpo & Métricas)",
+        f"- **Build Timestamp:** `{now_str}`",
+        f"- **Signing:** Production Keystore (Supports in-place APK updates)",
+        f"- **Official Typography:** Nexa (Display & Titles) + Plus Jakarta Sans (Body & Metrics)",
         "",
-        "### ⬇️ Descarga Directa del APK",
-        f"Descarga el paquete [`LastEdge-v{version}.apk`](https://github.com/imlast999/lastedge-app/releases/download/v{version}/LastEdge-v{version}.apk) adjunto en esta release e instálalo directamente sobre tu app existente.",
+        "### ⬇️ Direct APK Download",
+        f"Download the [`LastEdge-v{version}.apk`](https://github.com/imlast999/lastedge-app/releases/download/v{version}/LastEdge-v{version}.apk) package attached to this release and install directly over your existing app.",
         "",
         "---",
         "",
-        "### 📋 Registro Semántico de Cambios",
+        "### 📋 Semantic Changelog",
         ""
     ]
 
@@ -151,20 +151,20 @@ def generate_notes(version: str, version_code: str, output_path: Path, summary_p
             md_lines.append("")
 
     if not has_entries:
-        md_lines.append("- Compilación y optimización periódica de producción con dependencias actualizadas.")
+        md_lines.append("- Routine production build and performance optimization with updated dependencies.")
         md_lines.append("")
 
     md_lines.extend([
         "---",
         "",
-        "> **Soporte de Actualización:** No se pierden datos, sesiones, pines biométricos ni configuraciones al instalar este APK sobre una versión previa."
+        "> **Update Guarantee:** No local data, active sessions, biometric PINs, or trading preferences are lost when upgrading over an existing installation."
     ])
 
     full_markdown = "\n".join(md_lines)
     output_path.write_text(full_markdown, encoding="utf-8")
-    print(f"✅ Release notes escritas en: {output_path}")
+    print(f"✅ Release notes written to: {output_path}")
 
-    # 2. Concise Summary for Telegram / Discord
+    # 2. Concise Summary for Telegram / Discord Broadcast
     summary_lines = []
     top_items = []
     for cat_name, items in categorized.items():
@@ -177,11 +177,11 @@ def generate_notes(version: str, version_code: str, output_path: Path, summary_p
     if top_items:
         summary_lines.extend(top_items[:5])
     else:
-        summary_lines.append("• Compilación de producción optimizada y sincronizada.")
+        summary_lines.append("• Production build optimized and synchronized.")
 
     summary_text = "\n".join(summary_lines)
     summary_path.write_text(summary_text, encoding="utf-8")
-    print(f"✅ Resumen para bots escrito en: {summary_path}")
+    print(f"✅ Bot release summary written to: {summary_path}")
 
     return full_markdown, summary_text
 

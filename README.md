@@ -113,7 +113,7 @@ The mobile app includes a native local notification engine (`expo-notifications`
 | **`4.2`** | **Fin de Backtest / Optimización** | `system` | Heavy simulation or Monte Carlo audit finished in Strategy Lab. |
 | **`5.1`** | **Desconexión / Reconexión MT5** | `critical` | Critical alert upon losing or regaining connectivity with MetaTrader 5 or VPS. |
 | **`5.2`** | **Alerta de Spread Anormal** | `risk` | Spread spike alert (>4.0 pips / 40 points) with preventive trade block. |
-| **`6.1`** | **Resumen Diario de Sesión** | `system` | Daily wrap-up delivered at 22:00 UTC summarizing today's P&L and closed trades. |
+| **`6.1`** | **Daily Session Summary** | `system` | Daily wrap-up delivered at 22:00 UTC summarizing today's P&L and closed trades. |
 | **`6.2`** | **Nueva Versión APK Compilada** | `system` | 1-tap update alert when a newer release APK is compiled and ready on GitHub. |
 
 ---
