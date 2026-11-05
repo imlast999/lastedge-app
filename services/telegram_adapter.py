@@ -131,7 +131,7 @@ I18N = {
 
         "chart_title": "📊 *Live Technical Chart — {target}*",
         "chart_tf": "• *Timeframe:* `H1` (Last 80 MT5 candles)",
-        "chart_levels": "• *Key Levels:* 🟩 Entry | 🟥 Stop Loss | 🟦 Take Profit",
+        "chart_levels": "• *Key Levels:* 🟦 Entry | 🟥 Stop Loss | 🟩 Take Profit",
         "chart_select": "📈 *Select a position to view live chart:*",
         "chart_error": "⚠️ Could not generate the requested chart.",
         "btn_refresh_chart": "🔄 Refresh Chart",
@@ -257,7 +257,7 @@ I18N = {
 
         "chart_title": "📊 *Gráfico Técnico en Vivo — {target}*",
         "chart_tf": "• *Timeframe:* `H1` (Últimas 80 velas de MT5)",
-        "chart_levels": "• *Niveles:* 🟩 Entrada | 🟥 Stop Loss | 🟦 Take Profit",
+        "chart_levels": "• *Niveles:* 🟦 Entrada | 🟥 Stop Loss | 🟩 Take Profit",
         "chart_select": "📈 *Selecciona la posición para ver su gráfico:*",
         "chart_error": "⚠️ No se pudo generar el gráfico solicitado.",
         "btn_refresh_chart": "🔄 Refrescar Gráfico",
