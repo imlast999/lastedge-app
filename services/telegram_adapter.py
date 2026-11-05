@@ -660,7 +660,7 @@ class TelegramAdapter:
             f"{CARD_LINE}\n"
             f"{t['start_desc']}\n"
             f"{CARD_LINE}\n"
-            f"🌐 *Language / Idioma:* `{t['lang_badge']}`\n"
+            f"🌐 *{'Language' if lang == 'en' else 'Idioma'}:* `{t['lang_badge']}`\n"
             f"⏰ _{t['updated']}: {now_str}_\n"
         )
 
@@ -683,7 +683,7 @@ class TelegramAdapter:
                     {"text": t["btn_autosignals"], "callback_data": "nav_autosignals"}
                 ],
                 [
-                    {"text": t.get("btn_autonomous", "🤖 Modo Autónomo"), "callback_data": "nav_autonomous"},
+                    {"text": t.get("btn_autonomous", "🤖 Autonomous Mode" if lang == "en" else "🤖 Modo Autónomo"), "callback_data": "nav_autonomous"},
                     {"text": t["btn_toggle_lang"], "callback_data": "toggle_language"}
                 ],
                 [
@@ -742,7 +742,7 @@ class TelegramAdapter:
             f"{t['status_uptime']} `{st.get('uptime_formatted', '—')}`\n"
             f"{t['status_cb']} {cb_st} (×`{cb.get('risk_multiplier', 1.0):.1f}`)\n"
             f"{t['status_auto']} {'✅ Active' if st.get('autosignals_enabled') else '⏸ Disabled' if lang == 'en' else '✅ Activo' if st.get('autosignals_enabled') else '⏸ Desactivado'}\n"
-            f"• *Modo Operativo:* {'🟢 100% Autónomo (Manos Libres)' if auto_mode else '🟡 Híbrido (Manual)'}\n"
+            f"• *{'Operating Mode' if lang == 'en' else 'Modo Operativo'}:* {(('🟢 100% Autonomous (Hands-Free)' if auto_mode else '🟡 Hybrid (Manual)') if lang == 'en' else ('🟢 100% Autónomo (Manos Libres)' if auto_mode else '🟡 Híbrido (Manual)'))}\n"
             f"{t['status_pairs']} `{', '.join(st.get('monitored_symbols', []))}`\n"
             f"{t['status_news']} {st.get('news_indicator', '🟢 OK')}\n"
             f"{CARD_LINE}\n"
@@ -1135,11 +1135,13 @@ class TelegramAdapter:
                 title = "🤖 *Control de Modo 100% Autónomo*"
                 btn_toggle = "🟡 Cambiar a Modo Híbrido" if is_auto else "🟢 Activar 100% Autónomo"
 
+            st_lbl = "Status" if lang == "en" else "Estado"
+            rules_lbl = "Operating Rules" if lang == "en" else "Reglas Operativas"
             text = (
                 f"{title}\n"
                 f"{CARD_LINE}\n"
-                f"• *Estado:* {st_text}\n\n"
-                f"📋 *Reglas Operativas:*\n{desc}\n"
+                f"• *{st_lbl}:* {st_text}\n\n"
+                f"📋 *{rules_lbl}:*\n{desc}\n"
                 f"{CARD_LINE}\n"
                 f"⏰ _{t['updated']}: {now_str}_"
             )
@@ -1181,11 +1183,13 @@ class TelegramAdapter:
                 btn_toggle = "🟡 Cambiar a Modo Híbrido" if is_auto else "🟢 Activar 100% Autónomo"
                 toast = "Modo Autónomo: ACTIVADO" if is_auto else "Modo Híbrido: ACTIVADO"
 
+            st_lbl = "Status" if lang == "en" else "Estado"
+            rules_lbl = "Operating Rules" if lang == "en" else "Reglas Operativas"
             text = (
                 f"{title}\n"
                 f"{CARD_LINE}\n"
-                f"• *Estado:* {st_text}\n\n"
-                f"📋 *Reglas Operativas:*\n{desc}\n"
+                f"• *{st_lbl}:* {st_text}\n\n"
+                f"📋 *{rules_lbl}:*\n{desc}\n"
                 f"{CARD_LINE}\n"
                 f"⏰ _{t['updated']}: {now_str}_"
             )
@@ -1614,11 +1618,13 @@ class TelegramAdapter:
             title = "🤖 *Control de Modo 100% Autónomo*"
             btn_toggle = "🟡 Cambiar a Modo Híbrido" if is_auto else "🟢 Activar 100% Autónomo"
 
+        st_lbl = "Current Status" if user_lang == "en" else "Estado Actual"
+        rules_lbl = "Operating Rules" if user_lang == "en" else "Reglas Operativas"
         text = (
             f"{title}\n"
             f"{CARD_LINE}\n"
-            f"• *Estado Actual:* {st_text}\n\n"
-            f"📋 *Reglas Operativas:*\n{desc}\n"
+            f"• *{st_lbl}:* {st_text}\n\n"
+            f"📋 *{rules_lbl}:*\n{desc}\n"
             f"{CARD_LINE}\n"
             f"⏰ _{t['updated']}: {now_str}_"
         )

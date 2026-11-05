@@ -373,15 +373,34 @@ class BotManager:
                         sym = tg_info.get("symbol", "N/A")
                         direction = tg_info.get("direction", "BUY")
                         px = tg_info.get("price", "N/A")
-                        expired_text = (
-                            "⏳ *SEÑAL EXPIRADA (10 minutos sin confirmación)*\n"
-                            "━━━━━━━━━━━━━━━━━━\n"
-                            f"Par: *{sym}* | Dirección: *{direction}*\n"
-                            f"Precio: `{px}`\n"
-                            "Estado: *EXPIRADA* ⌛\n"
-                            "━━━━━━━━━━━━━━━━━━\n"
-                            "⚠️ Esta señal ya no está disponible para su ejecución."
-                        )
+                        chat_id = tg_info.get("chat_id")
+                        user_lang = "en"
+                        try:
+                            from services.telegram_adapter import get_chat_language
+                            user_lang = get_chat_language(chat_id)
+                        except Exception:
+                            user_lang = "en"
+
+                        if user_lang == "es":
+                            expired_text = (
+                                "⏳ *SEÑAL EXPIRADA (10 minutos sin confirmación)*\n"
+                                "━━━━━━━━━━━━━━━━━━\n"
+                                f"Par: *{sym}* | Dirección: *{direction}*\n"
+                                f"Precio: `{px}`\n"
+                                "Estado: *EXPIRADA* ⌛\n"
+                                "━━━━━━━━━━━━━━━━━━\n"
+                                "⚠️ Esta señal ya no está disponible para su ejecución."
+                            )
+                        else:
+                            expired_text = (
+                                "⏳ *SIGNAL EXPIRED (10 minutes without confirmation)*\n"
+                                "━━━━━━━━━━━━━━━━━━\n"
+                                f"Symbol: *{sym}* | Direction: *{direction}*\n"
+                                f"Price: `{px}`\n"
+                                "Status: *EXPIRED* ⌛\n"
+                                "━━━━━━━━━━━━━━━━━━\n"
+                                "⚠️ This signal is no longer available for execution."
+                            )
                         print(f"⏳ [Signals Watcher] Editando mensaje Telegram #{tg_info.get('message_id')} de señal #{p_sig_id} a EXPIRADA...")
                         sys.stdout.flush()
                         ok = await self._edit_telegram_message(
