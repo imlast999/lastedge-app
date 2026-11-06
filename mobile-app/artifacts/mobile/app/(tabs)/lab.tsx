@@ -260,7 +260,12 @@ export default function LabScreen() {
       }
       await loadExperiments();
     } catch (e) {
-      Alert.alert("Simulación no completada", e instanceof Error ? e.message : String(e));
+      Alert.alert(
+        isEs ? "Simulación no completada" : "Simulation not completed",
+        isEs
+          ? `No se pudo conectar con el motor cuantitativo: ${e instanceof Error ? e.message : String(e)}. Asegúrate de que la VPN de Tailscale esté activa.`
+          : `Could not connect to quantitative engine: ${e instanceof Error ? e.message : String(e)}. Ensure Tailscale VPN is active.`
+      );
     } finally {
       setBtLoading(false);
     }

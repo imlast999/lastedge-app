@@ -171,7 +171,11 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
 
     const { url: apiUrl } = resolveApiConfig(apiOverrides);
     if (!apiUrl) {
-      setApiError("EXPO_PUBLIC_API_URL no configurada — especifica la URL en Ajustes");
+      setApiError(
+        isEs
+          ? "EXPO_PUBLIC_API_URL no configurada — especifica la URL en Ajustes"
+          : "EXPO_PUBLIC_API_URL not configured — specify URL in Settings"
+      );
       setLoading(false);
       return;
     }
@@ -474,7 +478,11 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       console.warn("Error polling trading bot API:", msg);
-      setApiError(`Sin conexión con el servidor (${msg})`);
+      setApiError(
+        isEs
+          ? `Sin conexión con el servidor (${msg})`
+          : `No connection to server (${msg})`
+      );
     } finally {
       setLoading(false);
     }
