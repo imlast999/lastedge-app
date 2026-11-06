@@ -64,6 +64,20 @@ const FRIENDLY_STRATEGY_NAMES: Record<string, string> = {
   btceur_weekly_breakout: "Bitcoin · Ruptura Semanal",
 };
 
+const FRIENDLY_STRATEGY_NAMES_EN: Record<string, string> = {
+  eurusd_partial: "EUR/USD · Partial Close & Trend",
+  eurusd_simple: "EUR/USD · Basic Trend Following",
+  xauusd_partial: "GOLD (XAU) · Breakout & Partial Close",
+  xauusd_simple: "GOLD (XAU) · Basic Momentum",
+  xauusd_gsrs_v1: "GOLD (XAU) · GSRS Reversion",
+  btceur_partial: "Bitcoin · Momentum & Partial Close",
+  btceur_simple: "Bitcoin · Simple Trend",
+  btceur_trend_surge: "Bitcoin · Volatility Surge",
+  btc_trend_pullback_v1: "Bitcoin · Trend Pullback",
+  btceur_regime_momentum: "Bitcoin · Multi-Regime Momentum",
+  btceur_weekly_breakout: "Bitcoin · Weekly Breakout",
+};
+
 const FRIENDLY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   PROMOTED: { label: "Aprobada para Real", bg: "#065f46", text: "#34d399" },
   CANDIDATE: { label: "En Evaluación", bg: "#78350f", text: "#fbbf24" },
@@ -413,7 +427,7 @@ export default function LabScreen() {
             style={[styles.actionBtn, { backgroundColor: colors.primary }]}
           >
             <Feather name="plus" size={14} color={colors.primaryForeground} />
-            <Text style={[styles.actionBtnText, { color: colors.primaryForeground }]}>Nueva Hipótesis</Text>
+            <Text style={[styles.actionBtnText, { color: colors.primaryForeground }]}>{isEs ? "Nueva Hipótesis" : "New Hypothesis"}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push("/settings-modal" as any)}
@@ -482,7 +496,7 @@ export default function LabScreen() {
                 <View style={styles.inlineChips}>
                   {catalogSymbols.map((s) => {
                     const isSel = btSymbol === s;
-                    const friendlySym = s === "EURUSD" ? "EUR/USD (Divisas)" : s === "XAUUSD" ? "ORO (XAU/USD)" : s === "BTCEUR" ? "BITCOIN (BTC/EUR)" : s;
+                    const friendlySym = s === "EURUSD" ? (isEs ? "EUR/USD (Divisas)" : "EUR/USD (Forex)") : s === "XAUUSD" ? (isEs ? "ORO (XAU/USD)" : "GOLD (XAU/USD)") : s === "BTCEUR" ? "BITCOIN (BTC/EUR)" : s;
                     return (
                       <TouchableOpacity
                         key={s}
@@ -521,7 +535,7 @@ export default function LabScreen() {
                   {(strategyCatalog[btSymbol] || []).map((strat) => {
                     const stratId = strat.id;
                     const isSelected = btStrategy === stratId;
-                    const friendlyName = FRIENDLY_STRATEGY_NAMES[stratId] || strat.name || stratId;
+                    const friendlyName = isEs ? (FRIENDLY_STRATEGY_NAMES[stratId] || strat.name || stratId) : (FRIENDLY_STRATEGY_NAMES_EN[stratId] || strat.name || stratId);
                     return (
                       <TouchableOpacity
                         key={stratId}
@@ -682,8 +696,12 @@ export default function LabScreen() {
                   </View>
                   <Text style={[styles.scoreHeroSummary, { color: colors.foreground }]}>
                     {scoreVal >= 75
-                      ? `La estrategia supera los controles institucionales. Genera el doble de beneficio que de pérdida y tolera rachas adversas sin comprometer el capital.`
-                      : `Rendimiento aceptable, pero muestra sensibilidad a rachas de pérdidas consecutivas.`}
+                      ? (isEs
+                          ? "La estrategia supera los controles institucionales. Genera el doble de beneficio que de pérdida y tolera rachas adversas sin comprometer el capital."
+                          : "The strategy passes institutional controls. It generates double the profit of losses and tolerates adverse streaks without compromising capital.")
+                      : (isEs
+                          ? "Rendimiento aceptable, pero muestra sensibilidad a rachas de pérdidas consecutivas."
+                          : "Acceptable performance, but shows sensitivity to consecutive loss streaks.")}
                   </Text>
                 </View>
               </View>
@@ -737,7 +755,7 @@ export default function LabScreen() {
             <Feather name="search" size={16} color={colors.mutedForeground} />
             <TextInput
               style={[styles.searchInput, { color: colors.foreground }]}
-              placeholder="Buscar por título, activo o hipótesis..."
+              placeholder={isEs ? "Buscar por título, activo o hipótesis..." : "Search by title, asset, or hypothesis..."}
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -1060,10 +1078,10 @@ export default function LabScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              {isReopenMode ? "Reabrir Simulación" : "Nueva Hipótesis de Test"}
+              {isReopenMode ? (isEs ? "Reabrir Simulación" : "Reopen Simulation") : (isEs ? "Nueva Hipótesis de Test" : "New Test Hypothesis")}
             </Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
-              {isReopenMode ? "Cargarás la configuración exacta para repetir la prueba." : "Define qué activo e idea deseas someter a auditoría cuantitativa."}
+              {isReopenMode ? (isEs ? "Cargarás la configuración exacta para repetir la prueba." : "Load exact settings to rerun test.") : (isEs ? "Define qué activo e idea deseas someter a auditoría cuantitativa." : "Define which asset and idea to evaluate with quantitative audit.")}
             </Text>
 
             <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 8 }]}>Activo:</Text>

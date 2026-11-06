@@ -70,7 +70,7 @@ export interface Trade {
   closePrice: number;
   pips: number;
   profit: number;
-  closeReason: "TAKE_PROFIT" | "STOP_LOSS" | "MANUAL" | "PARTIAL_TP" | "WEEKEND_GUARD";
+  closeReason: "TAKE_PROFIT" | "STOP_LOSS" | "TRAILING_STOP" | "MANUAL" | "PARTIAL_TP" | "WEEKEND_GUARD";
   closedAt: string;
   lot: number;
   comment?: string;

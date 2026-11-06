@@ -66,7 +66,8 @@ def get_reconstructed_trades_from_mt5(days: int = 14) -> list:
                         profit = float(exit_d.profit) + float(exit_d.swap or 0.0) + float(exit_d.commission or 0.0)
                         if entry_d:
                             profit += float(entry_d.commission or 0.0)
-                        mult = 100.0 if ("JPY" in sym or "XAU" in sym) else (1.0 if "BTC" in sym else 10000.0)
+                        # 1 standard gold pip = 0.10 USD (10 cents). For EURUSD = 0.0001 (10000). JPY = 0.01 (100). BTC = 1.0.
+                        mult = 10.0 if "XAU" in sym else (100.0 if "JPY" in sym else (1.0 if "BTC" in sym else 10000.0))
                         pips = round(abs(close_p - open_p) * mult, 1)
                         if profit < 0:
                             pips = -abs(pips)
@@ -76,7 +77,8 @@ def get_reconstructed_trades_from_mt5(days: int = 14) -> list:
                         if "TP" in comment:
                             reason = "TAKE_PROFIT"
                         elif "SL" in comment:
-                            reason = "STOP_LOSS"
+                            # If SL triggered with positive profit, it was protected by trailing stop / break-even
+                            reason = "TRAILING_STOP" if profit > 0 else "STOP_LOSS"
                         elif profit > 0:
                             reason = "TAKE_PROFIT"
                         else:
@@ -652,7 +654,7 @@ class AppDashboardHandler(BaseHTTPRequestHandler):
                                     for r in rows:
                                         pnl_val = float(r["pnl_eur"] or 0.0)
                                         res_str = str(r["result"] or "").upper()
-                                        reason = "TAKE_PROFIT" if ("TP" in res_str or "PROFIT" in res_str) else ("STOP_LOSS" if ("SL" in res_str or "LOSS" in res_str) else ("TRAILING_STOP" if ("TRAIL" in res_str or "BE" in res_str) else "MANUAL"))
+                                        reason = "TAKE_PROFIT" if ("TP" in res_str or "PROFIT" in res_str) else ("TRAILING_STOP" if (pnl_val > 0 and "SL" in res_str) else ("STOP_LOSS" if ("SL" in res_str or "LOSS" in res_str) else ("TRAILING_STOP" if ("TRAIL" in res_str or "BE" in res_str) else "MANUAL")))
                                         trades_list.append({
                                             "id": str(r["id"]),
                                             "symbol": r["symbol"] or "UNKNOWN",

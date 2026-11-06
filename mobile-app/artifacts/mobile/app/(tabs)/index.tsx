@@ -29,7 +29,8 @@ export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const isEs = language === "es";
   const { status, equityHistory, dailyPnL, winrate, openPositions, pendingSignals, currencySymbol, loading, refresh } =
     useTrading();
 
@@ -128,7 +129,6 @@ export default function DashboardScreen() {
                   { color: floatingPnL >= 0 ? colors.profit : colors.loss },
                 ]}
               >
-                {floatingPnL >= 0 ? "+" : ""}
                 {floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} Float
               </Text>
             </View>
@@ -166,7 +166,7 @@ export default function DashboardScreen() {
         />
         <StatsCard
           label={t("winrate")}
-          value={`${winrate}%`}
+          value={`${winrate.toFixed(1)}%`}
           icon="percent"
           trend={winrate >= 50 ? "up" : "down"}
           accent={winrate >= 50 ? colors.profit : colors.loss}
@@ -225,8 +225,8 @@ export default function DashboardScreen() {
               <Feather name="pie-chart" size={14} color="#3B82F6" />
             </View>
             <View>
-              <Text style={styles.bentoCardTitle}>TELEMETRÍA DE MARGEN & CAPITAL</Text>
-              <Text style={styles.bentoCardSub}>Controles de Liquidez y Solvencia MT5</Text>
+              <Text style={styles.bentoCardTitle}>{isEs ? "TELEMETRÍA DE MARGEN & CAPITAL" : "MARGIN & CAPITAL TELEMETRY"}</Text>
+              <Text style={styles.bentoCardSub}>{isEs ? "Controles de Liquidez y Solvencia MT5" : "MT5 Liquidity & Solvency Controls"}</Text>
             </View>
           </View>
           <View style={styles.bentoBadge}>
@@ -237,7 +237,7 @@ export default function DashboardScreen() {
         {/* 1. Margen Libre Indicator */}
         <View style={styles.indicatorBlock}>
           <View style={styles.indicatorHeader}>
-            <Text style={styles.indicatorLabel}>Margen Libre Disponible</Text>
+            <Text style={styles.indicatorLabel}>{isEs ? "Margen Libre Disponible" : "Free Margin Available"}</Text>
             <Text style={styles.indicatorValue}>
               {currencySymbol}{safeStatus.freeMargin.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
               <Text style={styles.indicatorSub}>
@@ -262,11 +262,11 @@ export default function DashboardScreen() {
         {/* 2. Equidad vs Balance Indicator */}
         <View style={styles.indicatorBlock}>
           <View style={styles.indicatorHeader}>
-            <Text style={styles.indicatorLabel}>Equidad vs Balance</Text>
+            <Text style={styles.indicatorLabel}>{isEs ? "Equidad vs Balance" : "Equity vs Balance"}</Text>
             <Text style={styles.indicatorValue}>
               {currencySymbol}{safeStatus.equity.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
               <Text style={{ color: floatingPnL >= 0 ? "#34D399" : "#F87171", fontSize: 11, fontWeight: "700" }}>
-                ({floatingPnL >= 0 ? "+" : ""}{floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} Float)
+                ({floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} Float)
               </Text>
             </Text>
           </View>
@@ -295,9 +295,9 @@ export default function DashboardScreen() {
           return (
             <View style={styles.indicatorBlock}>
               <View style={styles.indicatorHeader}>
-                <Text style={styles.indicatorLabel}>Nivel de Margen (Margin Level)</Text>
+                <Text style={styles.indicatorLabel}>{isEs ? "Nivel de Margen (Margin Level)" : "Margin Level"}</Text>
                 <Text style={[styles.indicatorValue, { color: lvlColor }]}>
-                  {safeStatus.margin > 0 ? `${marginLvl.toFixed(0)}%` : "Infinito (Sin margen usado)"}
+                  {safeStatus.margin > 0 ? `${marginLvl.toFixed(0)}%` : (isEs ? "Infinito (Sin margen usado)" : "Infinite (No margin used)")}
                 </Text>
               </View>
               <View style={styles.hdProgressTrack}>
@@ -313,9 +313,9 @@ export default function DashboardScreen() {
                 />
               </View>
               <View style={styles.indicatorScaleRow}>
-                <Text style={styles.indicatorScaleText}>Crítico: &lt;200%</Text>
-                <Text style={styles.indicatorScaleText}>Precaución: 500%</Text>
-                <Text style={styles.indicatorScaleText}>Excelente: &gt;1000%</Text>
+                <Text style={styles.indicatorScaleText}>{isEs ? "Crítico: <200%" : "Critical: <200%"}</Text>
+                <Text style={styles.indicatorScaleText}>{isEs ? "Precaución: 500%" : "Caution: 500%"}</Text>
+                <Text style={styles.indicatorScaleText}>{isEs ? "Excelente: >1000%" : "Optimal: >1000%"}</Text>
               </View>
             </View>
           );

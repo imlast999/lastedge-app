@@ -1,7 +1,7 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
@@ -88,7 +88,7 @@ export default function TabLayout() {
             isIOS ? (
               <SymbolView name="flask.fill" tintColor={color} size={22} />
             ) : (
-              <Feather name={"flask" as any} size={22} color={color} />
+              <MaterialCommunityIcons name="flask-outline" size={22} color={color} />
             ),
         }}
       />

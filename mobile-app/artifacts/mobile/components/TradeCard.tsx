@@ -3,19 +3,21 @@ import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useTrading } from "@/context/TradingContext";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { Trade } from "@/context/TradingContext";
 
 interface Props {
   trade: Trade;
 }
 
-function formatDate(isoString: string): string {
+function formatDate(isoString: string, isEs: boolean = false): string {
   try {
     const d = new Date(isoString);
+    const locale = isEs ? "es-ES" : "en-US";
     return (
-      d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) +
+      d.toLocaleDateString(locale, { day: "2-digit", month: "short" }) +
       " · " +
-      d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+      d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
     );
   } catch {
     return isoString;
@@ -25,6 +27,8 @@ function formatDate(isoString: string): string {
 export function TradeCard({ trade }: Props) {
   const colors = useColors();
   const { currencySymbol } = useTrading();
+  const { language } = useTranslation();
+  const isEs = language === "es";
 
   const profitVal = Number(trade?.profit ?? 0);
   const pipsVal = Number(trade?.pips ?? 0);
@@ -34,7 +38,9 @@ export function TradeCard({ trade }: Props) {
   const isProfit = profitVal >= 0;
   const isBuy = trade?.type === "BUY";
   const isTP = trade?.closeReason === "TAKE_PROFIT";
-  const isSL = trade?.closeReason === "STOP_LOSS";
+  // A trade with positive profit that hit SL is a Trailing Stop / Break-Even
+  const isTrailing = trade?.closeReason === "TRAILING_STOP" || (trade?.closeReason === "STOP_LOSS" && isProfit);
+  const isSL = trade?.closeReason === "STOP_LOSS" && !isProfit;
 
   const typeColor = isBuy ? "#3B82F6" : "#F43F5E";
   const profitColor = isProfit ? "#10B981" : "#EF4444";
@@ -56,7 +62,7 @@ export function TradeCard({ trade }: Props) {
             </View>
           </View>
           <Text style={styles.date}>
-            {formatDate(trade?.closedAt || new Date().toISOString())}
+            {formatDate(trade?.closedAt || new Date().toISOString(), isEs)}
           </Text>
         </View>
 
@@ -68,7 +74,7 @@ export function TradeCard({ trade }: Props) {
           </Text>
           <Text style={styles.pips}>
             {pipsVal >= 0 ? "+" : ""}
-            {pipsVal.toFixed(1)} pips
+            {pipsVal.toFixed(1)} {symbolStr.includes('BTC') ? 'pts' : 'pips'}
           </Text>
         </View>
       </View>
@@ -97,13 +103,19 @@ export function TradeCard({ trade }: Props) {
             <Text style={[styles.reasonText, { color: "#34D399" }]}>TAKE PROFIT</Text>
           </View>
         )}
+        {isTrailing && (
+          <View style={[styles.reasonBadge, { backgroundColor: "rgba(16, 185, 129, 0.12)", borderColor: "rgba(16, 185, 129, 0.3)" }]}>
+            <Feather name="shield" size={10} color="#10B981" />
+            <Text style={[styles.reasonText, { color: "#34D399" }]}>TRAILING STOP</Text>
+          </View>
+        )}
         {isSL && (
           <View style={[styles.reasonBadge, styles.reasonBadgeSL]}>
             <Feather name="shield" size={10} color="#EF4444" />
             <Text style={[styles.reasonText, { color: "#F87171" }]}>STOP LOSS</Text>
           </View>
         )}
-        {!isTP && !isSL && (
+        {!isTP && !isSL && !isTrailing && (
           <View style={[styles.reasonBadge, styles.reasonBadgeManual]}>
             <Feather name="user" size={10} color="#94A3B8" />
             <Text style={[styles.reasonText, { color: "#CBD5E1" }]}>MANUAL</Text>
@@ -115,12 +127,12 @@ export function TradeCard({ trade }: Props) {
         <View style={styles.executionMetrics}>
           {trade.latencyMs !== undefined && (
             <Text style={styles.metricText}>
-              <Feather name="clock" size={10} /> {trade.latencyMs}ms latencia
+              <Feather name="clock" size={10} /> {trade.latencyMs}ms {isEs ? "latencia" : "latency"}
             </Text>
           )}
           {trade.slippagePips !== undefined && (
             <Text style={styles.metricText}>
-              <Feather name="activity" size={10} /> {trade.slippagePips} pips deslizamiento
+              <Feather name="activity" size={10} /> {trade.slippagePips} {isEs ? "pips deslizamiento" : "pips slippage"}
             </Text>
           )}
         </View>

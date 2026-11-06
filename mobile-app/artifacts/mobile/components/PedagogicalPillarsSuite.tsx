@@ -90,7 +90,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={styles.pillarTag}>PILAR 1</Text>
             <Text style={styles.pillarTitle}>{isEs ? "Robustez & Simulación Monte Carlo" : "Monte Carlo Robustness & Ruin"}</Text>
           </View>
-          <Badge badge={p1.badge} />
+          <Badge badge={p1.badge} isEs={isEs} />
         </View>
 
         {/* Dato + Comparativa Institucional */}
@@ -136,10 +136,12 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
 
         {expandedTooltip === "p1" && (
           <View style={styles.explanationBox}>
-            <Text style={styles.explanationText}>{p1.explanation}</Text>
+            <Text style={styles.explanationText}>
+              {isEs ? p1.explanation : "Simulates 1,000 possible futures by randomly shuffling your trades. A value < 1% proves the strategy does not rely on temporary luck."}
+            </Text>
             <Text style={styles.whyMattersText}>
               <Text style={{ fontWeight: "700", color: "#38BDF8" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
-              {p1.why_it_matters}
+              {isEs ? p1.why_it_matters : "Guarantees account survival against the worst possible trade sequencing in live markets."}
             </Text>
           </View>
         )}
@@ -155,7 +157,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={[styles.pillarTag, { color: "#C084FC" }]}>PILAR 2</Text>
             <Text style={styles.pillarTitle}>{isEs ? "Walk-Forward Analysis & Generalización" : "Walk-Forward Analysis & Generalization"}</Text>
           </View>
-          <Badge badge={p2.badge} />
+          <Badge badge={p2.badge} isEs={isEs} />
         </View>
 
         <View style={styles.metricRow}>
@@ -226,7 +228,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={[styles.pillarTag, { color: "#FBBF24" }]}>PILAR 3</Text>
             <Text style={styles.pillarTitle}>{isEs ? "Test de Sobreajuste & Deflated Sharpe" : "Overfitting Test & Deflated Sharpe"}</Text>
           </View>
-          <Badge badge={p3.badge} />
+          <Badge badge={p3.badge} isEs={isEs} />
         </View>
 
         <View style={styles.metricRow}>
@@ -281,7 +283,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={[styles.pillarTag, { color: "#34D399" }]}>PILAR 4</Text>
             <Text style={styles.pillarTitle}>{isEs ? "Payoff Matemático & Calidad de Ejecución" : "Mathematical Payoff & Execution Quality"}</Text>
           </View>
-          <Badge badge={p4.badge} />
+          <Badge badge={p4.badge} isEs={isEs} />
         </View>
 
         <View style={styles.metricRow}>
@@ -324,10 +326,12 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
 
         {expandedTooltip === "p4" && (
           <View style={styles.explanationBox}>
-            <Text style={styles.explanationText}>{p4.explanation}</Text>
+            <Text style={styles.explanationText}>
+              {isEs ? p4.explanation : "Measures expected net payoff per trade and verifies the worst losing streak does not reach the 4-loss Circuit Breaker limit."}
+            </Text>
             <Text style={styles.whyMattersText}>
               <Text style={{ fontWeight: "700", color: "#10B981" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
-              {p4.why_it_matters}
+              {isEs ? p4.why_it_matters : "Ensures positive expectancy per trade with healthy margin over broker spreads and slippage."}
             </Text>
           </View>
         )}
@@ -343,7 +347,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
             <Text style={[styles.pillarTag, { color: "#60A5FA" }]}>PILAR 5</Text>
             <Text style={styles.pillarTitle}>{isEs ? "Stress Test por Regímenes de Mercado" : "Macro Regime Stress Testing"}</Text>
           </View>
-          <Badge badge={p5.badge} />
+          <Badge badge={p5.badge} isEs={isEs} />
         </View>
 
         {/* 4 Macro Regimes Breakdown */}
@@ -395,10 +399,12 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
 
         {expandedTooltip === "p5" && (
           <View style={styles.explanationBox}>
-            <Text style={styles.explanationText}>{p5.explanation}</Text>
+            <Text style={styles.explanationText}>
+              {isEs ? p5.explanation : "Identifies if the strategy bleeds capital during sideways ranges to activate regime filters or pause entries."}
+            </Text>
             <Text style={styles.whyMattersText}>
               <Text style={{ fontWeight: "700", color: "#3B82F6" }}>{isEs ? "Impacto en capital: " : "Capital impact: "}</Text>
-              {p5.why_it_matters}
+              {isEs ? p5.why_it_matters : "Most automated systems fail because they keep forcing trend trades during low-volume consolidation."}
             </Text>
           </View>
         )}
@@ -473,7 +479,7 @@ export function PedagogicalPillarsSuite({ data, onPromoted }: Props) {
   );
 }
 
-function Badge({ badge }: { badge: "PASSED" | "WARNING" | "DANGER" }) {
+function Badge({ badge, isEs = false }: { badge: "PASSED" | "WARNING" | "DANGER"; isEs?: boolean }) {
   const isPassed = badge === "PASSED";
   const isWarn = badge === "WARNING";
   const bg = isPassed
@@ -482,7 +488,11 @@ function Badge({ badge }: { badge: "PASSED" | "WARNING" | "DANGER" }) {
     ? "rgba(245, 158, 11, 0.15)"
     : "rgba(239, 68, 68, 0.15)";
   const color = isPassed ? "#34D399" : isWarn ? "#FBBF24" : "#F87171";
-  const text = isPassed ? "🟢 Aprobado" : isWarn ? "🟡 Precaución" : "🔴 Peligro";
+  const text = isPassed
+    ? (isEs ? "🟢 Aprobado" : "🟢 Passed")
+    : isWarn
+    ? (isEs ? "🟡 Precaución" : "🟡 Warning")
+    : (isEs ? "🔴 Peligro" : "🔴 Danger");
 
   return (
     <View style={[styles.badgePill, { backgroundColor: bg }]}>

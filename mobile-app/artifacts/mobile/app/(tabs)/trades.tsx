@@ -22,6 +22,13 @@ import { TradeFlowModal, TradeFlowTarget } from "@/components/TradeFlowModal";
 
 type SubTab = "open" | "pending" | "closed";
 
+function formatPrice(val?: number, sym?: string): string {
+  if (val == null || isNaN(val)) return "-";
+  const num = Number(val);
+  const digits = (sym?.includes("JPY") || sym?.includes("XAU")) ? 3 : (sym?.includes("BTC") ? 2 : 5);
+  return num.toFixed(digits);
+}
+
 export default function TradesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -49,28 +56,10 @@ export default function TradesScreen() {
     router.push("/settings-modal" as any);
   };
 
-  // 1. Operaciones abiertas (posiciones reales MT5 o señales activas)
+  // 1. Operaciones abiertas (posiciones reales MT5)
   const openTrades = useMemo(() => {
-    if (positions && positions.length > 0) {
-      return positions;
-    }
-    // Fallback si MT5 reporta posiciones como señales activas
-    const activeSignals = signals.filter(
-      (s) => s.status === "active" || s.status === "executed"
-    );
-    return activeSignals.map((s, idx) => ({
-      ticket: 10000000 + idx,
-      symbol: s.symbol,
-      type: s.type,
-      volume: s.lot || 0.01,
-      open_price: s.entry,
-      current_price: s.entry,
-      sl: s.stopLoss,
-      tp: s.takeProfit,
-      profit: 0.0,
-      time: s.timestamp,
-    }));
-  }, [positions, signals]);
+    return Array.isArray(positions) ? positions : [];
+  }, [positions]);
 
   // 2. Operaciones por aceptar (señales pending)
   const pendingSignals = useMemo(
@@ -114,9 +103,9 @@ export default function TradesScreen() {
           <View style={styles.breadcrumbRow}>
             <Text style={[styles.breadcrumb, { color: colors.primary }]}>MT5 LIVE</Text>
             <Text style={[styles.breadcrumbSep, { color: colors.mutedForeground }]}>/</Text>
-            <Text style={[styles.breadcrumb, { color: colors.mutedForeground }]}>EXECUTION</Text>
+            <Text style={[styles.breadcrumb, { color: colors.mutedForeground }]}>{isEs ? "EJECUCIÓN" : "EXECUTION"}</Text>
           </View>
-          <Text style={[styles.title, { color: colors.foreground }]}>Trades & Signals</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{isEs ? "Operaciones & Señales" : "Trades & Signals"}</Text>
         </View>
         <TouchableOpacity
           onPress={handleOpenSettings}
@@ -279,7 +268,7 @@ export default function TradesScreen() {
                       </View>
                     </View>
                     <Text style={styles.expiredDetail}>
-                      {sig.type} {sig.lot}L · Entrada: {sig.entry} · SL: {sig.stopLoss} · TP: {sig.takeProfit}
+                      {sig.type} {Number(sig.lot ?? 0.01).toFixed(2)}L · {isEs ? "Entrada" : "Entry"}: {formatPrice(sig.entry, sig.symbol)} · SL: {formatPrice(sig.stopLoss, sig.symbol)} · TP: {formatPrice(sig.takeProfit, sig.symbol)}
                     </Text>
                   </View>
                 ))}
