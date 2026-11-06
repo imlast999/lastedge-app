@@ -78,12 +78,12 @@ const FRIENDLY_STRATEGY_NAMES_EN: Record<string, string> = {
   btceur_weekly_breakout: "Bitcoin · Weekly Breakout",
 };
 
-const FRIENDLY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  PROMOTED: { label: "Aprobada para Real", bg: "#065f46", text: "#34d399" },
-  CANDIDATE: { label: "En Evaluación", bg: "#78350f", text: "#fbbf24" },
-  REJECTED: { label: "Descartada", bg: "#881337", text: "#f43f5e" },
-  DRAFT: { label: "Borrador de Test", bg: "#1f2937", text: "#9ca3af" },
-  ARCHIVED: { label: "Archivada", bg: "#374151", text: "#9ca3af" },
+const FRIENDLY_STATUS_MAP: Record<string, { label_es: string; label_en: string; bg: string; text: string }> = {
+  PROMOTED: { label_es: "Aprobada para Real", label_en: "Approved for Live", bg: "#065f46", text: "#34d399" },
+  CANDIDATE: { label_es: "En Evaluación", label_en: "Under Evaluation", bg: "#78350f", text: "#fbbf24" },
+  REJECTED: { label_es: "Descartada", label_en: "Discarded", bg: "#881337", text: "#f43f5e" },
+  DRAFT: { label_es: "Borrador de Test", label_en: "Test Draft", bg: "#1f2937", text: "#9ca3af" },
+  ARCHIVED: { label_es: "Archivada", label_en: "Archived", bg: "#374151", text: "#9ca3af" },
 };
 
 export default function LabScreen() {
@@ -179,9 +179,10 @@ export default function LabScreen() {
         const cat = await fetchAvailableStrategies(apiOverrides);
         if (cat && cat.strategies) {
           setStrategyCatalog(cat.strategies);
-          const syms = cat.symbols || Object.keys(cat.strategies);
-          if (syms.length > 0) {
-            setCatalogSymbols(syms);
+          const rawSyms = cat.symbols || Object.keys(cat.strategies);
+          const cleanSyms = rawSyms.filter((s) => s && s.toUpperCase() !== "UNKNOWN");
+          if (cleanSyms.length > 0) {
+            setCatalogSymbols(cleanSyms);
           }
         }
       } catch (err) {
@@ -246,10 +247,15 @@ export default function LabScreen() {
         const sign = pips >= 0 ? "+" : "";
         const win = res.metrics?.win_rate_pct ?? 0;
         const sharpe = res.metrics?.sharpe_ratio ?? 0;
+        const friendlyName = isEs
+          ? (FRIENDLY_STRATEGY_NAMES[btStrategy] || btStrategy)
+          : (FRIENDLY_STRATEGY_NAMES_EN[btStrategy] || btStrategy);
         sendLocalNotification(
           "BACKTEST_COMPLETE",
-          `🔬 Simulación Lab Completada: ${FRIENDLY_STRATEGY_NAMES[btStrategy] || btStrategy}`,
-          `Resultado: ${sign}${pips.toFixed(1)} pips · Winrate: ${win.toFixed(0)}% · Sharpe: ${sharpe.toFixed(2)}`
+          isEs ? `🔬 Simulación Lab Completada: ${friendlyName}` : `🔬 Lab Simulation Completed: ${friendlyName}`,
+          isEs
+            ? `Resultado: ${sign}${pips.toFixed(1)} pips · Winrate: ${win.toFixed(0)}% · Sharpe: ${sharpe.toFixed(2)}`
+            : `Result: ${sign}${pips.toFixed(1)} pips · Winrate: ${win.toFixed(0)}% · Sharpe: ${sharpe.toFixed(2)}`
         );
       }
       await loadExperiments();
@@ -389,7 +395,15 @@ export default function LabScreen() {
   };
 
   const getStatusBadge = (status: string) => {
-    return FRIENDLY_STATUS_MAP[status] || { label: status, bg: "#1f2937", text: "#d1d5db" };
+    const item = FRIENDLY_STATUS_MAP[status];
+    if (item) {
+      return {
+        label: isEs ? item.label_es : item.label_en,
+        bg: item.bg,
+        text: item.text,
+      };
+    }
+    return { label: status, bg: "#1f2937", text: "#d1d5db" };
   };
 
   // Score calculation for Hero card
@@ -415,9 +429,9 @@ export default function LabScreen() {
       <View style={[styles.headerContainer, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerContent}>
           <View style={styles.breadcrumbRow}>
-            <Text style={[styles.breadcrumb, { color: colors.primary }]}>LABORATORIO CUANTITATIVO</Text>
+            <Text style={[styles.breadcrumb, { color: colors.primary }]}>{isEs ? "LABORATORIO CUANTITATIVO" : "QUANTITATIVE LAB"}</Text>
             <Text style={[styles.breadcrumbSep, { color: colors.mutedForeground }]}>/</Text>
-            <Text style={[styles.breadcrumb, { color: colors.mutedForeground }]}>TESTS & AUDITORÍA</Text>
+            <Text style={[styles.breadcrumb, { color: colors.mutedForeground }]}>{isEs ? "TESTS & AUDITORÍA" : "TESTS & AUDIT"}</Text>
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>Strategy Lab</Text>
         </View>
@@ -494,7 +508,7 @@ export default function LabScreen() {
               <View>
                 <Text style={[styles.controlLabel, { color: colors.mutedForeground }]}>{isEs ? "1. ACTIVO A EVALUAR" : "1. ASSET TO EVALUATE"}</Text>
                 <View style={styles.inlineChips}>
-                  {catalogSymbols.map((s) => {
+                  {catalogSymbols.filter((s) => s && s.toUpperCase() !== "UNKNOWN").map((s) => {
                     const isSel = btSymbol === s;
                     const friendlySym = s === "EURUSD" ? (isEs ? "EUR/USD (Divisas)" : "EUR/USD (Forex)") : s === "XAUUSD" ? (isEs ? "ORO (XAU/USD)" : "GOLD (XAU/USD)") : s === "BTCEUR" ? "BITCOIN (BTC/EUR)" : s;
                     return (
@@ -770,10 +784,10 @@ export default function LabScreen() {
           {/* Filtros de Símbolo */}
           <View style={styles.filterSection}>
             <View style={styles.filterHeader}>
-              <Text style={[styles.filterLabel, { color: colors.mutedForeground }]}>Filtrar por Activo:</Text>
+              <Text style={[styles.filterLabel, { color: colors.mutedForeground }]}>{isEs ? "Filtrar por Activo:" : "Filter by Asset:"}</Text>
               {hasActiveFilters ? (
                 <TouchableOpacity onPress={handleResetFilters}>
-                  <Text style={[styles.resetText, { color: colors.primary }]}>Limpiar Filtros</Text>
+                  <Text style={[styles.resetText, { color: colors.primary }]}>{isEs ? "Limpiar Filtros" : "Clear Filters"}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -791,7 +805,7 @@ export default function LabScreen() {
                   ]}
                 >
                   <Text style={{ color: selectedSymbol === sym ? colors.primaryForeground : colors.foreground, fontSize: 11.5, fontWeight: "600" }}>
-                    {sym === "ALL" ? "Todos los Activos" : sym}
+                    {sym === "ALL" ? (isEs ? "Todos los Activos" : "All Assets") : sym}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -801,7 +815,7 @@ export default function LabScreen() {
           {/* Filtros de Dictamen */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContainer}>
             {["ALL", "PROMOTED", "CANDIDATE", "REJECTED", "DRAFT", "ARCHIVED"].map((st) => {
-              const friendlyBadge = st === "ALL" ? { label: "Todos los Dictámenes" } : getStatusBadge(st);
+              const friendlyBadge = st === "ALL" ? { label: isEs ? "Todos los Dictámenes" : "All Verdicts" } : getStatusBadge(st);
               const isSel = selectedStatus === st;
               return (
                 <TouchableOpacity
@@ -827,7 +841,7 @@ export default function LabScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
-                Investigaciones Registradas ({experiments.length})
+                {isEs ? "Investigaciones Registradas" : "Registered Experiments"} ({experiments.length})
               </Text>
               <TouchableOpacity onPress={loadExperiments}>
                 <Feather name="refresh-cw" size={13} color={colors.primary} />
@@ -840,16 +854,16 @@ export default function LabScreen() {
               <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, alignItems: "center", paddingVertical: 24 }]}>
                 <Feather name="database" size={32} color={colors.mutedForeground} />
                 <Text style={[styles.emptyTitle, { color: colors.foreground, marginTop: 8 }]}>
-                  Sin investigaciones encontradas
+                  {isEs ? "Sin investigaciones encontradas" : "No experiments found"}
                 </Text>
                 <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  Prueba cambiando los términos de búsqueda o filtros.
+                  {isEs ? "Prueba cambiando los términos de búsqueda o filtros." : "Try changing search terms or active filters."}
                 </Text>
               </View>
             ) : (
               experiments.map((exp) => {
                 const badge = getStatusBadge(exp.decision_status);
-                const friendlyStrat = FRIENDLY_STRATEGY_NAMES[exp.strategy] || exp.strategy;
+                const friendlyStrat = (isEs ? FRIENDLY_STRATEGY_NAMES[exp.strategy] : FRIENDLY_STRATEGY_NAMES_EN[exp.strategy]) || exp.strategy;
                 return (
                   <TouchableOpacity
                     key={exp.experiment_id}
@@ -915,12 +929,12 @@ export default function LabScreen() {
                 <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
                   <View style={styles.detailBlock}>
                     <StatRow label={isEs ? "Activo y Estrategia" : "Asset & Strategy"} value={`${selectedExp.symbol} · ${FRIENDLY_STRATEGY_NAMES[selectedExp.strategy] || selectedExp.strategy}`} colors={colors} />
-                    <StatRow label="Fecha de Registro" value={new Date(selectedExp.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} colors={colors} />
+                    <StatRow label={isEs ? "Fecha de Registro" : "Record Date"} value={new Date(selectedExp.created_at).toLocaleDateString(isEs ? "es-ES" : "en-US", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} colors={colors} />
                   </View>
 
                   {selectedExp.hypothesis ? (
                     <View style={[styles.detailBlock, { marginTop: 10 }]}>
-                      <Text style={[styles.blockLabel, { color: colors.mutedForeground }]}>💡 Hipótesis Evaluada</Text>
+                      <Text style={[styles.blockLabel, { color: colors.mutedForeground }]}>💡 {isEs ? "Hipótesis Evaluada" : "Tested Hypothesis"}</Text>
                       <Text style={[styles.blockBody, { color: colors.foreground }]}>{selectedExp.hypothesis}</Text>
                     </View>
                   ) : null}
@@ -929,14 +943,14 @@ export default function LabScreen() {
                   <View style={styles.metricsGrid}>
                     <MetricCard label={isEs ? "Ratio Ganancia / Pérdida" : "Profit / Loss Ratio"} value={`PF ${selectedExp.best_profit_factor?.toFixed(2) ?? "—"}`} colors={colors} />
                     <MetricCard label={isEs ? "Tasa de Acierto" : "Win Rate"} value={`${selectedExp.best_winrate?.toFixed(1) ?? "—"}%`} colors={colors} />
-                    <MetricCard label="Puntuación de Estabilidad" value={`${selectedExp.best_stability_score?.toFixed(1) ?? "—"} / 100`} colors={colors} />
+                    <MetricCard label={isEs ? "Puntuación de Estabilidad" : "Stability Score"} value={`${selectedExp.best_stability_score?.toFixed(1) ?? "—"} / 100`} colors={colors} />
                     <MetricCard label={isEs ? "Mayor Caída Temporal" : "Max Temporary Drawdown"} value={`${selectedExp.best_max_drawdown?.toFixed(0) ?? "—"} pips`} colors={colors} />
                   </View>
 
                   {/* Dictamen Científico Amigable */}
                   <View style={[styles.detailBlock, { marginTop: 10 }]}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                      <Text style={[styles.blockLabel, { color: colors.mutedForeground }]}>Estado Operativo</Text>
+                      <Text style={[styles.blockLabel, { color: colors.mutedForeground }]}>{isEs ? "Estado Operativo" : "Operational Status"}</Text>
                       <View style={[styles.badge, { backgroundColor: getStatusBadge(selectedExp.decision_status).bg }]}>
                         <Text style={[styles.badgeText, { color: getStatusBadge(selectedExp.decision_status).text }]}>
                           {getStatusBadge(selectedExp.decision_status).label}
@@ -944,7 +958,7 @@ export default function LabScreen() {
                       </View>
                     </View>
                     <Text style={[styles.blockBody, { color: colors.foreground, marginTop: 6 }]}>
-                      {selectedExp.decision_notes || selectedExp.notes || "Sin observaciones adicionales."}
+                      {selectedExp.decision_notes || selectedExp.notes || (isEs ? "Sin observaciones adicionales." : "No additional notes.")}
                     </Text>
                   </View>
 
@@ -955,7 +969,7 @@ export default function LabScreen() {
                   >
                     <Feather name={showConfigJson ? "chevron-up" : "terminal"} size={13} color={colors.mutedForeground} />
                     <Text style={[styles.toggleJsonText, { color: colors.mutedForeground }]}>
-                      {showConfigJson ? "▲ Ocultar Datos Técnicos de Ingeniería" : "▼ Ver Datos Técnicos Avanzados (Commit & JSON)"}
+                      {showConfigJson ? (isEs ? "▲ Ocultar Datos Técnicos de Ingeniería" : "▲ Hide Technical Engineering Data") : (isEs ? "▼ Ver Datos Técnicos Avanzados (Commit & JSON)" : "▼ View Advanced Technical Data (Commit & JSON)")}
                     </Text>
                   </TouchableOpacity>
 
@@ -983,7 +997,7 @@ export default function LabScreen() {
                     style={[styles.flexBtn, { backgroundColor: colors.secondary, borderColor: colors.border, borderWidth: 1 }]}
                   >
                     <Feather name="edit-3" size={14} color={colors.foreground} />
-                    <Text style={{ color: colors.foreground, fontSize: 12, fontWeight: "600" }}>Editar Dictamen</Text>
+                    <Text style={{ color: colors.foreground, fontSize: 12, fontWeight: "600" }}>{isEs ? "Editar Dictamen" : "Edit Verdict"}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -996,7 +1010,7 @@ export default function LabScreen() {
                     ) : (
                       <>
                         <Feather name="rotate-ccw" size={14} color={colors.primaryForeground} />
-                        <Text style={{ color: colors.primaryForeground, fontSize: 12, fontWeight: "600" }}>Reabrir / Clonar</Text>
+                        <Text style={{ color: colors.primaryForeground, fontSize: 12, fontWeight: "600" }}>{isEs ? "Reabrir / Clonar" : "Reopen / Clone"}</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -1014,7 +1028,7 @@ export default function LabScreen() {
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>{isEs ? "Actualizar Dictamen de la Estrategia" : "Update Strategy Verdict"}</Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>Ref: {selectedExp?.experiment_id}</Text>
 
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 8 }]}>Nuevo Estado:</Text>
+            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 8 }]}>{isEs ? "Nuevo Estado:" : "New Status:"}</Text>
             <View style={styles.statusOptions}>
               {(["DRAFT", "CANDIDATE", "PROMOTED", "REJECTED", "ARCHIVED"] as const).map((st) => {
                 const friendly = getStatusBadge(st);
@@ -1039,7 +1053,7 @@ export default function LabScreen() {
               })}
             </View>
 
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 12 }]}>Motivo de la Decisión / Notas:</Text>
+            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 12 }]}>{isEs ? "Motivo de la Decisión / Notas:" : "Reason for Decision / Notes:"}</Text>
             <TextInput
               style={[styles.textArea, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border }]}
               multiline
@@ -1055,7 +1069,7 @@ export default function LabScreen() {
                 onPress={() => setEditModalVisible(false)}
                 style={[styles.flexBtn, { backgroundColor: colors.secondary }]}
               >
-                <Text style={{ color: colors.foreground }}>Cancelar</Text>
+                <Text style={{ color: colors.foreground }}>{isEs ? "Cancelar" : "Cancel"}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSaveDecision}
@@ -1065,7 +1079,7 @@ export default function LabScreen() {
                 {actionLoading ? (
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
-                  <Text style={{ color: colors.primaryForeground, fontWeight: "600" }}>Guardar Dictamen</Text>
+                  <Text style={{ color: colors.primaryForeground, fontWeight: "600" }}>{isEs ? "Guardar Dictamen" : "Save Verdict"}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1084,7 +1098,7 @@ export default function LabScreen() {
               {isReopenMode ? (isEs ? "Cargarás la configuración exacta para repetir la prueba." : "Load exact settings to rerun test.") : (isEs ? "Define qué activo e idea deseas someter a auditoría cuantitativa." : "Define which asset and idea to evaluate with quantitative audit.")}
             </Text>
 
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 8 }]}>Activo:</Text>
+            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 8 }]}>{isEs ? "Activo:" : "Asset:"}</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {["EURUSD", "XAUUSD", "BTCEUR"].map((sym) => (
                 <TouchableOpacity
@@ -1102,14 +1116,14 @@ export default function LabScreen() {
               ))}
             </View>
 
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 10 }]}>Título de la Prueba:</Text>
+            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 10 }]}>{isEs ? "Título de la Prueba:" : "Test Title:"}</Text>
             <TextInput
               style={[styles.singleInput, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border }]}
               value={formTitle}
               onChangeText={setFormTitle}
             />
 
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 10 }]}>Hipótesis / Objetivo:</Text>
+            <Text style={[styles.inputLabel, { color: colors.mutedForeground, marginTop: 10 }]}>{isEs ? "Hipótesis / Objetivo:" : "Hypothesis / Goal:"}</Text>
             <TextInput
               style={[styles.textArea, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, height: 70 }]}
               multiline
@@ -1122,7 +1136,7 @@ export default function LabScreen() {
                 onPress={() => setNewModalVisible(false)}
                 style={[styles.flexBtn, { backgroundColor: colors.secondary }]}
               >
-                <Text style={{ color: colors.foreground }}>Cancelar</Text>
+                <Text style={{ color: colors.foreground }}>{isEs ? "Cancelar" : "Cancel"}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleExecuteInvestigation}
@@ -1133,7 +1147,7 @@ export default function LabScreen() {
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
                   <Text style={{ color: colors.primaryForeground, fontWeight: "600" }}>
-                    {isReopenMode ? "Lanzar Réplica" : "Iniciar Test"}
+                    {isReopenMode ? (isEs ? "Lanzar Réplica" : "Rerun Simulation") : (isEs ? "Iniciar Test" : "Run Test")}
                   </Text>
                 )}
               </TouchableOpacity>

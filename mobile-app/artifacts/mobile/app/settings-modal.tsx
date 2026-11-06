@@ -99,50 +99,54 @@ export default function SettingsScreen() {
   }, [urlDraft, tokenDraft, updateSetting]);
 
   const handleRequestPermissions = useCallback(async () => {
+    const isEs = settings.language === "es";
     const token = await registerForPushNotificationsAsync();
     const { status: perm } = await Notifications.getPermissionsAsync();
     setPermStatus(
       perm === "granted"
         ? token
-          ? "Permisos concedidos · push activo"
-          : "Permisos concedidos · notificaciones locales"
-        : "Permisos denegados — actívalos en Ajustes del sistema"
+          ? (isEs ? "Permisos concedidos · push activo" : "Permissions granted · push active")
+          : (isEs ? "Permisos concedidos · notificaciones locales" : "Permissions granted · local alerts active")
+        : (isEs ? "Permisos denegados — actívalos en Ajustes del sistema" : "Permissions denied — enable in System Settings")
     );
-  }, []);
+  }, [settings.language]);
 
   const handleTestNotification = useCallback(async () => {
+    const isEs = settings.language === "es";
     await sendLocalNotification(
       "DISCRETIONARY_SIGNAL",
-      "🔔 LastEdge: Notificación de Prueba",
-      "Alertas locales activas (15 categorías configuradas correctamente)."
+      isEs ? "🔔 LastEdge: Notificación de Prueba" : "🔔 LastEdge: Test Notification",
+      isEs ? "Alertas locales activas (15 categorías configuradas correctamente)." : "Local alerts active (15 categories configured properly)."
     );
     if (settings.hapticsEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
-  }, [settings.hapticsEnabled]);
+  }, [settings.language, settings.hapticsEnabled]);
 
   const handleClearBadge = useCallback(async () => {
+    const isEs = settings.language === "es";
     await Notifications.setBadgeCountAsync(0);
-    Alert.alert("Listo", "Contador de notificaciones reiniciado.");
-  }, []);
+    Alert.alert(isEs ? "Listo" : "Done", isEs ? "Contador de notificaciones reiniciado." : "Notification counter reset.");
+  }, [settings.language]);
 
   const handleResetSettings = useCallback(() => {
+    const isEs = settings.language === "es";
     Alert.alert(
-      "Restablecer ajustes",
-      "¿Volver a la configuración predeterminada?",
+      isEs ? "Restablecer ajustes" : "Reset Settings",
+      isEs ? "¿Volver a la configuración predeterminada?" : "Restore factory defaults?",
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: isEs ? "Cancelar" : "Cancel", style: "cancel" },
         {
-          text: "Restablecer",
+          text: isEs ? "Restablecer" : "Reset",
           style: "destructive",
           onPress: async () => {
             await resetSettings();
-            Alert.alert("Hecho", "Ajustes restablecidos.");
+            Alert.alert(isEs ? "Hecho" : "Done", isEs ? "Ajustes restablecidos." : "Settings reset.");
           },
         },
       ]
     );
-  }, [resetSettings]);
+  }, [settings.language, resetSettings]);
 
   const handleLockApp = useCallback(async () => {
     await lockApp();

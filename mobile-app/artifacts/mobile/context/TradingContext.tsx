@@ -161,6 +161,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fetchAllData = useCallback(async () => {
+    const isEs = settings.language === "es";
     // If trading engine is disabled in ecosystem modules, do not poll or set errors!
     if (settings.ecosystemModules && !settings.ecosystemModules.tradingEngine) {
       setLoading(false);
@@ -183,14 +184,14 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         if (prevStatus.current?.connected && !statusData.connected && shouldNotify("DISCONNECT")) {
           sendLocalNotification(
             "DISCONNECT",
-            "🚨 Desconexión de MT5 / VPS",
-            "El bot de trading ha perdido la conexión con el terminal MetaTrader 5."
+            isEs ? "🚨 Desconexión de MT5 / VPS" : "🚨 MT5 / VPS Disconnected",
+            isEs ? "El bot de trading ha perdido la conexión con el terminal MetaTrader 5." : "The trading bot lost connection to the MetaTrader 5 terminal."
           );
         } else if (prevStatus.current && !prevStatus.current.connected && statusData.connected && shouldNotify("DISCONNECT")) {
           sendLocalNotification(
             "DISCONNECT",
-            "🟢 Conexión MT5 Restaurada",
-            "El enlace con MetaTrader 5 y VPS está de nuevo 100% operativo."
+            isEs ? "🟢 Conexión MT5 Restaurada" : "🟢 MT5 Connection Restored",
+            isEs ? "El enlace con MetaTrader 5 y VPS está de nuevo 100% operativo." : "The link to MetaTrader 5 and VPS is fully operational again."
           );
         }
 
@@ -202,8 +203,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         ) {
           sendLocalNotification(
             "CIRCUIT_BREAKER",
-            "🚨 Circuit Breaker Activado",
-            "Trading pausado automáticamente por superar el límite de drawdown o racha de pérdidas."
+            isEs ? "🚨 Circuit Breaker Activado" : "🚨 Circuit Breaker Activated",
+            isEs ? "Trading pausado automáticamente por superar el límite de drawdown o racha de pérdidas." : "Trading automatically paused after exceeding max drawdown or loss streak limit."
           );
         }
 
@@ -228,8 +229,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
                 const pct = sig.score ? Math.round(sig.score * 100) : 85;
                 sendLocalNotification(
                   "AUTO_SIGNAL",
-                  `⚡ Señal Auto-Ejecutada: ${sig.type} ${sig.symbol}`,
-                  `Score ${pct}% · Ejecutada automáticamente en MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})`
+                  isEs ? `⚡ Señal Auto-Ejecutada: ${sig.type} ${sig.symbol}` : `⚡ Auto-Executed Signal: ${sig.type} ${sig.symbol}`,
+                  isEs ? `Score ${pct}% · Ejecutada automáticamente en MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})` : `Score ${pct}% · Automatically executed on MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})`
                 );
               }
             } else if (sig.status === "pending") {
@@ -238,8 +239,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
                 const pct = sig.score ? Math.round(sig.score * 100) : 60;
                 sendLocalNotification(
                   "DISCRETIONARY_SIGNAL",
-                  `🎯 Señal Discrecional: ${sig.type} ${sig.symbol}`,
-                  `Score ${pct}% · Requiere confirmación manual antes de que expire el TTL (10m)`
+                  isEs ? `🎯 Señal Discrecional: ${sig.type} ${sig.symbol}` : `🎯 Discretionary Signal: ${sig.type} ${sig.symbol}`,
+                  isEs ? `Score ${pct}% · Requiere confirmación manual antes de que expire el TTL (10m)` : `Score ${pct}% · Requires manual confirmation before 10m TTL expires`
                 );
               }
             }
@@ -256,8 +257,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             if (isNowExpired && shouldNotify("EXPIRED_SIGNAL")) {
               sendLocalNotification(
                 "EXPIRED_SIGNAL",
-                `⏳ Señal Expirada: ${prevSig.symbol}`,
-                `La señal ${prevSig.type} en ${prevSig.symbol} ha caducado por superar el límite de 10 minutos.`
+                isEs ? `⏳ Señal Expirada: ${prevSig.symbol}` : `⏳ Expired Signal: ${prevSig.symbol}`,
+                isEs ? `La señal ${prevSig.type} en ${prevSig.symbol} ha caducado por superar el límite de 10 minutos.` : `The ${prevSig.type} signal on ${prevSig.symbol} has expired (exceeded 10-minute limit).`
               );
             }
           }
@@ -298,8 +299,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
               if (shouldNotify("BREAK_EVEN")) {
                 sendLocalNotification(
                   "BREAK_EVEN",
-                  `🛡️ Break-Even Asegurado: ${pos.symbol}`,
-                  `SL movido a precio de entrada (${openVal}) · Posición protegida a Riesgo Cero.`
+                  isEs ? `🛡️ Break-Even Asegurado: ${pos.symbol}` : `🛡️ Break-Even Secured: ${pos.symbol}`,
+                  isEs ? `SL movido a precio de entrada (${openVal}) · Posición protegida a Riesgo Cero.` : `SL moved to entry price (${openVal}) · Position protected at Zero Risk.`
                 );
               }
             }
@@ -311,8 +312,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             if (shouldNotify("SPREAD_SPIKE")) {
               sendLocalNotification(
                 "SPREAD_SPIKE",
-                `⚠️ Spread Anormal en ${pos.symbol}`,
-                `Spread elevado a ${(pos.spread / 10).toFixed(1)} pips. Nuevas órdenes bloqueadas preventivamente.`
+                isEs ? `⚠️ Spread Anormal en ${pos.symbol}` : `⚠️ Abnormal Spread on ${pos.symbol}`,
+                isEs ? `Spread elevado a ${(pos.spread / 10).toFixed(1)} pips. Nuevas órdenes bloqueadas preventivamente.` : `High spread at ${(pos.spread / 10).toFixed(1)} pips. New orders locked preventively.`
               );
             }
           }
@@ -334,8 +335,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
             if (shouldNotify("WEEKEND_GUARD_PRE")) {
               sendLocalNotification(
                 "WEEKEND_GUARD_PRE",
-                "⚠️ Weekend Exposure Guard (Aviso Previo)",
-                `Quedan minutos para el cierre de mercado. ${nonBtc.length} posición(es) no-cripto serán cerradas a las 21:45 UTC.`
+                isEs ? "⚠️ Weekend Exposure Guard (Aviso Previo)" : "⚠️ Weekend Exposure Guard (Early Warning)",
+                isEs ? `Quedan minutos para el cierre de mercado. ${nonBtc.length} posición(es) no-cripto serán cerradas a las 21:45 UTC.` : `Market close approaching. ${nonBtc.length} non-crypto position(s) will close at 21:45 UTC.`
               );
             }
           }
@@ -363,8 +364,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
               if (shouldNotify("WEEKEND_GUARD_EXEC")) {
                 sendLocalNotification(
                   "WEEKEND_GUARD_EXEC",
-                  `🔒 Liquidación de Fin de Semana: ${trade.symbol}`,
-                  `Operación cerrada preventivamente por Weekend Exposure Guard.`
+                  isEs ? `🔒 Liquidación de Fin de Semana: ${trade.symbol}` : `🔒 Weekend Settlement: ${trade.symbol}`,
+                  isEs ? `Operación cerrada preventivamente por Weekend Exposure Guard.` : `Position closed preventively by Weekend Exposure Guard.`
                 );
               }
             }
@@ -378,8 +379,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
                 const sign = trade.profit >= 0 ? "+" : "";
                 sendLocalNotification(
                   "PARTIAL_TP",
-                  `💰 Take Profit Parcial: ${trade.symbol}`,
-                  `50% de volumen asegurado (${sign}${trade.profit.toFixed(2)}$). Resto protegido en Trailing Stop.`
+                  isEs ? `💰 Take Profit Parcial: ${trade.symbol}` : `💰 Partial Take Profit: ${trade.symbol}`,
+                  isEs ? `50% de volumen asegurado (${sign}${trade.profit.toFixed(2)}$). Resto protegido en Trailing Stop.` : `50% volume locked in (${sign}${trade.profit.toFixed(2)}$). Remaining position trailing.`
                 );
               }
             }
@@ -388,8 +389,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
               if (shouldNotify("TRADE_PROFIT")) {
                 sendLocalNotification(
                   "TRADE_PROFIT",
-                  `🎯 Take Profit Alcanzado: ${trade.symbol}`,
-                  `Operación cerrada con balance positivo (+${trade.profit.toFixed(2)}$).`
+                  isEs ? `🎯 Take Profit Alcanzado: ${trade.symbol}` : `🎯 Take Profit Hit: ${trade.symbol}`,
+                  isEs ? `Operación cerrada con balance positivo (+${trade.profit.toFixed(2)}$).` : `Trade closed in profit (+${trade.profit.toFixed(2)}$).`
                 );
               }
             }
@@ -398,8 +399,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
               if (shouldNotify("TRADE_LOSS")) {
                 sendLocalNotification(
                   "TRADE_LOSS",
-                  `🛡️ Stop Loss Ejecutado: ${trade.symbol}`,
-                  `Operación cerrada por límite de pérdida (-${Math.abs(trade.profit).toFixed(2)}$).`
+                  isEs ? `🛡️ Stop Loss Ejecutado: ${trade.symbol}` : `🛡️ Stop Loss Hit: ${trade.symbol}`,
+                  isEs ? `Operación cerrada por límite de pérdida (-${Math.abs(trade.profit).toFixed(2)}$).` : `Trade closed at stop loss (-${Math.abs(trade.profit).toFixed(2)}$).`
                 );
               }
             }
@@ -427,8 +428,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
               : "N/A";
           sendLocalNotification(
             "DAILY_WRAPUP",
-            "📊 Resumen de Sesión Diaria",
-            `PnL hoy: ${dayPnl >= 0 ? "+" : ""}${dayPnl.toFixed(2)}$ | ${todayTrades.length} trades cerrados | Winrate: ${winRateStr}`
+            isEs ? "📊 Resumen de Sesión Diaria" : "📊 Daily Session Summary",
+            isEs ? `PnL hoy: ${dayPnl >= 0 ? "+" : ""}${dayPnl.toFixed(2)}$ | ${todayTrades.length} trades cerrados | Winrate: ${winRateStr}` : `Today's PnL: ${dayPnl >= 0 ? "+" : ""}${dayPnl.toFixed(2)}$ | ${todayTrades.length} closed trades | Winrate: ${winRateStr}`
           );
         }
       }
@@ -446,8 +447,8 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
               if (rel.tag_name !== currentVer && shouldNotify("APP_UPDATE")) {
                 sendLocalNotification(
                   "APP_UPDATE",
-                  `🚀 Actualización Disponible (${rel.tag_name})`,
-                  `Nueva versión de LastEdge App disponible. Toca aquí para descargar e instalar el nuevo APK.`,
+                  isEs ? `🚀 Actualización Disponible (${rel.tag_name})` : `🚀 Update Available (${rel.tag_name})`,
+                  isEs ? `Nueva versión de LastEdge App disponible. Toca aquí para descargar e instalar el nuevo APK.` : `New LastEdge App version available. Tap to download and install new APK.`,
                   { url: rel.html_url || "https://github.com/imlast999/lastedge-app/releases/latest" }
                 );
               }
