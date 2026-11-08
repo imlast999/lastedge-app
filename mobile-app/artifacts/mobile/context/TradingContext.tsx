@@ -9,6 +9,9 @@ import React, {
 import { resolveApiConfig, getAppVersion } from "@/lib/apiConfig";
 import { useSettings } from "@/context/SettingsContext";
 import { sendLocalNotification } from "@/services/notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const NOTIFIED_TRADES_STORAGE_KEY = "@lastedge_notified_trade_ids_v1";
 
 // ── Public types (re-exported so routes / mocks can import them) ──────────────
 
@@ -135,6 +138,25 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const lastWeekendPreWarnDate = useRef<string | null>(null);
   const lastDailyWrapDate = useRef<string | null>(null);
   const checkedAppUpdate = useRef<boolean>(false);
+  const isInitialSignalsSync = useRef<boolean>(true);
+  const isInitialTradesSync = useRef<boolean>(true);
+  const notifiedTradeIds = useRef<Set<string>>(new Set());
+
+  // Cargar IDs de trades ya notificados para evitar notificaciones duplicadas tras reconexión
+  useEffect(() => {
+    AsyncStorage.getItem(NOTIFIED_TRADES_STORAGE_KEY)
+      .then((data) => {
+        if (data) {
+          try {
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((id: string) => notifiedTradeIds.current.add(String(id)));
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // ── Network fetch helper (single-attempt, propagates errors to trigger mock fallback)
 
@@ -224,49 +246,53 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         ? rawSignals.signals
         : [];
       if (signalsList.length > 0 || Array.isArray(rawSignals)) {
-        signalsList.forEach((sig) => {
-          const isNew = !prevSignals.current.find((s) => s.id === sig.id);
-          if (isNew) {
-            // 1.2 Señal Auto-Ejecutada (Tier HIGH/VERY_HIGH >= 0.67 o autoExecuted)
-            if (sig.autoExecuted || (sig.score !== undefined && sig.score >= 0.67)) {
-              if (shouldNotify("AUTO_SIGNAL")) {
-                const pct = sig.score ? Math.round(sig.score * 100) : 85;
-                sendLocalNotification(
-                  "AUTO_SIGNAL",
-                  isEs ? `⚡ Señal Auto-Ejecutada: ${sig.type} ${sig.symbol}` : `⚡ Auto-Executed Signal: ${sig.type} ${sig.symbol}`,
-                  isEs ? `Score ${pct}% · Ejecutada automáticamente en MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})` : `Score ${pct}% · Automatically executed on MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})`
-                );
-              }
-            } else if (sig.status === "pending") {
-              // 1.1 Nueva Señal Discrecional (Modo Híbrido - TTL 10m)
-              if (shouldNotify("DISCRETIONARY_SIGNAL")) {
-                const pct = sig.score ? Math.round(sig.score * 100) : 60;
-                sendLocalNotification(
-                  "DISCRETIONARY_SIGNAL",
-                  isEs ? `🎯 Señal Discrecional: ${sig.type} ${sig.symbol}` : `🎯 Discretionary Signal: ${sig.type} ${sig.symbol}`,
-                  isEs ? `Score ${pct}% · Requiere confirmación manual antes de que expire el TTL (10m)` : `Score ${pct}% · Requires manual confirmation before 10m TTL expires`
-                );
+        if (isInitialSignalsSync.current) {
+          isInitialSignalsSync.current = false;
+        } else {
+          signalsList.forEach((sig) => {
+            const isNew = !prevSignals.current.find((s) => s.id === sig.id);
+            if (isNew) {
+              // 1.2 Señal Auto-Ejecutada (Tier HIGH/VERY_HIGH >= 0.67 o autoExecuted)
+              if (sig.autoExecuted || (sig.score !== undefined && sig.score >= 0.67)) {
+                if (shouldNotify("AUTO_SIGNAL")) {
+                  const pct = sig.score ? Math.round(sig.score * 100) : 85;
+                  sendLocalNotification(
+                    "AUTO_SIGNAL",
+                    isEs ? `⚡ Señal Auto-Ejecutada: ${sig.type} ${sig.symbol}` : `⚡ Auto-Executed Signal: ${sig.type} ${sig.symbol}`,
+                    isEs ? `Score ${pct}% · Ejecutada automáticamente en MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})` : `Score ${pct}% · Automatically executed on MT5 (SL: ${sig.stopLoss} | TP: ${sig.takeProfit})`
+                  );
+                }
+              } else if (sig.status === "pending") {
+                // 1.1 Nueva Señal Discrecional (Modo Híbrido - TTL 10m)
+                if (shouldNotify("DISCRETIONARY_SIGNAL")) {
+                  const pct = sig.score ? Math.round(sig.score * 100) : 60;
+                  sendLocalNotification(
+                    "DISCRETIONARY_SIGNAL",
+                    isEs ? `🎯 Señal Discrecional: ${sig.type} ${sig.symbol}` : `🎯 Discretionary Signal: ${sig.type} ${sig.symbol}`,
+                    isEs ? `Score ${pct}% · Requiere confirmación manual antes de que expire el TTL (10m)` : `Score ${pct}% · Requires manual confirmation before 10m TTL expires`
+                  );
+                }
               }
             }
-          }
-        });
+          });
 
-        // 1.3 Alerta de Tiempo Expirado (TTL 10m)
-        prevSignals.current.forEach((prevSig) => {
-          if (prevSig.status === "pending") {
-            const currentMatch = signalsList.find((s) => s.id === prevSig.id);
-            const isNowExpired =
-              (currentMatch && currentMatch.status === "expired") ||
-              (!currentMatch && Date.now() - new Date(prevSig.timestamp).getTime() > 600000);
-            if (isNowExpired && shouldNotify("EXPIRED_SIGNAL")) {
-              sendLocalNotification(
-                "EXPIRED_SIGNAL",
-                isEs ? `⏳ Señal Expirada: ${prevSig.symbol}` : `⏳ Expired Signal: ${prevSig.symbol}`,
-                isEs ? `La señal ${prevSig.type} en ${prevSig.symbol} ha caducado por superar el límite de 10 minutos.` : `The ${prevSig.type} signal on ${prevSig.symbol} has expired (exceeded 10-minute limit).`
-              );
+          // 1.3 Alerta de Tiempo Expirado (TTL 10m)
+          prevSignals.current.forEach((prevSig) => {
+            if (prevSig.status === "pending") {
+              const currentMatch = signalsList.find((s) => s.id === prevSig.id);
+              const isNowExpired =
+                (currentMatch && currentMatch.status === "expired") ||
+                (!currentMatch && Date.now() - new Date(prevSig.timestamp).getTime() > 600000);
+              if (isNowExpired && shouldNotify("EXPIRED_SIGNAL")) {
+                sendLocalNotification(
+                  "EXPIRED_SIGNAL",
+                  isEs ? `⏳ Señal Expirada: ${prevSig.symbol}` : `⏳ Expired Signal: ${prevSig.symbol}`,
+                  isEs ? `La señal ${prevSig.type} en ${prevSig.symbol} ha caducado por superar el límite de 10 minutos.` : `The ${prevSig.type} signal on ${prevSig.symbol} has expired (exceeded 10-minute limit).`
+                );
+              }
             }
-          }
-        });
+          });
+        }
 
         setSignals(signalsList);
         prevSignals.current = signalsList;
@@ -295,7 +321,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
 
             const prevPos = prevPositions.current.find((p) => p.ticket === pos.ticket);
             const prevWasNotAtBE =
-              !prevPos ||
+              prevPos &&
               (pos.type === "BUY" ? prevPos.sl < openVal - 0.0001 : prevPos.sl > openVal + 0.0001);
 
             if (isAtBE && prevWasNotAtBE) {
@@ -358,58 +384,93 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         ? rawTrades.trades
         : [];
       if (tradesList.length > 0 || Array.isArray(rawTrades)) {
-        tradesList.forEach((trade) => {
-          if (!prevTrades.current.find((t) => t.id === trade.id)) {
-            // 3.2 Confirmación Liquidación de Fin de Semana (Weekend Guard)
-            if (
-              trade.closeReason === "WEEKEND_GUARD" ||
-              trade.comment?.toLowerCase().includes("weekend")
-            ) {
-              if (shouldNotify("WEEKEND_GUARD_EXEC")) {
-                sendLocalNotification(
-                  "WEEKEND_GUARD_EXEC",
-                  isEs ? `🔒 Liquidación de Fin de Semana: ${trade.symbol}` : `🔒 Weekend Settlement: ${trade.symbol}`,
-                  isEs ? `Operación cerrada preventivamente por Weekend Exposure Guard.` : `Position closed preventively by Weekend Exposure Guard.`
-                );
+        if (isInitialTradesSync.current) {
+          isInitialTradesSync.current = false;
+          // Sembrar todos los IDs de trades existentes para que los históricos nunca disparen alertas al iniciar la app
+          tradesList.forEach((t) => notifiedTradeIds.current.add(String(t.id)));
+          AsyncStorage.setItem(
+            NOTIFIED_TRADES_STORAGE_KEY,
+            JSON.stringify(Array.from(notifiedTradeIds.current).slice(-200))
+          ).catch(() => {});
+        } else {
+          let newNotified = false;
+          const nowMs = Date.now();
+
+          tradesList.forEach((trade) => {
+            const tradeIdStr = String(trade.id);
+            const alreadyNotified = notifiedTradeIds.current.has(tradeIdStr);
+            const inPrev = prevTrades.current.some((t) => String(t.id) === tradeIdStr);
+
+            // Evitar notificaciones de operaciones cerradas hace más de 2 horas (previene spam al reconectar)
+            const closedMs = trade.closedAt ? new Date(trade.closedAt).getTime() : 0;
+            const isRecent = !closedMs || (nowMs - closedMs < 2 * 60 * 60 * 1000);
+
+            if (!alreadyNotified && !inPrev && isRecent) {
+              notifiedTradeIds.current.add(tradeIdStr);
+              newNotified = true;
+
+              // 3.2 Confirmación Liquidación de Fin de Semana (Weekend Guard)
+              if (
+                trade.closeReason === "WEEKEND_GUARD" ||
+                trade.comment?.toLowerCase().includes("weekend")
+              ) {
+                if (shouldNotify("WEEKEND_GUARD_EXEC")) {
+                  sendLocalNotification(
+                    "WEEKEND_GUARD_EXEC",
+                    isEs ? `🔒 Liquidación de Fin de Semana: ${trade.symbol}` : `🔒 Weekend Settlement: ${trade.symbol}`,
+                    isEs ? `Operación cerrada preventivamente por Weekend Exposure Guard.` : `Position closed preventively by Weekend Exposure Guard.`
+                  );
+                }
               }
-            }
-            // 2.2 Take Profit Parcial Ejecutado (50% volumen)
-            else if (
-              trade.closeReason === "PARTIAL_TP" ||
-              trade.comment?.toLowerCase().includes("partial") ||
-              trade.comment?.toLowerCase().includes("tp1")
-            ) {
-              if (shouldNotify("PARTIAL_TP")) {
-                const sign = trade.profit >= 0 ? "+" : "";
-                sendLocalNotification(
-                  "PARTIAL_TP",
-                  isEs ? `💰 Take Profit Parcial: ${trade.symbol}` : `💰 Partial Take Profit: ${trade.symbol}`,
-                  isEs ? `50% de volumen asegurado (${sign}${trade.profit.toFixed(2)}$). Resto protegido en Trailing Stop.` : `50% volume locked in (${sign}${trade.profit.toFixed(2)}$). Remaining position trailing.`
-                );
+              // 2.2 Take Profit Parcial Ejecutado (50% volumen)
+              else if (
+                trade.closeReason === "PARTIAL_TP" ||
+                trade.comment?.toLowerCase().includes("partial") ||
+                trade.comment?.toLowerCase().includes("tp1")
+              ) {
+                if (shouldNotify("PARTIAL_TP")) {
+                  const sign = trade.profit >= 0 ? "+" : "";
+                  sendLocalNotification(
+                    "PARTIAL_TP",
+                    isEs ? `💰 Take Profit Parcial: ${trade.symbol}` : `💰 Partial Take Profit: ${trade.symbol}`,
+                    isEs ? `50% de volumen asegurado (${sign}${trade.profit.toFixed(2)}$). Resto protegido en Trailing Stop.` : `50% volume locked in (${sign}${trade.profit.toFixed(2)}$). Remaining position trailing.`
+                  );
+                }
               }
-            }
-            // 2.3 Cierre en Ganancia
-            else if (trade.profit >= 0) {
-              if (shouldNotify("TRADE_PROFIT")) {
-                sendLocalNotification(
-                  "TRADE_PROFIT",
-                  isEs ? `🎯 Take Profit Alcanzado: ${trade.symbol}` : `🎯 Take Profit Hit: ${trade.symbol}`,
-                  isEs ? `Operación cerrada con balance positivo (+${trade.profit.toFixed(2)}$).` : `Trade closed in profit (+${trade.profit.toFixed(2)}$).`
-                );
+              // 2.3 Cierre en Ganancia
+              else if (trade.profit >= 0) {
+                if (shouldNotify("TRADE_PROFIT")) {
+                  sendLocalNotification(
+                    "TRADE_PROFIT",
+                    isEs ? `🎯 Take Profit Alcanzado: ${trade.symbol}` : `🎯 Take Profit Hit: ${trade.symbol}`,
+                    isEs ? `Operación cerrada con balance positivo (+${trade.profit.toFixed(2)}$).` : `Trade closed in profit (+${trade.profit.toFixed(2)}$).`
+                  );
+                }
               }
-            }
-            // 2.4 Cierre en Stop Loss
-            else {
-              if (shouldNotify("TRADE_LOSS")) {
-                sendLocalNotification(
-                  "TRADE_LOSS",
-                  isEs ? `🛡️ Stop Loss Ejecutado: ${trade.symbol}` : `🛡️ Stop Loss Hit: ${trade.symbol}`,
-                  isEs ? `Operación cerrada por límite de pérdida (-${Math.abs(trade.profit).toFixed(2)}$).` : `Trade closed at stop loss (-${Math.abs(trade.profit).toFixed(2)}$).`
-                );
+              // 2.4 Cierre en Stop Loss
+              else {
+                if (shouldNotify("TRADE_LOSS")) {
+                  sendLocalNotification(
+                    "TRADE_LOSS",
+                    isEs ? `🛡️ Stop Loss Ejecutado: ${trade.symbol}` : `🛡️ Stop Loss Hit: ${trade.symbol}`,
+                    isEs ? `Operación cerrada por límite de pérdida (-${Math.abs(trade.profit).toFixed(2)}$).` : `Trade closed at stop loss (-${Math.abs(trade.profit).toFixed(2)}$).`
+                  );
+                }
               }
+            } else if (!alreadyNotified) {
+              notifiedTradeIds.current.add(tradeIdStr);
+              newNotified = true;
             }
+          });
+
+          if (newNotified) {
+            AsyncStorage.setItem(
+              NOTIFIED_TRADES_STORAGE_KEY,
+              JSON.stringify(Array.from(notifiedTradeIds.current).slice(-200))
+            ).catch(() => {});
           }
-        });
+        }
+
         setTrades(tradesList);
         prevTrades.current = tradesList;
       }

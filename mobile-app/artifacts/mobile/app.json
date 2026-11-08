@@ -47,6 +47,7 @@
       "reactCompiler": true
     },
     "extra": {
+      "apiUrl": "https://vps-dev-eugenio.tail96b8f8.ts.net",
       "eas": {
         "projectId": "ed02925d-c159-4eb9-adfd-b82871c2a3ef"
       }
