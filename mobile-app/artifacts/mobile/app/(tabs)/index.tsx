@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Image,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, Redirect } from "expo-router";
@@ -326,6 +327,90 @@ export default function DashboardScreen() {
           );
         })()}
       </View>
+
+      {/* ── Community & VIP Signals Hub ── */}
+      <View style={styles.communityCard}>
+        <View style={styles.communityHeaderRow}>
+          <View style={styles.communityTitleGroup}>
+            <View style={styles.communityIconPill}>
+              <Feather name="globe" size={14} color="#10B981" />
+            </View>
+            <View>
+              <Text style={styles.communityCardTitle}>
+                {isEs ? "COMUNIDAD & SEÑALES VIP" : "COMMUNITY & VIP SIGNALS"}
+              </Text>
+              <Text style={styles.communityCardSub}>
+                {isEs ? "Canales oficiales y acceso directo" : "Official channels & direct access"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.communityBadge}>
+            <Text style={styles.communityBadgeText}>OFICIAL</Text>
+          </View>
+        </View>
+
+        {/* Grid for Telegram & Instagram */}
+        <View style={styles.socialGridRow}>
+          <TouchableOpacity
+            style={styles.socialBtn}
+            activeOpacity={0.75}
+            onPress={() => Linking.openURL("https://t.me/LastEdgeJournal")}
+          >
+            <View style={[styles.socialIconWrap, { backgroundColor: "rgba(56, 189, 248, 0.12)" }]}>
+              <Feather name="send" size={15} color="#38BDF8" />
+            </View>
+            <View style={styles.socialBtnContent}>
+              <Text style={styles.socialBtnTitle}>Telegram</Text>
+              <Text style={styles.socialBtnSub}>@LastEdgeJournal</Text>
+            </View>
+            <Feather name="arrow-up-right" size={14} color="#64748B" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialBtn}
+            activeOpacity={0.75}
+            onPress={() => Linking.openURL("https://ig.me/j/AbZrLKLRbIHnU-xw/")}
+          >
+            <View style={[styles.socialIconWrap, { backgroundColor: "rgba(225, 48, 108, 0.12)" }]}>
+              <Feather name="instagram" size={15} color="#E1306C" />
+            </View>
+            <View style={styles.socialBtnContent}>
+              <Text style={styles.socialBtnTitle}>Instagram</Text>
+              <Text style={styles.socialBtnSub}>{isEs ? "Canal Difusión" : "Broadcast"}</Text>
+            </View>
+            <Feather name="arrow-up-right" size={14} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Featured VIP Banner */}
+        <TouchableOpacity
+          style={styles.vipBannerBtn}
+          activeOpacity={0.82}
+          onPress={() => Linking.openURL("https://t.me/imlast999")}
+        >
+          <View style={styles.vipLeftContent}>
+            <View style={styles.vipIconWrap}>
+              <Feather name="zap" size={18} color="#10B981" />
+            </View>
+            <View style={styles.vipTextCol}>
+              <View style={styles.vipTitleRow}>
+                <Text style={styles.vipTitleText}>
+                  {isEs ? "Acceso Club VIP · Señales" : "VIP Signals · Private Club"}
+                </Text>
+                <View style={styles.vipPillBadge}>
+                  <Text style={styles.vipPillText}>DIRECT</Text>
+                </View>
+              </View>
+              <Text style={styles.vipSubText}>
+                {isEs
+                  ? "Habla directamente con @imlast999 para resolver dudas y unirte"
+                  : "Message @imlast999 directly for questions & access"}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color="#10B981" />
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -624,5 +709,148 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "PlusJakartaSans_500Medium",
     fontVariant: ["tabular-nums"],
+  },
+  communityCard: {
+    backgroundColor: "#0B0F17",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    padding: 16,
+    gap: 14,
+    marginTop: 4,
+  },
+  communityHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  communityTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  communityIconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  communityCardTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#F8FAFC",
+    letterSpacing: 0.5,
+  },
+  communityCardSub: {
+    fontSize: 10,
+    color: "#64748B",
+  },
+  communityBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.25)",
+  },
+  communityBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#10B981",
+  },
+  socialGridRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  socialBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    gap: 8,
+  },
+  socialIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  socialBtnContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  socialBtnTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#F1F5F9",
+  },
+  socialBtnSub: {
+    fontSize: 10,
+    color: "#64748B",
+    marginTop: 1,
+  },
+  vipBannerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(16, 185, 129, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.28)",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  vipLeftContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    marginRight: 6,
+  },
+  vipIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  vipTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  vipTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  vipTitleText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#F8FAFC",
+  },
+  vipPillBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  vipPillText: {
+    fontSize: 8,
+    fontWeight: "800",
+    color: "#34D399",
+  },
+  vipSubText: {
+    fontSize: 10,
+    color: "#94A3B8",
+    lineHeight: 14,
   },
 });

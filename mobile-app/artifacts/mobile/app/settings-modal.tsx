@@ -676,6 +676,30 @@ export default function SettingsScreen() {
         />
       </SettingsSection>
 
+      {/* ── Comunidad & Redes Oficiales ── */}
+      <SettingsSection title={isEs ? "Comunidad & Señales" : "Community & Signals"}>
+        <SettingsRow
+          icon="send"
+          label={isEs ? "Canal Oficial Telegram" : "Telegram Official Channel"}
+          value="@LastEdgeJournal"
+          onPress={() => Linking.openURL("https://t.me/LastEdgeJournal")}
+        />
+        <SettingsRow
+          icon="instagram"
+          label={isEs ? "Canal Difusión Instagram" : "Instagram Broadcast"}
+          value={isEs ? "Difusión Exclusiva ↗" : "Exclusive Broadcast ↗"}
+          onPress={() => Linking.openURL("https://ig.me/j/AbZrLKLRbIHnU-xw/")}
+        />
+        <SettingsRow
+          icon="zap"
+          label={isEs ? "Acceso Club VIP · Señales" : "VIP Signals · Private Club"}
+          value="@imlast999"
+          valueColor="#10B981"
+          onPress={() => Linking.openURL("https://t.me/imlast999")}
+          isLast
+        />
+      </SettingsSection>
+
       {/* ── Acerca de ── */}
       <SettingsSection title={isEs ? "Acerca de" : "About"}>
         <SettingsRow icon="box" label={isEs ? "Versión" : "Version"} value={getAppFullVersion()} />
