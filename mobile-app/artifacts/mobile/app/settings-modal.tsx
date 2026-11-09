@@ -693,7 +693,7 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="zap"
           label={isEs ? "Acceso Club VIP · Señales" : "VIP Signals · Private Club"}
-          value="@imlast999"
+          value={isEs ? "Contacto @imlast999" : "Contact @imlast999"}
           valueColor="#10B981"
           onPress={() => Linking.openURL("https://t.me/imlast999")}
           isLast

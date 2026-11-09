@@ -345,7 +345,7 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View style={styles.communityBadge}>
-            <Text style={styles.communityBadgeText}>OFICIAL</Text>
+            <Text style={styles.communityBadgeText}>{isEs ? "OFICIAL" : "OFFICIAL"}</Text>
           </View>
         </View>
 
@@ -360,7 +360,7 @@ export default function DashboardScreen() {
               <Feather name="send" size={15} color="#38BDF8" />
             </View>
             <View style={styles.socialBtnContent}>
-              <Text style={styles.socialBtnTitle}>Telegram</Text>
+              <Text style={styles.socialBtnTitle}>{isEs ? "Telegram Diario" : "Telegram Daily"}</Text>
               <Text style={styles.socialBtnSub}>@LastEdgeJournal</Text>
             </View>
             <Feather name="arrow-up-right" size={14} color="#64748B" />
@@ -376,7 +376,7 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.socialBtnContent}>
               <Text style={styles.socialBtnTitle}>Instagram</Text>
-              <Text style={styles.socialBtnSub}>{isEs ? "Canal Difusión" : "Broadcast"}</Text>
+              <Text style={styles.socialBtnSub}>{isEs ? "Canal Difusión" : "Broadcast Channel"}</Text>
             </View>
             <Feather name="arrow-up-right" size={14} color="#64748B" />
           </TouchableOpacity>
