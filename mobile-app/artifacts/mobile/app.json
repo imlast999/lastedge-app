@@ -2,14 +2,14 @@
   "expo": {
     "name": "LastEdge",
     "slug": "lastedge",
-    "version": "1.1.86",
+    "version": "1.1.87",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lastedge",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/adaptive-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#111419"
     },
@@ -20,7 +20,7 @@
       "backgroundColor": "#09090b",
       "package": "com.lastedge.app",
       "usesCleartextTraffic": true,
-      "versionCode": 86,
+      "versionCode": 87,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#111419"

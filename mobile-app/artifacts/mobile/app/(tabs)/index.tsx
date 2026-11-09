@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, Redirect } from "expo-router";
@@ -74,12 +75,16 @@ export default function DashboardScreen() {
       {/* Terminal Workspace Header (dashboard_new.tsx style) */}
       <View style={styles.workspaceHeader}>
         <View style={styles.workspaceProfile}>
-          <View style={[styles.avatarBox, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.avatarText, { color: colors.primaryForeground }]}>L</Text>
+          <View style={styles.avatarBox}>
+            <Image
+              source={require("@/assets/images/logo-e.png")}
+              style={{ width: 28, height: 28 }}
+              resizeMode="contain"
+            />
           </View>
           <View style={styles.workspaceMeta}>
             <Text style={[styles.workspaceTitle, { color: colors.foreground }]}>
-              MT5 Live Account
+              LastEdge App
             </Text>
             <Text style={[styles.workspaceSub, { color: colors.mutedForeground }]}>
               {safeStatus.connected ? "Production · Online" : "Production · Offline"}
