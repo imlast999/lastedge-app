@@ -463,7 +463,35 @@ class TelegramAdapter:
 
     async def _safe_process_update(self, session: aiohttp.ClientSession, update: Dict[str, Any]):
         try:
-            if "callback_query" in update:
+            if "channel_post" in update:
+                cp = update["channel_post"]
+                chat = cp.get("chat", {})
+                cid = chat.get("id")
+                title = chat.get("title", "")
+                logger.info(f"📢 [TelegramAdapter] DETECTADO CANAL: id={cid}, title={title}")
+                print(f"📢 [TelegramAdapter] DETECTADO CANAL: id={cid}, title={title}", flush=True)
+                if cid:
+                    try:
+                        os.makedirs(r"C:\LastEdge\LastEdge App\data", exist_ok=True)
+                        with open(r"C:\LastEdge\LastEdge App\data\last_channel_id.txt", "w", encoding="utf-8") as f:
+                            f.write(f"{cid}\n{title}\n")
+                    except Exception:
+                        pass
+            elif "my_chat_member" in update:
+                mcm = update["my_chat_member"]
+                chat = mcm.get("chat", {})
+                cid = chat.get("id")
+                title = chat.get("title", "")
+                logger.info(f"📢 [TelegramAdapter] DETECTADO MIEMBRO: id={cid}, title={title}")
+                print(f"📢 [TelegramAdapter] DETECTADO MIEMBRO: id={cid}, title={title}", flush=True)
+                if cid:
+                    try:
+                        os.makedirs(r"C:\LastEdge\LastEdge App\data", exist_ok=True)
+                        with open(r"C:\LastEdge\LastEdge App\data\last_channel_id.txt", "w", encoding="utf-8") as f:
+                            f.write(f"{cid}\n{title}\n")
+                    except Exception:
+                        pass
+            elif "callback_query" in update:
                 await self._process_callback_query(session, update["callback_query"])
             elif "message" in update:
                 await self._process_update(session, update)
