@@ -57,15 +57,26 @@ def get_reconstructed_trades_from_mt5(days: int = 14) -> list:
 
                 for pid, dlist in pos_map.items():
                     entry_d = next((d for d in dlist if d.entry == 0), None)
-                    exit_d = next((d for d in dlist if d.entry == 1), None)
-                    if exit_d:
-                        sym = exit_d.symbol
-                        ttype = "BUY" if (entry_d and entry_d.type == 0) else ("SELL" if (entry_d and entry_d.type == 1) else ("SELL" if exit_d.type == 0 else "BUY"))
-                        open_p = float(entry_d.price if entry_d else exit_d.price)
-                        close_p = float(exit_d.price)
-                        profit = float(exit_d.profit) + float(exit_d.swap or 0.0) + float(exit_d.commission or 0.0)
+                    exit_deals = [d for d in dlist if d.entry == 1]
+                    if exit_deals:
+                        sym = exit_deals[0].symbol
+                        ttype = "BUY" if (entry_d and entry_d.type == 0) else ("SELL" if (entry_d and entry_d.type == 1) else ("SELL" if exit_deals[0].type == 0 else "BUY"))
+                        open_p = float(entry_d.price if entry_d else exit_deals[0].price)
+                        total_exit_vol = sum(float(d.volume) for d in exit_deals)
+                        close_p = float(sum(float(d.price) * float(d.volume) for d in exit_deals) / total_exit_vol) if total_exit_vol > 0 else float(exit_deals[-1].price)
+                        profit = sum(float(d.profit) + float(d.swap or 0.0) + float(d.commission or 0.0) for d in exit_deals)
                         if entry_d:
                             profit += float(entry_d.commission or 0.0)
+                        last_exit = max(exit_deals, key=lambda d: d.time)
+                        all_comments = " ".join(str(d.comment or "").upper() for d in exit_deals)
+                        if "TP" in all_comments:
+                            reason = "TAKE_PROFIT"
+                        elif "SL" in all_comments:
+                            reason = "TRAILING_STOP" if profit > 0 else "STOP_LOSS"
+                        elif profit > 0:
+                            reason = "TAKE_PROFIT"
+                        else:
+                            reason = "MANUAL"
                         # 1 standard gold pip = 0.10 USD (10 cents). For EURUSD = 0.0001 (10000). JPY = 0.01 (100). BTC = 1.0.
                         mult = 10.0 if "XAU" in sym else (100.0 if "JPY" in sym else (1.0 if "BTC" in sym else 10000.0))
                         pips = round(abs(close_p - open_p) * mult, 1)
@@ -73,16 +84,6 @@ def get_reconstructed_trades_from_mt5(days: int = 14) -> list:
                             pips = -abs(pips)
                         else:
                             pips = abs(pips)
-                        comment = str(exit_d.comment or "").upper()
-                        if "TP" in comment:
-                            reason = "TAKE_PROFIT"
-                        elif "SL" in comment:
-                            # If SL triggered with positive profit, it was protected by trailing stop / break-even
-                            reason = "TRAILING_STOP" if profit > 0 else "STOP_LOSS"
-                        elif profit > 0:
-                            reason = "TAKE_PROFIT"
-                        else:
-                            reason = "MANUAL"
                         trades.append({
                             "id": str(pid),
                             "symbol": sym,
@@ -92,8 +93,8 @@ def get_reconstructed_trades_from_mt5(days: int = 14) -> list:
                             "pips": pips,
                             "profit": round(profit, 2),
                             "closeReason": reason,
-                            "closedAt": datetime.fromtimestamp(exit_d.time, tz=timezone.utc).isoformat(),
-                            "lot": round(float(exit_d.volume), 2),
+                            "closedAt": datetime.fromtimestamp(last_exit.time, tz=timezone.utc).isoformat(),
+                            "lot": round(total_exit_vol, 2),
                         })
                 trades.sort(key=lambda x: x["closedAt"], reverse=True)
                 _TRADES_CACHE = {"timestamp": now_ts, "trades": trades}
