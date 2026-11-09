@@ -164,8 +164,10 @@ def generate_chart(
         all_levels = price_levels + [candle_low, candle_high]
         p_min = min(all_levels)
         p_max = max(all_levels)
-        p_pad = max((p_max - p_min) * 0.08, 0.0005)
-        calculated_ylim = (p_min - p_pad, p_max + p_pad)
+        p_span = p_max - p_min
+        p_pad_bottom = max(p_span * 0.08, 0.0005)
+        p_pad_top = max(p_span * 0.18, 0.001)  # Extra headroom for header banner & top levels
+        calculated_ylim = (p_min - p_pad_bottom, p_max + p_pad_top)
 
         # Prepare EMA addplots
         addplots = []
@@ -249,24 +251,50 @@ def generate_chart(
                 if sl_val is not None:
                     ax.axhspan(min(entry_val, sl_val), max(entry_val, sl_val), color='#ef4444', alpha=0.07)
 
-            # Horizontal Level Lines & Left Badges (preserves clear view of newest candles on right)
+            # Check collision between SL and ENTRY (e.g. Break-Even trade)
+            y_span = calculated_ylim[1] - calculated_ylim[0]
+            is_breakeven = (
+                entry_val is not None and sl_val is not None and
+                abs(entry_val - sl_val) < y_span * 0.035
+            )
+
+            # Horizontal Level Lines
             if entry_val is not None:
                 ax.axhline(entry_val, color='#38bdf8', linestyle='--', linewidth=1.8, alpha=0.9)
-                ax.text(x_badge, entry_val, f" ENTRY  {fmt_price(entry_val)} ",
-                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='left',
-                        bbox=dict(boxstyle='square,pad=0.25', facecolor='#38bdf8', edgecolor='none'))
-
             if sl_val is not None:
                 ax.axhline(sl_val, color='#f43f5e', linestyle='--', linewidth=1.8, alpha=0.9)
-                ax.text(x_badge, sl_val, f" SL  {fmt_price(sl_val)} ",
-                        color='white', fontsize=9, fontweight='bold', va='center', ha='left',
-                        bbox=dict(boxstyle='square,pad=0.25', facecolor='#f43f5e', edgecolor='none'))
-
             if tp_val is not None:
                 ax.axhline(tp_val, color='#10b981', linestyle='--', linewidth=1.8, alpha=0.9)
                 ax.text(x_badge, tp_val, f" TP  {fmt_price(tp_val)} ",
                         color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='left',
                         bbox=dict(boxstyle='square,pad=0.25', facecolor='#10b981', edgecolor='none'))
+
+            if is_breakeven:
+                # Place SL first, then place ENTRY directly to the right of SL on the same line
+                t_sl = ax.text(x_badge, sl_val, f" SL  {fmt_price(sl_val)} ",
+                               color='white', fontsize=9, fontweight='bold', va='center', ha='left',
+                               bbox=dict(boxstyle='square,pad=0.25', facecolor='#f43f5e', edgecolor='none'))
+                try:
+                    fig.canvas.draw()
+                    renderer = fig.canvas.get_renderer()
+                    bbox_sl = t_sl.get_window_extent(renderer=renderer)
+                    inv = ax.transData.inverted()
+                    x_entry = inv.transform(bbox_sl)[1][0] + (x_end - x_start) * 0.006
+                except Exception:
+                    x_entry = x_badge + (x_end - x_start) * 0.12
+
+                ax.text(x_entry, entry_val, f" ENTRY  {fmt_price(entry_val)} ",
+                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='left',
+                        bbox=dict(boxstyle='square,pad=0.25', facecolor='#38bdf8', edgecolor='none'))
+            else:
+                if sl_val is not None:
+                    ax.text(x_badge, sl_val, f" SL  {fmt_price(sl_val)} ",
+                            color='white', fontsize=9, fontweight='bold', va='center', ha='left',
+                            bbox=dict(boxstyle='square,pad=0.25', facecolor='#f43f5e', edgecolor='none'))
+                if entry_val is not None:
+                    ax.text(x_badge, entry_val, f" ENTRY  {fmt_price(entry_val)} ",
+                            color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='left',
+                            bbox=dict(boxstyle='square,pad=0.25', facecolor='#38bdf8', edgecolor='none'))
 
         # Header Title Banner (Top Left)
         if title:
