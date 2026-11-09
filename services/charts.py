@@ -206,7 +206,7 @@ def generate_chart(
         xlim = ax.get_xlim()
         x_end = xlim[1]
         x_start = xlim[0]
-        x_badge = x_end - (x_end - x_start) * 0.008
+        x_badge = x_start + (x_end - x_start) * 0.012
 
         # Draw dotted line for last close price
         last_close = float(mpf_df['close'].iloc[-1])
@@ -249,23 +249,23 @@ def generate_chart(
                 if sl_val is not None:
                     ax.axhspan(min(entry_val, sl_val), max(entry_val, sl_val), color='#ef4444', alpha=0.07)
 
-            # Horizontal Level Lines & Right Badges
+            # Horizontal Level Lines & Left Badges (preserves clear view of newest candles on right)
             if entry_val is not None:
                 ax.axhline(entry_val, color='#38bdf8', linestyle='--', linewidth=1.8, alpha=0.9)
                 ax.text(x_badge, entry_val, f" ENTRY  {fmt_price(entry_val)} ",
-                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='right',
+                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='left',
                         bbox=dict(boxstyle='square,pad=0.25', facecolor='#38bdf8', edgecolor='none'))
 
             if sl_val is not None:
                 ax.axhline(sl_val, color='#f43f5e', linestyle='--', linewidth=1.8, alpha=0.9)
                 ax.text(x_badge, sl_val, f" SL  {fmt_price(sl_val)} ",
-                        color='white', fontsize=9, fontweight='bold', va='center', ha='right',
+                        color='white', fontsize=9, fontweight='bold', va='center', ha='left',
                         bbox=dict(boxstyle='square,pad=0.25', facecolor='#f43f5e', edgecolor='none'))
 
             if tp_val is not None:
                 ax.axhline(tp_val, color='#10b981', linestyle='--', linewidth=1.8, alpha=0.9)
                 ax.text(x_badge, tp_val, f" TP  {fmt_price(tp_val)} ",
-                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='right',
+                        color='#0f172a', fontsize=9, fontweight='bold', va='center', ha='left',
                         bbox=dict(boxstyle='square,pad=0.25', facecolor='#10b981', edgecolor='none'))
 
         # Header Title Banner (Top Left)
