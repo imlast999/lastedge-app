@@ -1,0 +1,96 @@
+name: Build Google Play AAB Bundle (Private)
+
+on:
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'Días de retención del artefacto privado (máx. 90)'
+        required: false
+        type: number
+        default: 7
+
+permissions:
+  contents: read
+
+jobs:
+  build-playstore-bundle:
+    name: Build & Sign LastEdge AAB (Play Store)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync Dynamic App Version
+        id: sync_version
+        run: |
+          python scripts/sync_version.py
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'mobile-app/pnpm-lock.yaml'
+
+      - name: Install Monorepo Dependencies
+        run: |
+          cd mobile-app
+          pnpm install --no-frozen-lockfile
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle Build Cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Build Signed Release AAB (Android App Bundle)
+        run: |
+          cd mobile-app/artifacts/mobile/android
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon -x lint -x test
+
+      - name: Prepare AAB Output
+        id: prepare_aab
+        run: |
+          VERSION="${{ steps.sync_version.outputs.VERSION }}"
+          BUNDLE_DIR="mobile-app/artifacts/mobile/android/app/build/outputs/bundle/release"
+          AAB_PATH=$(find "$BUNDLE_DIR" -name "*.aab" | head -n 1)
+          if [ -z "$AAB_PATH" ]; then
+            echo "::error::No AAB bundle found in $BUNDLE_DIR"
+            exit 1
+          fi
+          TARGET_NAME="LastEdge-v${VERSION}-PlayStore.aab"
+          TARGET_PATH="${BUNDLE_DIR}/${TARGET_NAME}"
+          cp "$AAB_PATH" "$TARGET_PATH"
+          echo "aab_path=${TARGET_PATH}" >> "$GITHUB_OUTPUT"
+          echo "aab_name=${TARGET_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Signed Play Store AAB Bundle ready: ${TARGET_NAME}"
+
+      - name: Upload Play Store AAB Artifact (Private Download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.prepare_aab.outputs.aab_name }}
+          path: ${{ steps.prepare_aab.outputs.aab_path }}
+          retention-days: ${{ github.event.inputs.retention_days || 7 }}

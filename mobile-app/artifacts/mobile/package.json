@@ -12,7 +12,8 @@
     "ios": "expo run:ios",
     "build:apk:local": "eas build --platform android --local --profile preview",
     "build:apk:debug": "cd android && gradlew.bat assembleDebug",
-    "build:apk:release": "cd android && gradlew.bat assembleRelease"
+    "build:apk:release": "cd android && gradlew.bat assembleRelease",
+    "build:bundle:release": "cd android && gradlew.bat bundleRelease"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -238,7 +238,8 @@ def print_banner() -> None:
     print(f" {BOLD}--- [ 🛠️ DIAGNOSTICS & WORKSPACE TOOLS ] ---{RESET}")
     print(f"  [{YELLOW}8{RESET}] Environment Doctor (Comprehensive Toolchain Audit)")
     print(f"  [{YELLOW}9{RESET}] Open APK Output Directory in Windows Explorer ({BOLD}dist/{RESET})")
-    print(f" [{YELLOW}10{RESET}] Install / Update Mobile Dependencies ({BOLD}pnpm install{RESET})\n")
+    print(f" [{YELLOW}10{RESET}] Install / Update Mobile Dependencies ({BOLD}pnpm install{RESET})")
+    print(f" [{GREEN}11{RESET}] Build Google Play Bundle ({BOLD}.aab{RESET} — Signed, Protected from Git)\n")
 
     print(f"  [{GRAY}0{RESET}] Exit")
     print(f"{CYAN}{'=' * 75}{RESET}")
@@ -316,6 +317,83 @@ def run_gradle_build(variant: str = "release", clean: bool = False) -> bool:
     print(f"  {BOLD}Update    :{RESET} Reinstalls seamlessly over existing app without uninstalling")
     print(f"  {BOLD}SHA-256   :{RESET} {sha256}")
     print(f"  {BOLD}Location  :{RESET} {dest_standard}")
+    print(f"{CYAN}{'=' * 75}{RESET}\n")
+
+    return True
+
+
+def run_gradle_bundle(clean: bool = False) -> bool:
+    """
+    Execute Gradle bundleRelease task and export AAB to LastEdge App/dist/.
+    """
+    if not GRADLEW_BAT.exists():
+        print(f"\n{RED}[✗] Gradle wrapper not found at: {GRADLEW_BAT}{RESET}")
+        return False
+
+    if not ensure_dependencies():
+        return False
+
+    env = get_build_environment()
+    if not env.get("JAVA_HOME"):
+        print(f"\n{RED}[✗] JAVA_HOME could not be detected. Please install JDK 17 or Android Studio.{RESET}")
+        return False
+
+    if not env.get("ANDROID_HOME"):
+        print(f"\n{RED}[✗] ANDROID_HOME could not be detected. Please configure Android SDK.{RESET}")
+        return False
+
+    task_name = "bundleRelease"
+    print(f"\n{BOLD}{CYAN}Starting Gradle Play Store Bundle Build: {task_name.upper()}{RESET}")
+    print(f"{GRAY}Target: {task_name}{RESET}")
+    print(f"{GRAY}Working Directory: {ANDROID_DIR}{RESET}\n")
+
+    t0 = time.time()
+
+    if clean:
+        print(f"{YELLOW}Cleaning previous build artifacts...{RESET}")
+        subprocess.run([str(GRADLEW_BAT), "clean", "--no-daemon"], cwd=str(ANDROID_DIR), env=env)
+
+    print(f"{GREEN}Compiling native modules and packaging Google Play AAB bundle...{RESET}\n")
+    build_cmd = [str(GRADLEW_BAT), task_name, "--no-daemon"]
+    result = subprocess.run(build_cmd, cwd=str(ANDROID_DIR), env=env)
+
+    elapsed = round(time.time() - t0, 1)
+
+    if result.returncode != 0:
+        print(f"\n{RED}[✗] Gradle bundle build failed with exit code {result.returncode} ({elapsed}s){RESET}\n")
+        return False
+
+    outputs_dir = ANDROID_DIR / "app" / "build" / "outputs" / "bundle" / "release"
+    aab_candidates = list(outputs_dir.glob("*.aab"))
+
+    if not aab_candidates:
+        print(f"\n{RED}[✗] Build succeeded, but no AAB was found in: {outputs_dir}{RESET}\n")
+        return False
+
+    source_aab = aab_candidates[0]
+    DIST_DIR.mkdir(parents=True, exist_ok=True)
+
+    version_str = "1.1.90"
+    version_file = APP_ROOT / "VERSION"
+    if version_file.exists():
+        version_str = version_file.read_text(encoding="utf-8").strip()
+
+    dest_bundle = DIST_DIR / f"LastEdge-v{version_str}-PlayStore.aab"
+    shutil.copy2(source_aab, dest_bundle)
+
+    file_size_mb = round(dest_bundle.stat().st_size / (1024 * 1024), 2)
+    sha256 = get_file_sha256(dest_bundle)
+
+    print(f"\n{CYAN}{BOLD}{'=' * 75}{RESET}")
+    print(f"{GREEN}{BOLD}       🎉 GOOGLE PLAY AAB BUNDLE READY ({elapsed}s){RESET}")
+    print(f"{CYAN}{BOLD}{'=' * 75}{RESET}")
+    print(f"  {BOLD}Format    :{RESET} Android App Bundle (.aab)")
+    print(f"  {BOLD}File Name :{RESET} {dest_bundle.name}")
+    print(f"  {BOLD}File Size :{RESET} {file_size_mb} MB")
+    print(f"  {BOLD}Signing   :{RESET} Persistent Release Keystore (lastedge-release.keystore)")
+    print(f"  {BOLD}Security  :{RESET} {GREEN}Protected by .gitignore (Never pushed to public git){RESET}")
+    print(f"  {BOLD}SHA-256   :{RESET} {sha256}")
+    print(f"  {BOLD}Location  :{RESET} {dest_bundle}")
     print(f"{CYAN}{'=' * 75}{RESET}\n")
 
     return True
@@ -525,6 +603,7 @@ def parse_args() -> Optional[str]:
     parser.add_argument("--launch", "-l", action="store_true", help="Install and launch app on connected device")
     parser.add_argument("--doctor", action="store_true", help="Run environment diagnostics")
     parser.add_argument("--open", action="store_true", help="Open dist folder in Explorer")
+    parser.add_argument("--bundle", "-b", action="store_true", help="Build signed Google Play AAB bundle")
 
     args = parser.parse_args()
 
@@ -534,6 +613,8 @@ def parse_args() -> Optional[str]:
         return "2"
     if args.clean:
         return "3"
+    if args.bundle:
+        return "11"
     if args.install:
         return "5"
     if args.launch:
@@ -558,7 +639,7 @@ def main() -> None:
         else:
             print_banner()
             try:
-                choice = input(f" {BOLD}Select an option [0-10]: {RESET}").strip()
+                choice = input(f" {BOLD}Select an option [0-11]: {RESET}").strip()
             except (KeyboardInterrupt, EOFError):
                 print(f"\n\n{YELLOW}Exiting LastEdge Mobile APK Compiler.{RESET}\n")
                 sys.exit(0)
@@ -584,6 +665,8 @@ def main() -> None:
             open_dist_folder()
         elif choice == "10":
             success = ensure_dependencies()
+        elif choice == "11":
+            success = run_gradle_bundle(clean=False)
         elif choice == "0":
             print(f"\n{GREEN}Exiting. Happy trading with LastEdge Mobile!{RESET}\n")
             sys.exit(0)

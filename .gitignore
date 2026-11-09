@@ -30,6 +30,9 @@ logs/
 # Build artifacts
 release_notes.md
 release_summary.txt
+*.apk
+*.aab
+*.apks
 
 data/
 

@@ -11,6 +11,9 @@ expo-env.d.ts
 
 # Native (android/ source se versiona; builds en .gitignore del monorepo)
 ios/
+*.apk
+*.aab
+*.apks
 *.orig.*
 *.jks
 *.p8

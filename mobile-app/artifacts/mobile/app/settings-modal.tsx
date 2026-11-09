@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -693,6 +694,12 @@ export default function SettingsScreen() {
           label={isEs ? "Modo datos" : "Data mode"}
           value={usingMockData ? (isEs ? "Datos de ejemplo (dev)" : "Sample data (dev)") : (isEs ? "Servidor en vivo" : "Live server")}
           valueColor={usingMockData ? colors.pending : colors.connected}
+        />
+        <SettingsRow
+          icon="shield"
+          label={isEs ? "Política de Privacidad" : "Privacy Policy"}
+          value={isEs ? "Ver online ↗" : "View online ↗"}
+          onPress={() => Linking.openURL("https://imlast999.github.io/lastedge-app/privacy.html")}
           isLast
         />
       </SettingsSection>
