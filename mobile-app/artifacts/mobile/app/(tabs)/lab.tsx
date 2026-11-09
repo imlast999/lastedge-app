@@ -53,8 +53,17 @@ type LabSubTab = "runner" | "history";
 const FRIENDLY_STRATEGY_NAMES: Record<string, string> = {
   eurusd_partial: "EUR/USD · Cierre Parcial & Tendencia",
   eurusd_simple: "EUR/USD · Seguimiento Básico",
+  eurusd_flow: "EUR/USD · Flujo Institucional",
+  eurusd_public_trend: "EUR/USD · Tendencia Pública (Benchmark)",
+  eurusd: "EUR/USD · Modelo Cuantitativo Integral",
+  eurusd_london_expansion: "EUR/USD · Expansión Sesión Londres",
   xauusd_partial: "ORO (XAU) · Rotura y Cierre Parcial",
   xauusd_simple: "ORO (XAU) · Impulso Básico",
+  xauusd_surge: "ORO (XAU) · Ruptura de Volatilidad",
+  xauusd_public_breakout: "ORO (XAU) · Ruptura Donchian (Benchmark)",
+  xauusd: "ORO (XAU) · Modelo Core Cuantitativo",
+  xauusd_asian_london: "ORO (XAU) · Sesión Asia / Londres",
+  xauusd_statistical_reversal: "ORO (XAU) · Reversión Estadística",
   xauusd_gsrs_v1: "ORO (XAU) · GSRS Reversión",
   btceur_partial: "Bitcoin · Momentum y Parcial",
   btceur_simple: "Bitcoin · Tendencia Simple",
@@ -62,13 +71,25 @@ const FRIENDLY_STRATEGY_NAMES: Record<string, string> = {
   btc_trend_pullback_v1: "Bitcoin · Retroceso Tendencial",
   btceur_regime_momentum: "Bitcoin · Momentum Multirégimen",
   btceur_weekly_breakout: "Bitcoin · Ruptura Semanal",
+  btceur_public_momentum: "Bitcoin · Momentum Público (Benchmark)",
+  btceur_new: "Bitcoin · Modelo Cuantitativo Adaptativo",
+  btceur_volatility_breakout: "Bitcoin · Ruptura de Volatilidad",
 };
 
 const FRIENDLY_STRATEGY_NAMES_EN: Record<string, string> = {
   eurusd_partial: "EUR/USD · Partial Close & Trend",
   eurusd_simple: "EUR/USD · Basic Trend Following",
+  eurusd_flow: "EUR/USD · Institutional Flow",
+  eurusd_public_trend: "EUR/USD · Public Trend (Benchmark)",
+  eurusd: "EUR/USD · Core Institutional Model",
+  eurusd_london_expansion: "EUR/USD · London Expansion",
   xauusd_partial: "GOLD (XAU) · Breakout & Partial Close",
   xauusd_simple: "GOLD (XAU) · Basic Momentum",
+  xauusd_surge: "GOLD (XAU) · Volatility Surge",
+  xauusd_public_breakout: "GOLD (XAU) · Public Breakout (Benchmark)",
+  xauusd: "GOLD (XAU) · Core Quantitative Model",
+  xauusd_asian_london: "GOLD (XAU) · Asian-London Liquidity",
+  xauusd_statistical_reversal: "GOLD (XAU) · Statistical Reversal",
   xauusd_gsrs_v1: "GOLD (XAU) · GSRS Reversion",
   btceur_partial: "Bitcoin · Momentum & Partial Close",
   btceur_simple: "Bitcoin · Simple Trend",
@@ -76,6 +97,9 @@ const FRIENDLY_STRATEGY_NAMES_EN: Record<string, string> = {
   btc_trend_pullback_v1: "Bitcoin · Trend Pullback",
   btceur_regime_momentum: "Bitcoin · Multi-Regime Momentum",
   btceur_weekly_breakout: "Bitcoin · Weekly Breakout",
+  btceur_public_momentum: "Bitcoin · Public Momentum (Benchmark)",
+  btceur_new: "Bitcoin · Adaptive Quant Model",
+  btceur_volatility_breakout: "Bitcoin · Volatility Breakout",
 };
 
 const FRIENDLY_STATUS_MAP: Record<string, { label_es: string; label_en: string; bg: string; text: string }> = {
@@ -129,7 +153,7 @@ export default function LabScreen() {
 
   // Formulario Crear / Reabrir
   const [formSymbol, setFormSymbol] = useState("EURUSD");
-  const [formStrategy, setFormStrategy] = useState("eurusd_partial");
+  const [formStrategy, setFormStrategy] = useState("eurusd_public_trend");
   const [formTitle, setFormTitle] = useState("");
   const [formHypothesis, setFormHypothesis] = useState("");
   const [isReopenMode, setIsReopenMode] = useState(false);
@@ -137,23 +161,19 @@ export default function LabScreen() {
   // ── Backtest Runner & Dynamic Strategy Catalog State ──
   const [strategyCatalog, setStrategyCatalog] = useState<Record<string, StrategyMetaItem[]>>({
     EURUSD: [
-      { id: "eurusd_partial", name: "EUR/USD Cierre Parcial", allowed_timeframes: ["H1"], default_timeframe: "H1" },
-      { id: "eurusd_simple", name: "EUR/USD Seguimiento Básico", allowed_timeframes: ["H1"], default_timeframe: "H1" },
+      { id: "eurusd_public_trend", name: "EUR/USD · Tendencia Pública", allowed_timeframes: ["H1"], default_timeframe: "H1" },
     ],
     XAUUSD: [
-      { id: "xauusd_partial", name: "Oro Rotura y Cierre Parcial", allowed_timeframes: ["H1"], default_timeframe: "H1" },
-      { id: "xauusd_simple", name: "Oro Impulso Básico", allowed_timeframes: ["H1"], default_timeframe: "H1" },
+      { id: "xauusd_public_breakout", name: "ORO (XAU) · Ruptura Donchian", allowed_timeframes: ["H1"], default_timeframe: "H1" },
     ],
     BTCEUR: [
-      { id: "btceur_trend_surge", name: "Bitcoin Impulso de Volatilidad", allowed_timeframes: ["H1"], default_timeframe: "H1" },
-      { id: "btceur_partial", name: "Bitcoin Momentum y Parcial", allowed_timeframes: ["H1"], default_timeframe: "H1" },
-      { id: "btceur_simple", name: "Bitcoin Tendencia Simple", allowed_timeframes: ["H1"], default_timeframe: "H1" },
+      { id: "btceur_public_momentum", name: "Bitcoin · Momentum Público", allowed_timeframes: ["H1"], default_timeframe: "H1" },
     ],
   });
 
   const [catalogSymbols, setCatalogSymbols] = useState<string[]>(["EURUSD", "XAUUSD", "BTCEUR"]);
   const [btSymbol, setBtSymbol] = useState("EURUSD");
-  const [btStrategy, setBtStrategy] = useState("eurusd_partial");
+  const [btStrategy, setBtStrategy] = useState("eurusd_public_trend");
   const [btTimeframe, setBtTimeframe] = useState("H1");
   const [btBars, setBtBars] = useState<number>(1000);
   const [btLoading, setBtLoading] = useState(false);
