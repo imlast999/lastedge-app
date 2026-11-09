@@ -86,7 +86,8 @@ def get_chart_for_signal(
     timeframe: str = "H1",
     signal_data: Optional[Dict[str, Any]] = None,
     bars: int = 80,
-    title: Optional[str] = None
+    title: Optional[str] = None,
+    projection_mode: bool = False
 ) -> Optional[str]:
     """
     Generates a candlestick chart with Entry, SL, and TP levels plotted.
@@ -97,6 +98,10 @@ def get_chart_for_signal(
         signal_data = symbol
         symbol = signal_data.get("symbol", "EURUSD")
         timeframe = signal_data.get("timeframe", timeframe)
+        if "projection_mode" in signal_data:
+            projection_mode = bool(signal_data["projection_mode"])
+    elif signal_data and "projection_mode" in signal_data:
+        projection_mode = bool(signal_data["projection_mode"])
     sym = str(symbol).upper()
 
     df = _fetch_candles_mt5(sym, timeframe, bars)
@@ -139,7 +144,8 @@ def get_chart_for_signal(
             filename=out_file,
             title=title,
             dark_mode=True,
-            candlesticks=True
+            candlesticks=True,
+            projection_mode=projection_mode
         )
         return path
     except Exception as e:
@@ -223,7 +229,8 @@ def get_chart_for_position(ticket: int, bars: int = 80) -> Optional[str]:
         timeframe="H1",
         signal_data=pos_data,
         bars=bars,
-        title=title
+        title=title,
+        projection_mode=False
     )
 
 
