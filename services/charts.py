@@ -206,8 +206,15 @@ def generate_chart(
         fig, axes = mpf.plot(mpf_df, **mpf_kwargs)
         ax = axes[0]
         xlim = ax.get_xlim()
-        x_end = xlim[1]
         x_start = xlim[0]
+        x_end_orig = xlim[1]
+
+        # Right margin: adds 8 to 12 bars of breathing room for future price action & projection boxes
+        n_bars = len(mpf_df)
+        right_pad_bars = max(8, int(n_bars * 0.12))
+        x_end = x_end_orig + right_pad_bars
+        ax.set_xlim(x_start, x_end)
+
         x_badge = x_start + (x_end - x_start) * 0.012
 
         # Draw dotted line for last close price
@@ -247,9 +254,20 @@ def generate_chart(
             # Shaded Risk / Reward zones (TradingView Position Tool aesthetic)
             if entry_val is not None:
                 if tp_val is not None:
-                    ax.axhspan(min(entry_val, tp_val), max(entry_val, tp_val), color='#10b981', alpha=0.07)
+                    ax.axhspan(min(entry_val, tp_val), max(entry_val, tp_val), color='#10b981', alpha=0.04)
                 if sl_val is not None:
-                    ax.axhspan(min(entry_val, sl_val), max(entry_val, sl_val), color='#ef4444', alpha=0.07)
+                    ax.axhspan(min(entry_val, sl_val), max(entry_val, sl_val), color='#ef4444', alpha=0.04)
+
+            # TradingView-style position projection box into the right margin
+            x_box_start = max(0, n_bars - 1)
+            x_box_end = x_end - 0.5
+            if entry_val is not None:
+                if tp_val is not None:
+                    ax.fill_between([x_box_start, x_box_end], min(entry_val, tp_val), max(entry_val, tp_val),
+                                    color='#10b981', alpha=0.20, edgecolor='#10b981', linewidth=1.0)
+                if sl_val is not None:
+                    ax.fill_between([x_box_start, x_box_end], min(entry_val, sl_val), max(entry_val, sl_val),
+                                    color='#ef4444', alpha=0.20, edgecolor='#ef4444', linewidth=1.0)
 
             # Check collision between SL and ENTRY (e.g. Break-Even trade)
             y_span = calculated_ylim[1] - calculated_ylim[0]
