@@ -6,38 +6,61 @@
   <title>LastEdge · Institutional Quantitative Trading Ecosystem</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
   <meta name="description" content="LastEdge is an institutional quantitative trading terminal, Risk Engine v2, and MetaTrader 5 execution ecosystem.">
+  
+  <!-- Bespoke Typography: Google Fonts fallback + Local Nexa & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
+    @font-face {
+      font-family: 'Nexa';
+      src: url('assets/fonts/Nexa.ttf') format('truetype');
+      font-weight: 700 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --bg: #07090E;
-      --card-bg: #0D111A;
-      --card-inner: #121824;
+      --card-bg: #0C1018;
+      --card-inner: #111722;
       --card-border: #1A2333;
-      --card-hover: #26334D;
+      --card-hover: #26354D;
       --accent-green: #10B981;
-      --accent-green-glow: rgba(16, 185, 129, 0.15);
+      --accent-green-glow: rgba(16, 185, 129, 0.14);
       --accent-blue: #38BDF8;
-      --accent-blue-glow: rgba(56, 189, 248, 0.15);
+      --accent-blue-glow: rgba(56, 189, 248, 0.14);
+      --accent-red: #F43F5E;
+      --accent-red-glow: rgba(244, 63, 94, 0.14);
       --accent-purple: #A78BFA;
       --text-main: #F3F4F6;
-      --text-muted: #9CA3AF;
+      --text-muted: #94A3B8;
       --text-dim: #64748B;
       --heading: #FFFFFF;
-      --danger: #EF4444;
+      --font-display: 'Nexa', 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Geist Mono', monospace;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
       background-color: var(--bg);
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 90% 40%, rgba(56, 189, 248, 0.05) 0%, transparent 40%);
+        radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 90% 30%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+        radial-gradient(rgba(26, 35, 51, 0.4) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 28px 28px;
       color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: var(--font-body);
       line-height: 1.5;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       -webkit-font-smoothing: antialiased;
     }
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -51,8 +74,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 20px;
-      background: rgba(13, 17, 26, 0.7);
+      padding: 14px 22px;
+      background: rgba(12, 16, 24, 0.75);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--card-border);
@@ -66,15 +89,16 @@
       text-decoration: none;
     }
     .brand img {
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       object-fit: contain;
     }
     .brand-title {
-      font-size: 1.3rem;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
       font-weight: 800;
       color: var(--heading);
-      letter-spacing: -0.03em;
+      letter-spacing: -0.02em;
     }
     .nav-actions {
       display: flex;
@@ -87,7 +111,8 @@
       gap: 8px;
       padding: 6px 14px;
       border-radius: 9999px;
-      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
       font-weight: 700;
       color: var(--accent-green);
       background: var(--accent-green-glow);
@@ -104,7 +129,7 @@
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.35; transform: scale(0.85); }
     }
     .lang-switcher {
       display: inline-flex;
@@ -120,7 +145,8 @@
       color: var(--text-muted);
       padding: 4px 12px;
       border-radius: 7px;
-      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -149,16 +175,16 @@
     }
     .bento-card:hover {
       border-color: var(--card-hover);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
     }
     .bento-card::before {
       content: "";
       position: absolute;
       top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
     }
 
-    /* SPECIFIC BENTO SIZES */
+    /* SIZES */
     .col-12 { grid-column: span 12; }
     .col-8  { grid-column: span 8; }
     .col-7  { grid-column: span 7; }
@@ -166,14 +192,15 @@
     .col-5  { grid-column: span 5; }
     .col-4  { grid-column: span 4; }
 
-    /* CARD HEADERS & LABELS */
+    /* CARD TYPOGRAPHY */
     .card-label {
+      font-family: var(--font-mono);
       font-size: 0.72rem;
-      font-weight: 800;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--accent-green);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -181,28 +208,30 @@
     .card-label.blue { color: var(--accent-blue); }
     .card-label.purple { color: var(--accent-purple); }
     .card-title {
-      font-size: 1.45rem;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
       font-weight: 800;
       color: var(--heading);
       letter-spacing: -0.02em;
       margin-bottom: 8px;
     }
     .card-desc {
-      font-size: 0.92rem;
+      font-size: 0.93rem;
       color: var(--text-muted);
       line-height: 1.6;
       margin-bottom: 20px;
     }
 
-    /* HERO CARD SPECIFICS */
+    /* HERO BENTO */
     .hero-card {
-      background: linear-gradient(135deg, rgba(13, 17, 26, 0.95) 0%, rgba(18, 24, 36, 0.85) 100%);
+      background: linear-gradient(135deg, rgba(12, 16, 24, 0.98) 0%, rgba(17, 23, 34, 0.9) 100%);
       padding: 38px 36px;
       justify-content: center;
     }
     .hero-card h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      font-weight: 900;
       letter-spacing: -0.03em;
       line-height: 1.15;
       margin-bottom: 14px;
@@ -217,8 +246,8 @@
       font-size: 1.05rem;
       color: var(--text-muted);
       max-width: 620px;
-      line-height: 1.6;
-      margin-bottom: 24px;
+      line-height: 1.65;
+      margin-bottom: 26px;
     }
     .hero-actions {
       display: flex;
@@ -229,7 +258,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 11px 20px;
+      padding: 12px 22px;
       border-radius: 12px;
       font-size: 0.92rem;
       font-weight: 700;
@@ -243,7 +272,7 @@
     .btn-green:hover {
       background: #0ea572;
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
     }
     .btn-dark {
       background: var(--card-inner);
@@ -255,7 +284,7 @@
       transform: translateY(-2px);
     }
 
-    /* LIVE METRICS TILES */
+    /* METRICS BOXES */
     .metrics-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -269,6 +298,7 @@
       padding: 12px 14px;
     }
     .metric-val {
+      font-family: var(--font-display);
       font-size: 1.35rem;
       font-weight: 800;
       color: var(--heading);
@@ -280,15 +310,16 @@
     .metric-val.green { color: var(--accent-green); }
     .metric-val.blue { color: var(--accent-blue); }
     .metric-sub {
+      font-family: var(--font-mono);
       font-size: 0.72rem;
       font-weight: 600;
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-top: 2px;
+      margin-top: 3px;
     }
 
-    /* STRATEGY CATALOG LIST */
+    /* LIVE TRADE / STRATEGY BENTO */
     .strat-item {
       display: flex;
       justify-content: space-between;
@@ -302,26 +333,29 @@
     .strat-item:last-child { margin-bottom: 0; }
     .strat-info { display: flex; align-items: center; gap: 10px; }
     .strat-ticker {
+      font-family: var(--font-display);
       font-weight: 800;
-      font-size: 0.95rem;
+      font-size: 1rem;
       color: var(--heading);
     }
     .strat-tag {
+      font-family: var(--font-mono);
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 600;
       padding: 2px 8px;
       border-radius: 6px;
       background: rgba(255,255,255,0.06);
       color: var(--text-muted);
     }
     .strat-stat {
+      font-family: var(--font-mono);
       text-align: right;
       font-size: 0.82rem;
       font-weight: 700;
       color: var(--accent-green);
     }
 
-    /* FEATURE TAGS CLUSTER */
+    /* TAG CLUSTERS */
     .tag-cluster {
       display: flex;
       flex-wrap: wrap;
@@ -329,7 +363,8 @@
       margin-top: auto;
     }
     .feature-tag {
-      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
       font-weight: 600;
       padding: 6px 12px;
       border-radius: 8px;
@@ -342,6 +377,7 @@
     .banner-card {
       padding: 0;
       overflow: hidden;
+      border-radius: 20px;
     }
     .banner-card img {
       width: 100%;
@@ -364,14 +400,14 @@
     .footer-links {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 24px;
       margin-bottom: 14px;
       flex-wrap: wrap;
     }
     .footer-links a {
       color: var(--text-main);
       text-decoration: none;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       font-weight: 600;
       transition: color 0.2s ease;
     }
@@ -379,14 +415,14 @@
       color: var(--accent-green);
     }
     .footer-disclaimer {
-      font-size: 0.75rem;
+      font-size: 0.78rem;
       color: var(--text-dim);
       max-width: 760px;
       margin: 8px auto 0 auto;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
-    /* RESPONSIVE BREAKPOINTS */
+    /* RESPONSIVE */
     @media (max-width: 980px) {
       .col-8, .col-7, .col-6, .col-5, .col-4 { grid-column: span 12; }
       .hero-card h1 { font-size: 2.1rem; }
