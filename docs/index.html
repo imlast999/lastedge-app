@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LastEdge · Institutional Quantitative Trading Ecosystem</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <meta name="description" content="LastEdge is an institutional quantitative trading terminal and mobile telemetry suite connecting MetaTrader 5 with sub-second execution, Risk Engine v2, and quantitative alpha models.">
+  <style>
+    :root {
+      --bg: #07090E;
+      --card-bg: #0E121A;
+      --card-border: #1A2230;
+      --card-hover: #242E42;
+      --accent: #10B981;
+      --accent-glow: rgba(16, 185, 129, 0.15);
+      --accent-blue: #38BDF8;
+      --text: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --heading: #FFFFFF;
+      --code-bg: #141923;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      width: 100%;
+      flex: 1;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 48px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+    .brand img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+    }
+    .brand-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--heading);
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .hero {
+      text-align: center;
+      max-width: 780px;
+      margin: 0 auto 56px auto;
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: var(--heading);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, #10B981 0%, #38BDF8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #07090E;
+    }
+    .btn-primary:hover {
+      background: #0ea572;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+    .btn-secondary:hover {
+      background: var(--card-border);
+      border-color: var(--card-hover);
+      transform: translateY(-1px);
+    }
+    .banner-preview {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      overflow: hidden;
+      margin-bottom: 56px;
+      background: var(--card-bg);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .banner-preview img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 56px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px;
+      transition: border-color 0.2s ease;
+    }
+    .card:hover {
+      border-color: var(--card-hover);
+    }
+    .card-icon {
+      font-size: 1.6rem;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+    .card h3 {
+      font-size: 1.18rem;
+      color: var(--heading);
+      margin-bottom: 8px;
+    }
+    .card p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 32px 0 16px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 2rem; }
+      .hero p { font-size: 1rem; }
+      header { flex-direction: column; gap: 16px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="./" class="brand">
+        <img src="assets/logo.png" alt="LastEdge Logo">
+        <span class="brand-title">LastEdge</span>
+      </a>
+      <span class="badge">Production Ready · v1.1.90</span>
+    </header>
+
+    <div class="hero">
+      <h1>Institutional <span>Quantitative Trading</span> & Telemetry</h1>
+      <p>
+        High-performance algorithmic execution engine, Risk Engine v2 surveillance, 
+        and real-time mobile telemetry interfaced with MetaTrader 5 (MT5).
+      </p>
+      <div class="actions">
+        <a href="https://t.me/LastEdgeJournal" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+          📢 Public Trading Journal
+        </a>
+        <a href="https://t.me/imlast999" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+          💎 VIP Signals Access
+        </a>
+        <a href="privacy.html" class="btn btn-secondary">
+          🔒 Privacy Policy
+        </a>
+      </div>
+    </div>
+
+    <div class="banner-preview">
+      <img src="assets/feature-graphic.png" alt="LastEdge Feature Graphic">
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <span class="card-icon">⚡</span>
+        <h3>Sub-Second MT5 Execution</h3>
+        <p>Direct low-latency order placement, partial closes, and dynamic spread evaluation (SpreadGuard) guarding against rollover blowouts.</p>
+      </div>
+
+      <div class="card">
+        <span class="card-icon">🛡️</span>
+        <h3>Risk Engine v2</h3>
+        <p>Pre-trade mathematical position sizing, automated margin enforcement, and daily loss circuit breakers protecting trading capital.</p>
+      </div>
+
+      <div class="card">
+        <span class="card-icon">📊</span>
+        <h3>Visual Technical Engine</h3>
+        <p>TradingView-styled dark mode candlestick charts with left-aligned price badges, Break-Even indicators, and forward Risk/Reward projection boxes.</p>
+      </div>
+
+      <div class="card">
+        <span class="card-icon">📱</span>
+        <h3>Mobile Telemetry Suite</h3>
+        <p>Autonomous mobile client built with React Native and Hermes for real-time portfolio monitoring, position management, and priority alerts.</p>
+      </div>
+
+      <div class="card">
+        <span class="card-icon">📡</span>
+        <h3>Dual VIP Broadcasting</h3>
+        <p>Real-time replication of algorithmic trade signals to private VIP channels, standardized in institutional English with full technical audits.</p>
+      </div>
+
+      <div class="card">
+        <span class="card-icon">🧪</span>
+        <h3>Strategy Lab Ingestion</h3>
+        <p>Cryptographic package verification with SHA-256 validation for promoted quantitative strategies across EURUSD, XAUUSD, and BTCEUR.</p>
+      </div>
+    </div>
+
+    <footer>
+      <div class="footer-links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="https://t.me/LastEdgeJournal" target="_blank" rel="noopener noreferrer">Telegram Channel</a>
+        <a href="https://t.me/imlast999" target="_blank" rel="noopener noreferrer">Founder VIP Contact</a>
+        <a href="https://github.com/imlast999/LastEdge" target="_blank" rel="noopener noreferrer">GitHub Ecosystem</a>
+      </div>
+      <p>&copy; 2026 LastEdge Quantitative Trading Ecosystem. All rights reserved.</p>
+      <p style="margin-top: 6px; font-size: 0.78rem; color: #6B7280;">
+        LastEdge is technical software for quantitative analysis and algorithmic execution telemetry. Not a broker, dealer, or investment advisor.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
