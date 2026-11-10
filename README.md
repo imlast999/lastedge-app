@@ -38,7 +38,8 @@
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
 - **Graceful Degradation**: 100% crash-proof operation; displays clear status badges and offline fallbacks when backend engines are temporarily offline.
 - **Messaging Adapters & Granular Bot Controls**: Decoupled Discord Slash command adapter (`services/commands_refactored.py`) and Telegram Bot polling adapter (`services/telegram_adapter.py`) with independent `.env` switches (`ACTIVATE_DISCORD_BOT=on|off`, `ACTIVATE_TELEGRAM_BOT=on|off`), fail-safe security whitelist, dynamic currency detection, and interactive in-place chart refresh (`[🔄 Refresh Chart]`).
-- **Visual Technical Chart Engine**: TradingView-styled dark mode (`#090d16`) chart generator (`services/chart_helper.py`, `services/charts.py`) with 80 H1 candles, dynamic Y-axis scaling (+8% padding ensuring Entry, SL & TP are in frame), EMA50/EMA200, and shaded Risk/Reward zone boxes.
+- **Visual Technical Chart Engine**: TradingView-styled dark mode (`#090d16`) chart generator (`services/chart_helper.py`, `services/charts.py`) with 80 H1 candles, EMA50/EMA200, dynamic Y-axis scaling (+18% headroom), left-aligned badges for 100% visible live candles, Break-Even contiguous horizontal badge placement, and dual modalities (standard filled-to-end position charts vs new signal execution forward projection box).
+- **VIP Signals Dual-Broadcasting & Landing Gate**: Seamless replication of quantitative signals to the private VIP channel (`LastEdge VIP Signals`), English alert standardization, and automated visitor landing responses on `@LastEdgeBot` with interactive buttons for the public journal and VIP access.
 - **Deep Linking & On-Demand Position Charts**: Direct bot triggers (`t.me/LastEdgeBot?start=chart_{ticket}`) and `/chart_{ticket}` commands for instant visual chart generation from open MT5 positions.
 - **Interactive Flow Modals**: Live Trade Flow modals inside the Bento Grid and Mobile App with real-time candle feeds, Entry/SL/TP horizontal overlays, and live tick polling.
 
@@ -77,6 +78,17 @@ The LastEdge Mobile App is built on **React Native (Expo SDK 54, Hermes Engine)*
 * **Titles & Display**: **Nexa** — Geometric, high-impact display font with standard clean ampersand (`&`) and full Spanish accent support (`ñ`, `á`, `é`, `í`, `ó`, `ú`).
 * **Body & Financial Metrics**: **Plus Jakarta Sans** — Fintech gold-standard sans-serif with complete Latin extended characters and strict numeric punctuation (`.`, `/`, `:`, `,`).
 * **Institutional Bento Grid**: Preserved tabular figures and monospace dot-matrix digits (*Geist Mono* / `tabular-nums`).
+
+### 🏪 Google Play Store Deployment & Compliance
+* **Private AAB Build Workflow**: Dedicated `.github/workflows/build-playstore-bundle.yml` producing encrypted release App Bundles (`.aab`) with `workflow_dispatch` manual trigger and private 7-day artifact storage (strictly isolated from public GitHub releases).
+* **Local CLI Bundle Tooling**: Run `build_bundle.bat` or `python build_apk.py --bundle` (option `11`) for local Gradle AAB compilation.
+* **Graphic Assets**:
+  - High-Res App Icon: 512x512 PNG (32-bit RGBA) at `branding/playstore/icon-512.png`.
+  - Feature Graphic: 1024x500 PNG (24-bit RGB) at `branding/playstore/feature-graphic-1024x500.png`.
+* **Privacy Policy & In-App Link**: Responsive dark-mode privacy policy hosted at [`docs/privacy.html`](docs/privacy.html) (GitHub Pages) and mirrored in [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md), with 1-tap in-app settings modal access.
+* **Community Hub & Direct Founder VIP Access**:
+  - Home Dashboard Bento card (`COMUNIDAD & SEÑALES VIP` / `COMMUNITY & VIP SIGNALS`) featuring direct links to the Public Telegram Journal, Instagram Broadcast, and direct VIP Club contact ([`@imlast999`](https://t.me/imlast999)).
+  - Fully bilingual reactive localization (ES / EN).
 
 ---
 
