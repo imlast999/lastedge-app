@@ -329,13 +329,21 @@ class TelegramAdapter:
     ):
         self.token = os.getenv("TELEGRAM_BOT_TOKEN")
         self.authorized_chat_id = os.getenv("TELEGRAM_CHAT_ID")
-        self.authorized_user_id = os.getenv("TELEGRAM_AUTHORIZED_USER_ID")
+        self.authorized_user_id = os.getenv("TELEGRAM_AUTHORIZED_USER_ID") or self.authorized_chat_id
         self.bot_service = bot_service
         self.trading_client = trading_client or get_trading_client()
         self.research_client = research_client or get_research_client()
         self.bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "LastEdgeBot")
         self.last_update_id = 0
         self.is_running = False
+
+    def is_authorized(self, from_user_id: Any, chat_id: Any = None) -> bool:
+        auth_id = str(self.authorized_user_id or self.authorized_chat_id or "").strip()
+        if not auth_id:
+            return True
+        uid_str = str(from_user_id).strip()
+        cid_str = str(chat_id).strip() if chat_id is not None else ""
+        return (uid_str == auth_id) or (cid_str == auth_id)
 
     def is_configured(self) -> bool:
         """Indica si las credenciales de Telegram están presentes."""
@@ -1056,9 +1064,15 @@ class TelegramAdapter:
         message_id = msg.get("message_id")
         from_user_id = str(cq.get("from", {}).get("id", ""))
 
-        if self.authorized_user_id and from_user_id != str(self.authorized_user_id):
+        if not self.is_authorized(from_user_id, chat_id):
             if cq_id:
-                await self._answer_callback_query(session, cq_id, "⛔ Unauthorized.")
+                user_lang_code = str(cq.get("from", {}).get("language_code", "en")).lower()
+                toast_msg = (
+                    "🔒 Bot privado. Contacta a @imlast999 para acceso VIP."
+                    if user_lang_code.startswith("es")
+                    else "🔒 Private bot. Contact @imlast999 for VIP access."
+                )
+                await self._answer_callback_query(session, cq_id, toast_msg)
             return
 
         if not chat_id or not message_id or not data:
@@ -1458,8 +1472,42 @@ class TelegramAdapter:
         from_user_id = str(message.get("from", {}).get("id", ""))
         text = message["text"].strip()
 
-        if self.authorized_user_id and from_user_id != str(self.authorized_user_id):
-            await self._send_response(session, chat_id, "⛔ Unauthorized.")
+        if not self.is_authorized(from_user_id, chat_id):
+            user_lang_code = str(message.get("from", {}).get("language_code", "en")).lower()
+            is_es = user_lang_code.startswith("es")
+
+            if is_es:
+                unauth_text = (
+                    "🔒 *LASTEDGE BOT · SISTEMA PRIVADO*\n"
+                    "━━━━━━━━━━━━━━━━━━\n"
+                    "Este bot está reservado a la gestión y ejecución institucional del motor algorítmico LastEdge.\n\n"
+                    "Para seguir las operaciones en vivo, acceder al análisis cuantitativo o unirte a la comunidad VIP:\n\n"
+                    "• *Diario de trading:* [@LastEdgeJournal](https://t.me/LastEdgeJournal)\n"
+                    "• *Canal VIP de Señales:* Contacta a [@imlast999](https://t.me/imlast999) para adquirir tu acceso."
+                )
+                btn_journal = "📢 Trading Journal"
+                btn_vip = "💎 Adquirir Acceso VIP"
+            else:
+                unauth_text = (
+                    "🔒 *LASTEDGE BOT · PRIVATE SYSTEM*\n"
+                    "━━━━━━━━━━━━━━━━━━\n"
+                    "This bot is strictly reserved for the institutional execution of the LastEdge algorithmic engine.\n\n"
+                    "To track live performance, view quantitative signals, or join the VIP community:\n\n"
+                    "• *Trading Journal:* [@LastEdgeJournal](https://t.me/LastEdgeJournal)\n"
+                    "• *Live VIP Signals:* Contact [@imlast999](https://t.me/imlast999) to purchase access."
+                )
+                btn_journal = "📢 Trading Journal"
+                btn_vip = "💎 Get VIP Signals Access"
+
+            markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": btn_journal, "url": "https://t.me/LastEdgeJournal"},
+                        {"text": btn_vip, "url": "https://t.me/imlast999"}
+                    ]
+                ]
+            }
+            await self._send_response(session, chat_id, unauth_text, reply_markup=markup)
             return
 
         lang = self.get_lang(chat_id)
