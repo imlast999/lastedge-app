@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Linking,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, Redirect } from "expo-router";
@@ -58,6 +59,8 @@ export default function DashboardScreen() {
 
   const isProfit = (Number(dailyPnL) || 0) >= 0;
   const floatingPnL = safeStatus.equity - safeStatus.balance;
+  const floatPct = safeStatus.balance > 0 ? (floatingPnL / safeStatus.balance) * 100 : 0;
+  const pingMs = Math.round(safeStatus.executionQuality?.avgLatency ?? (usingMockData ? 12 : 24));
   const bottomPad = insets.bottom + 90;
 
   const handleOpenSettings = () => {
@@ -118,47 +121,68 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Institutional MT5 Balance & Equity Card (line-charts.tsx style) */}
+      {/* Institutional MT5 Balance & Equity Bento Card (Tour Step 1 Real Implementation) */}
       <View style={[styles.equityCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.equityHeader}>
-          <View style={styles.equityLeft}>
-            <Text style={[styles.equityLabel, { color: colors.mutedForeground }]}>
-              MT5 {t("equity")}
-            </Text>
-            <Text style={[styles.equityValue, { color: colors.foreground }]}>
-              {safeStatus.equity.toLocaleString("en", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-              <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}> {currencySymbol}</Text>
-            </Text>
-          </View>
-
-          <View style={styles.equityRight}>
+        {/* Top telemetry status bar */}
+        <View style={styles.telemetryTopBar}>
+          <View style={styles.serverPill}>
             <View
               style={[
-                styles.floatingBadge,
-                {
-                  backgroundColor: floatingPnL >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                },
+                styles.serverDot,
+                { backgroundColor: usingMockData ? "#10B981" : safeStatus.connected ? "#10B981" : "#EF4444" },
+              ]}
+            />
+            <Text style={styles.serverPillText}>
+              {usingMockData
+                ? "DEMO SANDBOX (12ms)"
+                : safeStatus.connected
+                ? `MT5: CONNECTED (${pingMs}ms)`
+                : "MT5: OFFLINE"}
+            </Text>
+          </View>
+          <Text style={[styles.brokerMode, { color: colors.mutedForeground }]}>
+            {usingMockData || safeStatus.connected ? "Raw Spread ECN" : "Terminal Disconnected"}
+          </Text>
+        </View>
+
+        {/* 2-Column Institutional Metrics Grid */}
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricBlock}>
+            <Text style={styles.metricLabel}>LIVE BALANCE</Text>
+            <Text style={[styles.metricValue, { color: colors.foreground }]}>
+              {currencySymbol}{safeStatus.balance.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <View style={[styles.metricDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.metricBlock}>
+            <Text style={styles.metricLabel}>EQUITY</Text>
+            <Text
+              style={[
+                styles.metricValue,
+                { color: floatingPnL >= 0 ? "#10B981" : "#EF4444" },
               ]}
             >
-              <Text
-                style={[
-                  styles.floatingText,
-                  { color: floatingPnL >= 0 ? colors.profit : colors.loss },
-                ]}
-              >
-                {floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} Float
-              </Text>
-            </View>
-            <Text style={[styles.balanceValue, { color: colors.mutedForeground }]}>
-              Bal: {currencySymbol}{safeStatus.balance.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}{safeStatus.equity.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
         </View>
 
-        {/* Equity Chart with Cartesian Grid & Precision Labels */}
+        {/* Sub-bar: Free Margin & Floating PnL */}
+        <View style={[styles.telemetryFooterBar, { backgroundColor: "rgba(255, 255, 255, 0.03)" }]}>
+          <Text style={[styles.telemetryFooterText, { color: colors.mutedForeground }]}>
+            Free Margin: {currencySymbol}{safeStatus.freeMargin.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+          <Text
+            style={[
+              styles.telemetryFooterText,
+              { color: floatingPnL >= 0 ? "#10B981" : "#EF4444", fontWeight: "700" },
+            ]}
+          >
+            {floatingPnL >= 0 ? "+" : ""}{currencySymbol}{floatingPnL.toFixed(2)} ({floatingPnL >= 0 ? "+" : ""}{floatPct.toFixed(1)}%)
+          </Text>
+        </View>
+
+        {/* Equity Chart with Cartesian Grid & Precision Labels (INTACT) */}
         <View style={styles.chartContainer}>
           <EquityChart data={equityHistory} height={120} showLabels={true} />
         </View>
@@ -523,6 +547,81 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 3,
+  },
+  telemetryTopBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  serverPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.25)",
+  },
+  serverDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  serverPillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#10B981",
+    letterSpacing: 0.4,
+  },
+  brokerMode: {
+    fontSize: 11,
+    fontFamily: "PlusJakartaSans_500Medium",
+  },
+  metricsGrid: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  metricBlock: {
+    flex: 1,
+  },
+  metricLabel: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#94A3B8",
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    letterSpacing: -0.5,
+  },
+  metricDivider: {
+    width: 1,
+    height: 32,
+    marginHorizontal: 12,
+  },
+  telemetryFooterBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 12,
+    marginBottom: 6,
+    borderRadius: 6,
+  },
+  telemetryFooterText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   equityHeader: {
     flexDirection: "row",

@@ -83,23 +83,55 @@ export default function SettingsScreen() {
     if (settings.hapticsEnabled) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
-    const result = await testServerConnection(apiOverrides);
+    let testUrl = urlDraft.trim();
+    if (testUrl && !/^https?:\/\//i.test(testUrl)) {
+      testUrl = `http://${testUrl}`;
+    }
+    const result = await testServerConnection({
+      url: testUrl || apiOverrides.url,
+      token: tokenDraft.trim() || apiOverrides.token,
+    });
     setTesting(false);
     if (result.ok && result.status) {
       const s = result.status;
       setTestResult(
-        `OK · ${result.latencyMs} ms · MT5 ${s.connected ? "conectado" : "desconectado"} · ${s.currency || "USD"} ${s.equity.toFixed(2)}`
+        `OK · ${result.latencyMs} ms · MT5 ${s.connected ? (isEs ? "conectado" : "connected") : (isEs ? "desconectado" : "disconnected")} · ${s.currency || "USD"} ${s.equity.toFixed(2)}`
       );
     } else {
-      setTestResult(result.error ?? "No se pudo conectar al servidor");
+      setTestResult(result.error ?? (isEs ? "No se pudo conectar al servidor" : "Failed to connect to server"));
     }
-  }, [settings.hapticsEnabled, apiOverrides]);
+  }, [settings.hapticsEnabled, apiOverrides, urlDraft, tokenDraft, isEs]);
 
   const saveConnection = useCallback(() => {
-    updateSetting("serverUrl", urlDraft.trim());
-    updateSetting("serverToken", tokenDraft.trim());
-    Alert.alert(isEs ? "Guardado" : "Saved", isEs ? "Conexión actualizada. La app recargará datos automáticamente." : "Connection updated. App will reload data automatically.");
-  }, [urlDraft, tokenDraft, updateSetting]);
+    let cleanUrl = urlDraft.trim();
+    if (cleanUrl && !/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = `http://${cleanUrl}`;
+    }
+    const cleanToken = tokenDraft.trim();
+    setUrlDraft(cleanUrl);
+    updateSetting("serverUrl", cleanUrl);
+    updateSetting("serverToken", cleanToken);
+    
+    // Automatically switch from Demo to Live when valid server URL is configured
+    if (cleanUrl) {
+      updateSetting("demoMode", false);
+    }
+
+    Alert.alert(
+      isEs ? "Conexión Guardada" : "Connection Saved",
+      isEs
+        ? cleanUrl
+          ? "Servidor VPS configurado. Modo Live MT5 activado. Recargando telemetría..."
+          : "Ajustes de conexión guardados."
+        : cleanUrl
+        ? "VPS server configured. Live MT5 Mode activated. Reloading telemetry..."
+        : "Connection settings saved."
+    );
+
+    setTimeout(() => {
+      refresh().catch(() => {});
+    }, 250);
+  }, [urlDraft, tokenDraft, updateSetting, isEs, refresh]);
 
   const handleRequestPermissions = useCallback(async () => {
     const isEs = settings.language === "es";
@@ -205,7 +237,75 @@ export default function SettingsScreen() {
       </View>
 
       {/* ── Servidor ── */}
-      <SettingsSection title={isEs ? "Servidor" : "Server & Connection"}>
+      <SettingsSection title={isEs ? "Servidor & Broker MT5" : "Server & MT5 Broker"}>
+        <View
+          style={[
+            styles.modeBannerCard,
+            {
+              backgroundColor: settings.demoMode ? "rgba(245, 158, 11, 0.08)" : "rgba(16, 185, 129, 0.08)",
+              borderColor: settings.demoMode ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)",
+            },
+          ]}
+        >
+          <View style={styles.modeBannerHeader}>
+            <View
+              style={[
+                styles.modeDot,
+                { backgroundColor: settings.demoMode ? "#F59E0B" : "#10B981" },
+              ]}
+            />
+            <Text
+              style={[
+                styles.modeBannerTitle,
+                { color: settings.demoMode ? "#F59E0B" : "#10B981" },
+              ]}
+            >
+              {settings.demoMode
+                ? (isEs ? "MODO DEMO SANDBOX ACTIVO" : "DEMO SANDBOX ACTIVE")
+                : (isEs ? "MODO LIVE MT5 ACTIVO" : "LIVE MT5 MODE ACTIVE")}
+            </Text>
+          </View>
+          <Text style={[styles.modeBannerDesc, { color: colors.mutedForeground }]}>
+            {settings.demoMode
+              ? (isEs
+                  ? "La app muestra datos y órdenes simuladas. Introduce la URL y Token de tu VPS abajo y pulsa 'Guardar conexión' para activar el streaming en vivo de MetaTrader 5."
+                  : "App is running in simulated Sandbox mode. Enter your VPS URL and Token below and tap 'Save connection' to stream live from MetaTrader 5.")
+              : (isEs
+                  ? "La app está conectada en tiempo real a tu Trading Engine autohospedado en MetaTrader 5."
+                  : "App is polling live telemetry from your self-hosted Trading Engine on MetaTrader 5.")}
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              const newMode = !settings.demoMode;
+              updateSetting("demoMode", newMode);
+              setTimeout(() => refresh().catch(() => {}), 200);
+            }}
+            style={[
+              styles.modeSwitchBtn,
+              {
+                borderColor: settings.demoMode ? "#10B981" : "#F59E0B",
+                backgroundColor: settings.demoMode ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+              },
+            ]}
+          >
+            <Feather
+              name={settings.demoMode ? "zap" : "box"}
+              size={13}
+              color={settings.demoMode ? "#10B981" : "#F59E0B"}
+            />
+            <Text
+              style={[
+                styles.modeSwitchText,
+                { color: settings.demoMode ? "#10B981" : "#F59E0B" },
+              ]}
+            >
+              {settings.demoMode
+                ? (isEs ? "Cambiar a Modo Live (VPS)" : "Switch to Live Mode (VPS)")
+                : (isEs ? "Cambiar a Modo Demo Sandbox" : "Switch to Demo Sandbox")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={[styles.connEdit, { borderBottomColor: colors.border }]}>
           <Text style={[styles.connLabel, { color: colors.mutedForeground }]}>
             {isEs ? "URL personalizada (vacío = APK)" : "Custom Server URL (empty = default)"}
@@ -904,4 +1004,47 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   saveConnText: { fontSize: 13, fontFamily: "PlusJakartaSans_500Medium" },
+  modeBannerCard: {
+    margin: 12,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 8,
+  },
+  modeBannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  modeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  modeBannerTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  modeBannerDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  modeSwitchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  modeSwitchText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
 });

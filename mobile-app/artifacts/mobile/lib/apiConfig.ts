@@ -26,7 +26,10 @@ export function getBuildApiSecret(): string {
 
 /** URL/token efectivos: override de Ajustes > valores del build. */
 export function resolveApiConfig(overrides?: { url?: string; token?: string }) {
-  const url = (overrides?.url?.trim() || getBuildApiUrl()).replace(/\/$/, "");
+  let url = (overrides?.url?.trim() || getBuildApiUrl()).replace(/\/$/, "");
+  if (url && !/^https?:\/\//i.test(url)) {
+    url = `http://${url}`;
+  }
   const token = overrides?.token?.trim() || getBuildApiSecret();
   return { url, token };
 }

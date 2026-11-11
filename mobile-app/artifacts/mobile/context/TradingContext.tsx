@@ -207,14 +207,16 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
       setUsingMockData(true);
       setApiError(null);
       setStatus(DEMO_BOT_STATUS);
-      setPositions((prev) => (prev.length > 0 ? prev : DEMO_POSITIONS));
-      setSignals((prev) => (prev.length > 0 ? prev : DEMO_SIGNALS));
-      setTrades((prev) => (prev.length > 0 ? prev : DEMO_TRADES));
+      setPositions((prev) => (prev.length > 0 && usingMockData ? prev : DEMO_POSITIONS));
+      setSignals((prev) => (prev.length > 0 && usingMockData ? prev : DEMO_SIGNALS));
+      setTrades((prev) => (prev.length > 0 && usingMockData ? prev : DEMO_TRADES));
       setEquityHistory(DEMO_EQUITY_HISTORY);
       setLastSyncAt(new Date());
       setLoading(false);
       return;
     }
+
+    setUsingMockData(false);
 
     try {
       // 1. Status
@@ -558,10 +560,11 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
           ? `Sin conexión con el servidor (${msg})`
           : `No connection to server (${msg})`
       );
+      setUsingMockData(false);
     } finally {
       setLoading(false);
     }
-  }, [safeFetch, shouldNotify, apiOverrides, settings.ecosystemModules]);
+  }, [safeFetch, shouldNotify, apiOverrides, settings.ecosystemModules, settings.demoMode, settings.language, usingMockData]);
 
   useEffect(() => {
     if (settings.ecosystemModules && !settings.ecosystemModules.tradingEngine) {
@@ -573,7 +576,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
     if (!settings.autoRefresh) return;
     const interval = setInterval(fetchAllData, settings.pollIntervalMs);
     return () => clearInterval(interval);
-  }, [fetchAllData, settings.autoRefresh, settings.pollIntervalMs, settings.ecosystemModules?.tradingEngine, apiOverrides.url, apiOverrides.token]);
+  }, [fetchAllData, settings.autoRefresh, settings.pollIntervalMs, settings.ecosystemModules?.tradingEngine, settings.demoMode, apiOverrides.url, apiOverrides.token]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 

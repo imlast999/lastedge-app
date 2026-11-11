@@ -385,6 +385,42 @@ function OpenPositionCard({
   const pSign = isProfit ? "+" : "";
   const isBuy = pos.type === "BUY";
 
+  const entry = Number(pos.open_price ?? pos.entry ?? 0);
+  const sl = Number(pos.sl ?? 0);
+  const tp = Number(pos.tp ?? 0);
+  const current = Number(pos.current_price ?? entry);
+  const profitVal = parseFloat(pos.profit ?? 0);
+
+  const isJpyOrXau = pos.symbol?.includes("JPY") || pos.symbol?.includes("XAU");
+  const isCrypto = pos.symbol?.includes("BTC") || pos.symbol?.includes("ETH");
+  const digits = isJpyOrXau ? 3 : (isCrypto ? 2 : 5);
+
+  const isBeCovered = isBuy ? (sl > 0 && sl >= entry - 0.0001) : (sl > 0 && sl <= entry + 0.0001);
+  const commentHasBe = Boolean(
+    pos.comment?.toUpperCase().includes("BE") ||
+    pos.comment?.toUpperCase().includes("BREAK") ||
+    pos.comment?.toUpperCase().includes("TRAILING") ||
+    pos.comment?.toUpperCase().includes("RATCHET")
+  );
+  const isBeLocked = isBeCovered || commentHasBe;
+
+  const initialRiskDist = sl > 0 ? Math.abs(entry - sl) : 0;
+  let targetR = 3.0;
+  let lockedR = 0.2;
+
+  if (initialRiskDist > 0) {
+    if (tp > 0) {
+      const tpDist = Math.abs(tp - entry);
+      targetR = Math.max(1.0, Math.min(8.0, tpDist / initialRiskDist));
+    }
+    if (isBeCovered && sl > 0) {
+      const coveredDist = isBuy ? (sl - entry) : (entry - sl);
+      if (coveredDist > 0) {
+        lockedR = Math.max(0.1, coveredDist / initialRiskDist);
+      }
+    }
+  }
+
   return (
     <View style={[styles.posCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.posHeader}>
@@ -393,25 +429,76 @@ function OpenPositionCard({
           <View
             style={[
               styles.posTypeBadge,
-              { backgroundColor: isBuy ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)" },
+              { backgroundColor: isBuy ? "rgba(59,130,246,0.18)" : "rgba(244,63,94,0.18)" },
             ]}
           >
-            <Text style={[styles.posTypeText, { color: isBuy ? "#10b981" : "#ef4444" }]}>
-              {pos.type} {pos.volume || pos.lot || 0.01}L
+            <Text style={[styles.posTypeText, { color: isBuy ? "#3B82F6" : "#F43F5E" }]}>
+              {pos.type} {pos.volume || pos.lot || 0.01} LOT
             </Text>
           </View>
           <Text style={styles.posTicket}>#{pos.ticket}</Text>
         </View>
 
+        <View style={styles.posHeaderRight}>
+          {isBeLocked && (
+            <View style={styles.beBadge}>
+              <Feather name="shield" size={11} color="#3B82F6" />
+              <Text style={styles.beBadgeText}>BE LOCKED (+{lockedR.toFixed(1)}R)</Text>
+            </View>
+          )}
+          <View
+            style={[
+              styles.posPnlBadge,
+              { backgroundColor: isProfit ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)" },
+            ]}
+          >
+            <Text style={[styles.posPnlText, { color: isProfit ? "#10b981" : "#ef4444" }]}>
+              {pSign}${profitVal.toFixed(2)}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Visual Risk/Reward Projection Bar (Room Tour Step 2) */}
+      <View style={styles.rrVisualBar}>
+        <View style={[styles.rrSegment, { flex: 1, backgroundColor: "rgba(239, 68, 68, 0.45)" }]}>
+          <Text style={styles.rrSegmentText}>SL -1.0R</Text>
+        </View>
         <View
           style={[
-            styles.posPnlBadge,
-            { backgroundColor: isProfit ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)" },
+            styles.rrSegment,
+            {
+              flex: 0.25,
+              backgroundColor: isBeLocked ? "rgba(59, 130, 246, 0.85)" : "rgba(100, 116, 139, 0.35)",
+            },
           ]}
         >
-          <Text style={[styles.posPnlText, { color: isProfit ? "#10b981" : "#ef4444" }]}>
-            {pSign}${parseFloat(pos.profit ?? 0).toFixed(2)}
+          <Text style={[styles.rrSegmentText, { color: isBeLocked ? "#FFFFFF" : "#94A3B8" }]}>BE</Text>
+        </View>
+        <View style={[styles.rrSegment, { flex: targetR, backgroundColor: "rgba(16, 185, 129, 0.45)" }]}>
+          <Text style={styles.rrSegmentText}>TP +{targetR.toFixed(1)}R</Text>
+        </View>
+      </View>
+
+      {/* Ratchet SL Monotonic Sub-bar */}
+      <View style={styles.ratchetFooterBar}>
+        <View style={styles.ratchetLeft}>
+          <Feather name="crosshair" size={12} color="#94A3B8" />
+          <Text style={styles.ratchetText}>
+            Ratchet SL: {sl > 0 ? sl.toFixed(digits) : (isEs ? "Sin SL" : "No SL")}
           </Text>
+        </View>
+        <View style={styles.ratchetRight}>
+          {isBeLocked ? (
+            <View style={styles.lockedPill}>
+              <Feather name="lock" size={10} color="#3B82F6" />
+              <Text style={styles.lockedText}>Monotonic Locked</Text>
+            </View>
+          ) : (
+            <Text style={[styles.ratchetStatus, { color: isProfit ? "#10B981" : "#94A3B8" }]}>
+              {isProfit ? (isEs ? "En Beneficio" : "In Profit") : (isEs ? "Riesgo Activo" : "Active Risk")}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -420,25 +507,25 @@ function OpenPositionCard({
         <View style={styles.posMetric}>
           <Text style={styles.posMetricLabel}>{isEs ? "Entrada" : "Entry"}</Text>
           <Text style={[styles.posMetricValue, { color: colors.foreground }]}>
-            {(pos.open_price ?? pos.entry ?? 0).toFixed(5)}
+            {entry.toFixed(digits)}
           </Text>
         </View>
         <View style={styles.posMetric}>
           <Text style={styles.posMetricLabel}>Stop Loss</Text>
           <Text style={[styles.posMetricValue, { color: "#ef4444" }]}>
-            {(pos.sl ?? 0).toFixed(5)}
+            {sl > 0 ? sl.toFixed(digits) : "—"}
           </Text>
         </View>
         <View style={styles.posMetric}>
           <Text style={styles.posMetricLabel}>Take Profit</Text>
           <Text style={[styles.posMetricValue, { color: "#38bdf8" }]}>
-            {(pos.tp ?? 0).toFixed(5)}
+            {tp > 0 ? tp.toFixed(digits) : "—"}
           </Text>
         </View>
         <View style={styles.posMetric}>
           <Text style={styles.posMetricLabel}>{isEs ? "Actual" : "Current"}</Text>
           <Text style={[styles.posMetricValue, { color: "#00ff88" }]}>
-            {(pos.current_price ?? pos.open_price ?? 0).toFixed(5)}
+            {current.toFixed(digits)}
           </Text>
         </View>
       </View>
@@ -653,6 +740,88 @@ const styles = StyleSheet.create({
   posPnlText: {
     fontSize: 13,
     fontFamily: "PlusJakartaSans_500Medium",
+  },
+  posHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  beBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: "rgba(59, 130, 246, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.35)",
+  },
+  beBadgeText: {
+    color: "#3B82F6",
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  rrVisualBar: {
+    flexDirection: "row",
+    height: 22,
+    borderRadius: 6,
+    overflow: "hidden",
+    marginVertical: 8,
+    gap: 2,
+  },
+  rrSegment: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 3,
+  },
+  rrSegmentText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  ratchetFooterBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 2,
+    marginBottom: 6,
+  },
+  ratchetLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  ratchetText: {
+    color: "#94a3b8",
+    fontSize: 11,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontWeight: "600",
+  },
+  ratchetRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  lockedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(59, 130, 246, 0.12)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  lockedText: {
+    color: "#3B82F6",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  ratchetStatus: {
+    fontSize: 10,
+    fontWeight: "600",
   },
   posMetricsRow: {
     flexDirection: "row",

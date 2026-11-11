@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import { useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
 import { AUTH_STORAGE_KEY } from "./PinAuthModal";
@@ -221,13 +222,15 @@ interface AppTourModalProps {
 }
 
 export function AppTourModal({ forceVisible = false, onClose }: AppTourModalProps) {
-  const { settings, loaded } = useSettings();
+  const router = useRouter();
+  const { settings, loaded, updateSetting } = useSettings();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isEs = settings?.language === "es";
 
   const [visible, setVisible] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [showModeChoice, setShowModeChoice] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -238,7 +241,10 @@ export function AppTourModal({ forceVisible = false, onClose }: AppTourModalProp
 
     async function checkTourStatus() {
       if (forceVisible) {
-        if (mounted) setVisible(true);
+        if (mounted) {
+          setVisible(true);
+          setShowModeChoice(false);
+        }
         return;
       }
 
@@ -311,8 +317,11 @@ export function AppTourModal({ forceVisible = false, onClose }: AppTourModalProp
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       triggerStepTransition(currentStepIndex + 1);
     } else {
-      // Completed last step!
-      await handleCompleteTour();
+      // Completed step 5: proceed to mode selection!
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+      setShowModeChoice(true);
     }
   };
 
@@ -322,21 +331,207 @@ export function AppTourModal({ forceVisible = false, onClose }: AppTourModalProp
     }
   };
 
-  const handleCompleteTour = async () => {
+  const handleSkipToModeChoice = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    setShowModeChoice(true);
+  };
+
+  const handleChooseDemo = async () => {
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
+    updateSetting("demoMode", true);
     try {
       await AsyncStorage.setItem(TOUR_STORAGE_KEY, "true");
-    } catch {
-      // Storage fallback
-    }
+    } catch {}
     setVisible(false);
     onClose?.();
   };
 
+  const handleChooseLive = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+    updateSetting("demoMode", false);
+    try {
+      await AsyncStorage.setItem(TOUR_STORAGE_KEY, "true");
+    } catch {}
+    setVisible(false);
+    onClose?.();
+    setTimeout(() => {
+      router.push("/settings-modal" as any);
+    }, 150);
+  };
+
   if (!loaded || !visible) {
     return null;
+  }
+
+  if (showModeChoice) {
+    return (
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent={false}
+        statusBarTranslucent={true}
+      >
+        <View style={[styles.container, { backgroundColor: colors.background || "#090B10" }]}>
+          <View style={[styles.ambientGlowTop, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]} />
+          <View style={styles.ambientGlowBottom} />
+
+          {/* Top Header Bar */}
+          <View
+            style={[
+              styles.headerBar,
+              { paddingTop: Math.max(insets.top + 8, 28) },
+            ]}
+          >
+            <View style={[styles.stepPill, { borderColor: "rgba(16, 185, 129, 0.4)" }]}>
+              <View style={[styles.stepDot, { backgroundColor: "#10B981" }]} />
+              <Text style={[styles.stepPillText, { color: "#10B981" }]}>
+                {isEs ? "ELECCIÓN DE MODO" : "SELECT ACCESS MODE"}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShowModeChoice(false)}
+              style={styles.skipButton}
+            >
+              <Feather name="arrow-left" size={14} color="#94A3B8" />
+              <Text style={styles.skipButtonText}>
+                {isEs ? "Volver al Tour" : "Back to Tour"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: insets.bottom + 40 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Title & Subtitle */}
+            <View style={styles.modeHeroHeader}>
+              <View style={styles.modeHeroIconBox}>
+                <Feather name="compass" size={28} color="#10B981" />
+              </View>
+              <Text style={styles.modeHeroTitle}>
+                {isEs ? "¿Cómo deseas comenzar?" : "How would you like to start?"}
+              </Text>
+              <Text style={styles.modeHeroSubtitle}>
+                {isEs
+                  ? "Elige cómo quieres acceder a LastEdge en este teléfono. Puedes cambiar de modo cuando quieras desde los Ajustes."
+                  : "Choose how you want to access LastEdge on this device. You can switch modes anytime in Settings."}
+              </Text>
+            </View>
+
+            {/* Option 1: Sandbox Demo Mode */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={handleChooseDemo}
+              style={[styles.modeCard, { borderColor: "#10B981" }]}
+            >
+              <View style={styles.modeCardTop}>
+                <View style={[styles.modeCardIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+                  <Feather name="box" size={22} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={[styles.modeCardTag, { backgroundColor: "rgba(16, 185, 129, 0.18)" }]}>
+                    <Text style={[styles.modeCardTagText, { color: "#10B981" }]}>
+                      {isEs ? "MODO DEMO SANDBOX" : "DEMO SANDBOX"}
+                    </Text>
+                  </View>
+                  <Text style={styles.modeCardTitle}>
+                    {isEs ? "Explorar en Modo Demo" : "Explore Demo Sandbox"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.modeCardDesc}>
+                {isEs
+                  ? "Inicia la app con $10,000 virtuales, 3 operaciones simuladas con trailing ratchet, 2 señales cuantitativas y el laboratorio de investigación."
+                  : "Start immediately with $10,000 virtual balance, 3 simulated open positions with trailing ratchet, 2 signals, and quantitative strategy lab."}
+              </Text>
+
+              <View style={styles.modeCardFeatureList}>
+                <View style={styles.modeCardFeatureItem}>
+                  <Feather name="check" size={13} color="#10B981" />
+                  <Text style={styles.modeCardFeatureText}>
+                    {isEs ? "No requiere tener servidor VPS ni MT5 configurado" : "No VPS server or MT5 setup required"}
+                  </Text>
+                </View>
+                <View style={styles.modeCardFeatureItem}>
+                  <Feather name="check" size={13} color="#10B981" />
+                  <Text style={styles.modeCardFeatureText}>
+                    {isEs ? "100% interactivo: aprueba señales y audita el laboratorio" : "100% interactive: approve signals & audit strategy lab"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.modeActionButton, { backgroundColor: "#10B981" }]}>
+                <Text style={styles.modeActionButtonText}>
+                  {isEs ? "Entrar en Modo Demo →" : "Enter Demo Sandbox →"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Option 2: Live VPS MT5 Mode */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={handleChooseLive}
+              style={[styles.modeCard, { borderColor: "#3B82F6", marginTop: 18 }]}
+            >
+              <View style={styles.modeCardTop}>
+                <View style={[styles.modeCardIconCircle, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+                  <Feather name="server" size={22} color="#3B82F6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={[styles.modeCardTag, { backgroundColor: "rgba(59, 130, 246, 0.18)" }]}>
+                    <Text style={[styles.modeCardTagText, { color: "#3B82F6" }]}>
+                      {isEs ? "PRODUCCIÓN LIVE · MT5" : "LIVE PRODUCTION · MT5"}
+                    </Text>
+                  </View>
+                  <Text style={styles.modeCardTitle}>
+                    {isEs ? "Conectar mi Servidor VPS" : "Connect my VPS Server"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.modeCardDesc}>
+                {isEs
+                  ? "Configura la IP de tu VPS y token de API para conectar en directo con tu terminal MetaTrader 5 y gestionar tu capital real."
+                  : "Enter your VPS IP and API token to connect directly with MetaTrader 5 and manage your real live capital."}
+              </Text>
+
+              <View style={styles.modeCardFeatureList}>
+                <View style={styles.modeCardFeatureItem}>
+                  <Feather name="check" size={13} color="#3B82F6" />
+                  <Text style={styles.modeCardFeatureText}>
+                    {isEs ? "Telemetría milimétrica en tiempo real con MetaTrader 5" : "Sub-second millisecond telemetry with MetaTrader 5"}
+                  </Text>
+                </View>
+                <View style={styles.modeCardFeatureItem}>
+                  <Feather name="check" size={13} color="#3B82F6" />
+                  <Text style={styles.modeCardFeatureText}>
+                    {isEs ? "Trailing Ratchet y Circuit Breaker sobre capital real" : "Live Trailing Ratchet & Drawdown Circuit Breaker"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.modeActionButton, { backgroundColor: "#3B82F6" }]}>
+                <Text style={styles.modeActionButtonText}>
+                  {isEs ? "Configurar Servidor VPS →" : "Configure VPS Server →"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+    );
   }
 
   const step = TOUR_STEPS[currentStepIndex];
@@ -379,7 +574,7 @@ export function AppTourModal({ forceVisible = false, onClose }: AppTourModalProp
           {/* Skip All Button */}
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={handleCompleteTour}
+            onPress={handleSkipToModeChoice}
             style={styles.skipButton}
           >
             <Text style={styles.skipButtonText}>
@@ -1199,6 +1394,110 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#FFFFFF",
     fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  modeHeroHeader: {
+    alignItems: "center",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  modeHeroIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  modeHeroTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  modeHeroSubtitle: {
+    color: "#94A3B8",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    paddingHorizontal: 12,
+  },
+  modeCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+  },
+  modeCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+  },
+  modeCardIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeCardTag: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    marginBottom: 4,
+  },
+  modeCardTagText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  modeCardTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  modeCardDesc: {
+    color: "#94A3B8",
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  modeCardFeatureList: {
+    gap: 6,
+    marginBottom: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    padding: 10,
+    borderRadius: 10,
+  },
+  modeCardFeatureItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modeCardFeatureText: {
+    color: "#CBD5E1",
+    fontSize: 11.5,
+    flex: 1,
+  },
+  modeActionButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeActionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
