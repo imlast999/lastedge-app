@@ -3,8 +3,68 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
-project.ext.REACT_NATIVE_NODE_MODULES_DIR = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
-project.ext.REACT_NATIVE_WORKLETS_NODE_MODULES_DIR = new File(["node", "--print", "require.resolve('react-native-worklets/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+if (new File("C:/M").exists()) {
+    projectRoot = projectRoot
+      .replace("C:\\LastEdge\\LastEdge App\\mobile-app\\artifacts\\mobile", "C:\\M")
+      .replace("C:/LastEdge/LastEdge App/mobile-app/artifacts/mobile", "C:/M")
+      .replace("C:\\LE\\mobile-app\\artifacts\\mobile", "C:\\M")
+      .replace("C:/LE/mobile-app/artifacts/mobile", "C:/M")
+} else if (new File("C:/LE").exists()) {
+    projectRoot = projectRoot.replace("LastEdge\\LastEdge App", "LE").replace("LastEdge/LastEdge App", "LE")
+}
+
+def getShortPath = { String rawPath ->
+    if (new File("C:/M").exists() && rawPath != null) {
+        def p = rawPath
+          .replace("C:\\LastEdge\\LastEdge App\\mobile-app\\artifacts\\mobile", "C:\\M")
+          .replace("C:/LastEdge/LastEdge App/mobile-app/artifacts/mobile", "C:/M")
+          .replace("C:\\LE\\mobile-app\\artifacts\\mobile", "C:\\M")
+          .replace("C:/LE/mobile-app/artifacts/mobile", "C:/M")
+        if (new File("C:/k").exists()) {
+            p = p
+              .replace("C:\\P\\react-native-keyboard-contr_ec857121a21aa451dd0f86aa24cc60b2\\node_modules\\react-native-keyboard-controller", "C:\\k")
+              .replace("C:/P/react-native-keyboard-contr_ec857121a21aa451dd0f86aa24cc60b2/node_modules/react-native-keyboard-controller", "C:/k")
+        }
+        if (new File("C:/s").exists()) {
+            p = p
+              .replace("C:\\P\\react-native-screens@4.16.0_e0e9489fc898c84fbe4bb926eacc799d\\node_modules\\react-native-screens", "C:\\s")
+              .replace("C:/P/react-native-screens@4.16.0_e0e9489fc898c84fbe4bb926eacc799d/node_modules/react-native-screens", "C:/s")
+        }
+        if (new File("C:/v").exists()) {
+            p = p
+              .replace("C:\\P\\react-native-svg@15.12.1_re_6dc001472c9df3127bd9f6cb603b1369\\node_modules\\react-native-svg", "C:\\v")
+              .replace("C:/P/react-native-svg@15.12.1_re_6dc001472c9df3127bd9f6cb603b1369/node_modules/react-native-svg", "C:/v")
+        }
+        if (new File("C:/a").exists()) {
+            p = p
+              .replace("C:\\P\\react-native-safe-area-cont_e99969b06e7c321d1a21c9e0f5ec4abe\\node_modules\\react-native-safe-area-context", "C:\\a")
+              .replace("C:/P/react-native-safe-area-cont_e99969b06e7c321d1a21c9e0f5ec4abe/node_modules/react-native-safe-area-context", "C:/a")
+        }
+        if (new File("C:/g").exists()) {
+            p = p
+              .replace("C:\\P\\react-native-gesture-handle_b5369b7359ec8c3c0a5224abd7dc8561\\node_modules\\react-native-gesture-handler", "C:\\g")
+              .replace("C:/P/react-native-gesture-handle_b5369b7359ec8c3c0a5224abd7dc8561/node_modules/react-native-gesture-handler", "C:/g")
+        }
+        if (new File("C:/y").exists()) {
+            p = p
+              .replace("C:\\P\\@react-native-async-storage_a98614c4a6212818cc26ef036ab07220\\node_modules\\@react-native-async-storage\\async-storage", "C:\\y")
+              .replace("C:/P/@react-native-async-storage_a98614c4a6212818cc26ef036ab07220/node_modules/@react-native-async-storage/async-storage", "C:/y")
+        }
+        if (new File("C:/P").exists()) {
+            p = p
+              .replace("C:\\M\\node_modules\\.pnpm", "C:\\P")
+              .replace("C:/M/node_modules/.pnpm", "C:/P")
+        }
+        return p
+    }
+    if (new File("C:/LE").exists() && rawPath != null) {
+        return rawPath.replace("LastEdge\\LastEdge App", "LE").replace("LastEdge/LastEdge App", "LE")
+    }
+    return rawPath
+}
+
+project.ext.REACT_NATIVE_NODE_MODULES_DIR = new File(getShortPath(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim())).getParentFile().getAbsoluteFile()
+project.ext.REACT_NATIVE_WORKLETS_NODE_MODULES_DIR = new File(getShortPath(["node", "--print", "require.resolve('react-native-worklets/package.json')"].execute(null, rootDir).text.trim())).getParentFile().getAbsoluteFile()
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -12,16 +72,16 @@ project.ext.REACT_NATIVE_WORKLETS_NODE_MODULES_DIR = new File(["node", "--print"
  */
 react {
     // package.json lives two levels above android/app/.
-    root = file("../../")
-    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
-    reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
-    hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
-    codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+    root = file(projectRoot)
+    entryFile = file(getShortPath(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim()))
+    reactNativeDir = project.ext.REACT_NATIVE_NODE_MODULES_DIR
+    hermesCommand = "node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc" + (org.gradle.internal.os.OperatingSystem.current().isWindows() ? ".exe" : "")
+    codegenDir = new File(getShortPath(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim())).getParentFile().getAbsoluteFile()
 
     enableBundleCompression = (findProperty('android.enableBundleCompression') ?: false).toBoolean()
     // Use Expo CLI to bundle the app, this ensures the Metro config
     // works correctly with Expo projects.
-    cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
+    cliFile = new File(getShortPath(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim()))
     bundleCommand = "export:embed"
 
     /* Folders */
@@ -97,8 +157,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Dynamic auto-incrementing versionCode (seconds since epoch) to allow seamless in-place APK updates without uninstalling
-        versionCode 94
-        versionName "1.1.94"
+        versionCode 95
+        versionName "1.1.95"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
 
@@ -158,6 +218,11 @@ android {
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+    externalNativeBuild {
+        cmake {
+            buildStagingDirectory file("C:/b")
+        }
     }
 }
 

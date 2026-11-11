@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -8,10 +8,12 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
+import { DISCLAIMER_STORAGE_KEY } from "./EcosystemDisclaimerModal";
 
 export function EcosystemOnboardingModal() {
   const { settings, loaded, updateEcosystemModules } = useSettings();
@@ -21,9 +23,28 @@ export function EcosystemOnboardingModal() {
   const [engineActive, setEngineActive] = useState(true);
   const [labActive, setLabActive] = useState(true);
   const [showError, setShowError] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
-  // If not loaded yet, or if already completed, do not show
-  if (!loaded || settings.ecosystemSetupCompleted) {
+  useEffect(() => {
+    let mounted = true;
+    async function check() {
+      try {
+        const val = await AsyncStorage.getItem(DISCLAIMER_STORAGE_KEY);
+        if (mounted) setDisclaimerAccepted(val === "true");
+      } catch {
+        if (mounted) setDisclaimerAccepted(true);
+      }
+    }
+    check();
+    const interval = setInterval(check, 350);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // If not loaded yet, or if already completed, or if disclaimer is not yet accepted, do not show
+  if (!loaded || settings.ecosystemSetupCompleted || !disclaimerAccepted) {
     return null;
   }
 
@@ -31,7 +52,6 @@ export function EcosystemOnboardingModal() {
 
   const toggleEngine = () => {
     if (engineActive && !labActive) {
-      // Trying to uncheck the only remaining item
       setShowError(true);
       return;
     }
@@ -41,7 +61,6 @@ export function EcosystemOnboardingModal() {
 
   const toggleLab = () => {
     if (labActive && !engineActive) {
-      // Trying to uncheck the only remaining item
       setShowError(true);
       return;
     }
@@ -60,7 +79,7 @@ export function EcosystemOnboardingModal() {
     });
   };
 
-  const isEs = settings.language === "es" || true; // Spanish default for ecosystem prompt
+  const isEs = settings.language === "es";
 
   return (
     <Modal
@@ -89,21 +108,33 @@ export function EcosystemOnboardingModal() {
             <View style={styles.badgeWrapper}>
               <View style={[styles.badgeTag, { backgroundColor: "rgba(16, 185, 129, 0.12)", borderColor: "rgba(16, 185, 129, 0.3)" }]}>
                 <Feather name="layers" size={12} color="#10B981" />
-                <Text style={styles.badgeText}>ECOSISTEMA LASTEDGE</Text>
+                <Text style={styles.badgeText}>
+                  {isEs ? "ECOSISTEMA LASTEDGE" : "LASTEDGE ECOSYSTEM"}
+                </Text>
               </View>
             </View>
 
             {/* Title & Explanatory Prompt */}
             <Text style={[styles.title, { color: colors.foreground || "#FFFFFF" }]}>
-              Configuración de Servicios
+              {isEs ? "Configuración de Servicios" : "Service Configuration"}
             </Text>
             <Text style={[styles.description, { color: colors.mutedForeground || "#94A3B8" }]}>
-              Esta app es parte del ecosistema{" "}
-              <Text style={{ fontWeight: "700", color: "#FFFFFF" }}>LastEdge</Text>. Si no
-              tienes alguno de estos servicios, esta app no tendrá ningún uso real.
+              {isEs ? (
+                <>
+                  Esta app es parte del ecosistema{" "}
+                  <Text style={{ fontWeight: "700", color: "#FFFFFF" }}>LastEdge</Text>. Si no
+                  tienes alguno de estos servicios, esta app no tendrá ningún uso real.
+                </>
+              ) : (
+                <>
+                  This app is part of the{" "}
+                  <Text style={{ fontWeight: "700", color: "#FFFFFF" }}>LastEdge</Text> ecosystem.
+                  If you do not run at least one of these services, this app will have no real utility.
+                </>
+              )}
             </Text>
             <Text style={[styles.question, { color: colors.foreground || "#F1F5F9" }]}>
-              ¿Qué partes del ecosistema tienes activas?
+              {isEs ? "¿Qué partes del ecosistema tienes activas?" : "Which parts of the ecosystem do you have active?"}
             </Text>
 
             {/* Selection Cards */}
@@ -141,9 +172,13 @@ export function EcosystemOnboardingModal() {
                 <Text style={[styles.cardTitle, { color: colors.foreground || "#FFFFFF" }]}>
                   Trading Engine
                 </Text>
-                <Text style={styles.cardPort}>MetaTrader 5 &bull; Puerto 8081</Text>
+                <Text style={styles.cardPort}>
+                  {isEs ? "MetaTrader 5 · Puerto 8081" : "MetaTrader 5 · Port 8081"}
+                </Text>
                 <Text style={[styles.cardText, { color: colors.mutedForeground || "#94A3B8" }]}>
-                  Ejecución autónoma o híbrida de órdenes en vivo en MT5, trailing stops en tiempo real, gestión de riesgo institucional y monitor de posiciones abiertas.
+                  {isEs
+                    ? "Ejecución autónoma o híbrida de órdenes en vivo en MT5, trailing stops en tiempo real, gestión de riesgo institucional y monitor de posiciones abiertas."
+                    : "Autonomous or hybrid live MT5 order execution, real-time trailing stops, institutional risk management, and live open positions telemetry."}
                 </Text>
               </TouchableOpacity>
 
@@ -180,9 +215,13 @@ export function EcosystemOnboardingModal() {
                 <Text style={[styles.cardTitle, { color: colors.foreground || "#FFFFFF" }]}>
                   Strategy Lab
                 </Text>
-                <Text style={styles.cardPort}>Research Cuantitativo &bull; Puerto 8082</Text>
+                <Text style={styles.cardPort}>
+                  {isEs ? "Research Cuantitativo · Puerto 8082" : "Quantitative Research · Port 8082"}
+                </Text>
                 <Text style={[styles.cardText, { color: colors.mutedForeground || "#94A3B8" }]}>
-                  Laboratorio cuantitativo, simulación vela a vela, stress test Monte Carlo de ruina, auditoría de 6 Pilares pedagógicos y análisis Walk-Forward.
+                  {isEs
+                    ? "Laboratorio cuantitativo, simulación vela a vela, stress test Monte Carlo de ruina, auditoría de 6 Pilares pedagógicos y análisis Walk-Forward."
+                    : "Quantitative research laboratory, candle-by-candle simulation, Monte Carlo ruin stress-testing, 6 pedagogical pillars audit, and Walk-Forward analysis."}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -192,7 +231,9 @@ export function EcosystemOnboardingModal() {
               <View style={styles.errorBanner}>
                 <Feather name="alert-triangle" size={15} color="#EF4444" />
                 <Text style={styles.errorText}>
-                  Debes seleccionar mínimo 1 opción de las 2, ya que si no la app no tendría ningún sentido.
+                  {isEs
+                    ? "Debes seleccionar mínimo 1 opción de las 2, ya que si no la app no tendría ningún sentido."
+                    : "You must select at least 1 of the 2 options, otherwise this app cannot function."}
                 </Text>
               </View>
             )}
@@ -201,7 +242,9 @@ export function EcosystemOnboardingModal() {
             <View style={styles.footerNoteRow}>
               <Feather name="info" size={13} color="#64748B" />
               <Text style={styles.footerNoteText}>
-                Podrás cambiar esta configuración en cualquier momento desde los Ajustes de la app.
+                {isEs
+                  ? "Podrás cambiar esta configuración en cualquier momento desde los Ajustes de la app."
+                  : "You can change this configuration anytime from the app Settings."}
               </Text>
             </View>
 
@@ -217,7 +260,9 @@ export function EcosystemOnboardingModal() {
                 },
               ]}
             >
-              <Text style={styles.confirmButtonText}>Guardar y Comenzar</Text>
+              <Text style={styles.confirmButtonText}>
+                {isEs ? "Guardar y Comenzar" : "Save and Continue"}
+              </Text>
               <Feather name="arrow-right" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </ScrollView>

@@ -40,7 +40,7 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 # Project Paths
-APP_ROOT = Path(__file__).parent.resolve()
+APP_ROOT = Path(r"C:\LE") if Path(r"C:\LE").exists() else Path(__file__).parent.resolve()
 MOBILE_DIR = APP_ROOT / "mobile-app"
 ARTIFACTS_MOBILE_DIR = MOBILE_DIR / "artifacts" / "mobile"
 ANDROID_DIR = ARTIFACTS_MOBILE_DIR / "android"
@@ -72,6 +72,7 @@ def detect_java_home() -> Optional[Path]:
         return Path(env_java)
 
     candidates = [
+        Path(os.environ.get("USERPROFILE", "")) / "jdk-17.0.14+7",
         Path(r"C:\Program Files\Android\Android Studio\jbr"),
         Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Android Studio" / "jbr",
         Path(r"C:\Program Files\Java"),
@@ -110,6 +111,7 @@ def detect_android_home() -> Optional[Path]:
 
     local_app_data = os.environ.get("LOCALAPPDATA", "")
     candidates = [
+        Path(os.environ.get("USERPROFILE", "")) / "android-sdk",
         Path(local_app_data) / "Android" / "Sdk",
         Path(r"C:\Android\Sdk"),
         Path(os.environ.get("USERPROFILE", "")) / "AppData" / "Local" / "Android" / "Sdk",
@@ -245,12 +247,22 @@ def print_banner() -> None:
     print(f"{CYAN}{'=' * 75}{RESET}")
 
 
+def get_working_android_dir() -> Tuple[Path, Path]:
+    """Return standard Android project and gradlew path."""
+    short_android = Path(r"C:\M\android")
+    if short_android.exists():
+        return short_android, short_android / "gradlew.bat"
+    return ANDROID_DIR, GRADLEW_BAT
+
+
 def run_gradle_build(variant: str = "release", clean: bool = False) -> bool:
     """
     Execute Gradle assemble task and export APK to LastEdge App/dist/.
     """
-    if not GRADLEW_BAT.exists():
-        print(f"\n{RED}[✗] Gradle wrapper not found at: {GRADLEW_BAT}{RESET}")
+    android_dir, gradlew_bat = get_working_android_dir()
+
+    if not gradlew_bat.exists():
+        print(f"\n{RED}[✗] Gradle wrapper not found at: {gradlew_bat}{RESET}")
         return False
 
     if not ensure_dependencies():
@@ -268,17 +280,17 @@ def run_gradle_build(variant: str = "release", clean: bool = False) -> bool:
     task_name = f"assemble{variant.capitalize()}"
     print(f"\n{BOLD}{CYAN}Starting Gradle Build for variant: {variant.upper()}{RESET}")
     print(f"{GRAY}Target: {task_name}{RESET}")
-    print(f"{GRAY}Working Directory: {ANDROID_DIR}{RESET}\n")
+    print(f"{GRAY}Working Directory: {android_dir}{RESET}\n")
 
     t0 = time.time()
 
     if clean:
         print(f"{YELLOW}Cleaning previous build artifacts...{RESET}")
-        subprocess.run([str(GRADLEW_BAT), "clean", "--no-daemon"], cwd=str(ANDROID_DIR), env=env)
+        subprocess.run([str(gradlew_bat), "clean", "--no-daemon"], cwd=str(android_dir), env=env)
 
     print(f"{GREEN}Compiling native modules and bundling JavaScript...{RESET}\n")
-    build_cmd = [str(GRADLEW_BAT), task_name, "--no-daemon"]
-    result = subprocess.run(build_cmd, cwd=str(ANDROID_DIR), env=env)
+    build_cmd = [str(gradlew_bat), task_name, "--no-daemon"]
+    result = subprocess.run(build_cmd, cwd=str(android_dir), env=env)
 
     elapsed = round(time.time() - t0, 1)
 
@@ -287,7 +299,7 @@ def run_gradle_build(variant: str = "release", clean: bool = False) -> bool:
         return False
 
     # Locate generated APK
-    outputs_dir = ANDROID_DIR / "app" / "build" / "outputs" / "apk" / variant
+    outputs_dir = android_dir / "app" / "build" / "outputs" / "apk" / variant
     apk_candidates = list(outputs_dir.glob("*.apk"))
 
     if not apk_candidates:
@@ -298,8 +310,13 @@ def run_gradle_build(variant: str = "release", clean: bool = False) -> bool:
     DIST_DIR.mkdir(parents=True, exist_ok=True)
 
     # Destination files
+    version_str = "1.1.95"
+    version_file = APP_ROOT / "VERSION"
+    if version_file.exists():
+        version_str = version_file.read_text(encoding="utf-8").strip()
+
     dest_standard = DIST_DIR / f"lastedge-app-{variant}.apk"
-    dest_versioned = DIST_DIR / f"LastEdge-Mobile-v1.0.0-{variant}.apk"
+    dest_versioned = DIST_DIR / f"LastEdge-v{version_str}.apk"
 
     shutil.copy2(source_apk, dest_standard)
     shutil.copy2(source_apk, dest_versioned)
@@ -326,8 +343,10 @@ def run_gradle_bundle(clean: bool = False) -> bool:
     """
     Execute Gradle bundleRelease task and export AAB to LastEdge App/dist/.
     """
-    if not GRADLEW_BAT.exists():
-        print(f"\n{RED}[✗] Gradle wrapper not found at: {GRADLEW_BAT}{RESET}")
+    android_dir, gradlew_bat = get_working_android_dir()
+
+    if not gradlew_bat.exists():
+        print(f"\n{RED}[✗] Gradle wrapper not found at: {gradlew_bat}{RESET}")
         return False
 
     if not ensure_dependencies():
@@ -345,17 +364,17 @@ def run_gradle_bundle(clean: bool = False) -> bool:
     task_name = "bundleRelease"
     print(f"\n{BOLD}{CYAN}Starting Gradle Play Store Bundle Build: {task_name.upper()}{RESET}")
     print(f"{GRAY}Target: {task_name}{RESET}")
-    print(f"{GRAY}Working Directory: {ANDROID_DIR}{RESET}\n")
+    print(f"{GRAY}Working Directory: {android_dir}{RESET}\n")
 
     t0 = time.time()
 
     if clean:
         print(f"{YELLOW}Cleaning previous build artifacts...{RESET}")
-        subprocess.run([str(GRADLEW_BAT), "clean", "--no-daemon"], cwd=str(ANDROID_DIR), env=env)
+        subprocess.run([str(gradlew_bat), "clean", "--no-daemon"], cwd=str(android_dir), env=env)
 
     print(f"{GREEN}Compiling native modules and packaging Google Play AAB bundle...{RESET}\n")
-    build_cmd = [str(GRADLEW_BAT), task_name, "--no-daemon"]
-    result = subprocess.run(build_cmd, cwd=str(ANDROID_DIR), env=env)
+    build_cmd = [str(gradlew_bat), task_name, "--no-daemon"]
+    result = subprocess.run(build_cmd, cwd=str(android_dir), env=env)
 
     elapsed = round(time.time() - t0, 1)
 
@@ -363,7 +382,7 @@ def run_gradle_bundle(clean: bool = False) -> bool:
         print(f"\n{RED}[✗] Gradle bundle build failed with exit code {result.returncode} ({elapsed}s){RESET}\n")
         return False
 
-    outputs_dir = ANDROID_DIR / "app" / "build" / "outputs" / "bundle" / "release"
+    outputs_dir = android_dir / "app" / "build" / "outputs" / "bundle" / "release"
     aab_candidates = list(outputs_dir.glob("*.aab"))
 
     if not aab_candidates:

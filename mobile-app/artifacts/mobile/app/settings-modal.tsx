@@ -43,6 +43,8 @@ import {
   sendLocalNotification,
 } from "@/services/notifications";
 import { lockApp } from "@/components/PinAuthModal";
+import { TOUR_STORAGE_KEY } from "@/components/AppTourModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "@/hooks/useTranslation";
 
 function formatLastSync(d: Date | null, isEs: boolean): string {
@@ -156,7 +158,7 @@ export default function SettingsScreen() {
     }
     Alert.alert(
       isEs ? "Aplicación Bloqueada" : "Application Locked",
-      isEs ? "La aplicación ha sido bloqueada. Deberá introducir el PIN de seguridad (1623) para volver a entrar." : "The app has been locked. Please enter your 4-digit PIN (1623) to unlock.",
+      isEs ? "La aplicación ha sido bloqueada. Deberá introducir su PIN de seguridad para volver a entrar." : "The app has been locked. Please enter your 4-digit security PIN to unlock.",
       [
         {
           text: "OK",
@@ -168,6 +170,11 @@ export default function SettingsScreen() {
       ]
     );
   }, [settings.hapticsEnabled, router]);
+
+  const handleReplayTour = useCallback(async () => {
+    await AsyncStorage.removeItem(TOUR_STORAGE_KEY);
+    router.back();
+  }, [router]);
 
 
   return (
@@ -654,8 +661,14 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="lock"
           label={isEs ? "Bloquear aplicación con PIN ahora" : "Lock application with PIN now"}
-          value="PIN 1623"
+          value={isEs ? "Bloquear" : "Lock now"}
           onPress={handleLockApp}
+        />
+        <SettingsRow
+          icon="help-circle"
+          label={isEs ? "Ver tour interactivo de la app" : "Take interactive app tour"}
+          value={isEs ? "Iniciar" : "Start"}
+          onPress={handleReplayTour}
           isLast
         />
       </SettingsSection>

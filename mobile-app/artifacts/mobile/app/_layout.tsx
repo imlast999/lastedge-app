@@ -19,6 +19,8 @@ import { TradingProvider } from "@/context/TradingContext";
 import { setupNotificationListeners } from "@/services/notifications";
 import { PinAuthModal } from "@/components/PinAuthModal";
 import { EcosystemOnboardingModal } from "@/components/EcosystemOnboardingModal";
+import { EcosystemDisclaimerModal } from "@/components/EcosystemDisclaimerModal";
+import { AppTourModal } from "@/components/AppTourModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -85,8 +87,10 @@ export default function RootLayout() {
               <GestureHandlerRootView>
                 <KeyboardProvider>
                   <RootLayoutNav />
+                  <AppTourModal />
                   <PinAuthModal />
                   <EcosystemOnboardingModal />
+                  <EcosystemDisclaimerModal />
                 </KeyboardProvider>
               </GestureHandlerRootView>
             </TradingProvider>
