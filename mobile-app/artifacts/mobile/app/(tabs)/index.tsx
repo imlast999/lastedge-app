@@ -33,8 +33,18 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { t, language } = useTranslation();
   const isEs = language === "es";
-  const { status, equityHistory, dailyPnL, winrate, openPositions, pendingSignals, currencySymbol, loading, refresh } =
-    useTrading();
+  const {
+    status,
+    equityHistory,
+    dailyPnL,
+    winrate,
+    openPositions,
+    pendingSignals,
+    currencySymbol,
+    loading,
+    refresh,
+    usingMockData,
+  } = useTrading();
 
   const safeStatus = {
     connected: Boolean(status?.connected),
@@ -84,17 +94,21 @@ export default function DashboardScreen() {
             />
           </View>
           <View style={styles.workspaceMeta}>
-            <Text style={[styles.workspaceTitle, { color: colors.foreground }]}>
+            <Text style={[styles.workspaceTitle, { color: colors.foreground }]} numberOfLines={1}>
               LastEdge App
             </Text>
-            <Text style={[styles.workspaceSub, { color: colors.mutedForeground }]}>
-              {safeStatus.connected ? "Production · Online" : "Production · Offline"}
+            <Text style={[styles.workspaceSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {usingMockData
+                ? "Interactive Sandbox"
+                : safeStatus.connected
+                ? "Production · Online"
+                : "Production · Offline"}
             </Text>
           </View>
         </View>
 
         <View style={styles.headerActions}>
-          <ConnectionBadge connected={safeStatus.connected} uptime={safeStatus.uptime} />
+          <ConnectionBadge connected={safeStatus.connected} uptime={safeStatus.uptime} isDemo={usingMockData} />
           <TouchableOpacity
             onPress={handleOpenSettings}
             style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -448,13 +462,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
+    gap: 8,
   },
   workspaceProfile: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     flex: 1,
+    flexShrink: 1,
   },
   avatarBox: {
     width: 28,
@@ -462,6 +478,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   avatarText: {
     fontSize: 13,
@@ -469,6 +486,7 @@ const styles = StyleSheet.create({
   },
   workspaceMeta: {
     flexDirection: "column",
+    flexShrink: 1,
   },
   workspaceTitle: {
     fontSize: 13,
@@ -476,14 +494,15 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   workspaceSub: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "PlusJakartaSans_500Medium",
-    lineHeight: 14,
+    lineHeight: 13,
   },
   headerActions: {
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
+    flexShrink: 0,
   },
   settingsButton: {
     width: 32,

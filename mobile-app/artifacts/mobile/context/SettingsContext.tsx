@@ -68,6 +68,8 @@ export interface AppSettings {
   serverToken: string;
   /** Idioma de la app: 'en' | 'es' */
   language: "en" | "es";
+  /** Modo Demostración Interactivo (True si explora sin servidor real) */
+  demoMode: boolean;
   /** Ecosistema LastEdge: partes activas */
   ecosystemModules: EcosystemModules;
   /** Si el wizard inicial de ecosistema ya fue completado */
@@ -107,6 +109,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   serverUrl: "",
   serverToken: "",
   language: "en",
+  demoMode: true,
   ecosystemModules: DEFAULT_ECOSYSTEM_MODULES,
   ecosystemSetupCompleted: false,
 };

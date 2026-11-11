@@ -4,6 +4,8 @@ import { SymbolView } from "expo-symbols";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 
 import { useColors } from "@/hooks/useColors";
 import { useSettings } from "@/context/SettingsContext";
@@ -11,33 +13,52 @@ import { useSettings } from "@/context/SettingsContext";
 export default function TabLayout() {
   const colors = useColors();
   const { settings } = useSettings();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+
+  const bottomInset = Math.max(insets.bottom, 0);
+  const tabHeight = (isWeb ? 68 : 58) + bottomInset;
 
   const showTrading = settings.ecosystemModules?.tradingEngine !== false;
   const showLab = settings.ecosystemModules?.strategyLab !== false;
 
   return (
     <Tabs
+      screenListeners={{
+        tabPress: () => {
+          if (Platform.OS !== "web" && settings.hapticsEnabled) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          }
+        },
+      }}
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.card,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: isIOS ? "transparent" : (colors.card || "#0D111A"),
           borderTopWidth: 1,
-          borderTopColor: colors.border,
-          elevation: 0,
-          height: 56,
-          ...(isWeb ? { height: 68 } : {}),
+          borderTopColor: colors.border || "rgba(255, 255, 255, 0.08)",
+          elevation: 12,
+          height: tabHeight,
+          paddingTop: 6,
+          paddingBottom: Math.max(bottomInset, 8),
+        },
+        tabBarItemStyle: {
+          paddingTop: 2,
+          paddingBottom: 2,
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontFamily: "PlusJakartaSans_500Medium",
-          marginTop: -2,
+          fontFamily: "PlusJakartaSans_600SemiBold",
+          marginTop: 2,
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -46,11 +67,14 @@ export default function TabLayout() {
               tint="dark"
               style={StyleSheet.absoluteFill}
             />
-          ) : isWeb ? (
+          ) : (
             <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: colors.card || "#0D111A" },
+              ]}
             />
-          ) : null,
+          ),
       }}
     >
       <Tabs.Screen

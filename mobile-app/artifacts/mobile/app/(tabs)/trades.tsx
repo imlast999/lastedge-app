@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 import { useColors } from "@/hooks/useColors";
 import { useTrading, Position, Signal } from "@/context/TradingContext";
@@ -51,6 +52,13 @@ export default function TradesScreen() {
   const [flowTarget, setFlowTarget] = useState<TradeFlowTarget | null>(null);
 
   const bottomPad = insets.bottom + 120;
+
+  const handleTabChange = (tab: SubTab) => {
+    if (Platform.OS !== "web" && settings.hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    setActiveTab(tab);
+  };
 
   const handleOpenSettings = () => {
     router.push("/settings-modal" as any);
@@ -126,21 +134,21 @@ export default function TradesScreen() {
           label={isEs ? "Abiertas" : "Open"}
           badge={openTrades.length}
           active={activeTab === "open"}
-          onPress={() => setActiveTab("open")}
+          onPress={() => handleTabChange("open")}
           colors={colors}
         />
         <SubTabButton
           label={isEs ? "Por aceptar" : "To Accept"}
           badge={pendingSignals.length}
           active={activeTab === "pending"}
-          onPress={() => setActiveTab("pending")}
+          onPress={() => handleTabChange("pending")}
           colors={colors}
         />
         <SubTabButton
           label={isEs ? "Cerradas" : "Closed"}
           badge={closedTrades.length}
           active={activeTab === "closed"}
-          onPress={() => setActiveTab("closed")}
+          onPress={() => handleTabChange("closed")}
           colors={colors}
         />
       </View>

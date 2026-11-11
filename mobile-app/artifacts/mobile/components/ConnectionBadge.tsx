@@ -5,9 +5,10 @@ import { useColors } from "@/hooks/useColors";
 interface Props {
   connected: boolean;
   uptime: string;
+  isDemo?: boolean;
 }
 
-export function ConnectionBadge({ connected, uptime }: Props) {
+export function ConnectionBadge({ connected, uptime, isDemo }: Props) {
   const colors = useColors();
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -23,8 +24,8 @@ export function ConnectionBadge({ connected, uptime }: Props) {
     return () => anim.stop();
   }, [connected, pulse]);
 
-  const dotColor = connected ? colors.connected : colors.disconnected;
-  const label = connected ? "MT5 ONLINE" : "MT5 OFFLINE";
+  const dotColor = isDemo ? "#10B981" : connected ? colors.connected : colors.disconnected;
+  const label = isDemo ? "DEMO ACTIVE" : connected ? "MT5 ONLINE" : "MT5 OFFLINE";
 
   return (
     <View style={[styles.badge, { backgroundColor: colors.card, borderColor: colors.border }]}>

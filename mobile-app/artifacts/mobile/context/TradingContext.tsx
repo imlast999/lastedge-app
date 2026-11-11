@@ -6,10 +6,19 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { Platform } from "react-native";
+import * as Haptics from "expo-haptics";
 import { resolveApiConfig, getAppVersion } from "@/lib/apiConfig";
 import { useSettings } from "@/context/SettingsContext";
 import { sendLocalNotification } from "@/services/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  DEMO_BOT_STATUS,
+  DEMO_EQUITY_HISTORY,
+  DEMO_POSITIONS,
+  DEMO_SIGNALS,
+  DEMO_TRADES,
+} from "@/lib/demoData";
 
 const NOTIFIED_TRADES_STORAGE_KEY = "@lastedge_notified_trade_ids_v1";
 
@@ -192,12 +201,17 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
     }
 
     const { url: apiUrl } = resolveApiConfig(apiOverrides);
-    if (!apiUrl) {
-      setApiError(
-        isEs
-          ? "EXPO_PUBLIC_API_URL no configurada — especifica la URL en Ajustes"
-          : "EXPO_PUBLIC_API_URL not configured — specify URL in Settings"
-      );
+    const isDemo = settings.demoMode || !apiUrl;
+
+    if (isDemo) {
+      setUsingMockData(true);
+      setApiError(null);
+      setStatus(DEMO_BOT_STATUS);
+      setPositions((prev) => (prev.length > 0 ? prev : DEMO_POSITIONS));
+      setSignals((prev) => (prev.length > 0 ? prev : DEMO_SIGNALS));
+      setTrades((prev) => (prev.length > 0 ? prev : DEMO_TRADES));
+      setEquityHistory(DEMO_EQUITY_HISTORY);
+      setLastSyncAt(new Date());
       setLoading(false);
       return;
     }
@@ -566,6 +580,36 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   const acceptSignal = useCallback(
     async (id: string) => {
       const { url: apiUrl, token: apiSecret } = resolveApiConfig(apiOverrides);
+      const isDemo = settings.demoMode || !apiUrl;
+
+      if (isDemo) {
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        }
+        setSignals((prev) => {
+          const target = prev.find((s) => s.id === id);
+          if (target) {
+            const newPos: Position = {
+              ticket: Math.floor(1000000 + Math.random() * 9000000),
+              symbol: target.symbol,
+              type: target.type,
+              volume: target.lot,
+              open_price: target.entry,
+              current_price: target.entry,
+              sl: target.stopLoss,
+              tp: target.takeProfit,
+              profit: 0.0,
+              comment: target.strategy || "Manual Executed (Demo)",
+              time: new Date().toISOString(),
+              spread: 0.8,
+            };
+            setPositions((posList) => [newPos, ...posList]);
+          }
+          return prev.filter((s) => s.id !== id);
+        });
+        return;
+      }
+
       try {
         setLoading(true);
         const res = await fetch(`${apiUrl}/api/signals/${id}/accept`, {
@@ -590,12 +634,22 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    [fetchAllData, apiOverrides]
+    [fetchAllData, apiOverrides, settings.demoMode]
   );
 
   const rejectSignal = useCallback(
     async (id: string) => {
       const { url: apiUrl, token: apiSecret } = resolveApiConfig(apiOverrides);
+      const isDemo = settings.demoMode || !apiUrl;
+
+      if (isDemo) {
+        if (Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        }
+        setSignals((prev) => prev.filter((s) => s.id !== id));
+        return;
+      }
+
       try {
         setLoading(true);
         const res = await fetch(`${apiUrl}/api/signals/${id}/reject`, {
@@ -620,7 +674,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    [fetchAllData, apiOverrides]
+    [fetchAllData, apiOverrides, settings.demoMode]
   );
 
   const refresh = useCallback(async () => {

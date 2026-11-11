@@ -21,6 +21,7 @@ import { PinAuthModal } from "@/components/PinAuthModal";
 import { EcosystemOnboardingModal } from "@/components/EcosystemOnboardingModal";
 import { EcosystemDisclaimerModal } from "@/components/EcosystemDisclaimerModal";
 import { AppTourModal } from "@/components/AppTourModal";
+import { NotificationPermissionModal } from "@/components/NotificationPermissionModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -87,6 +88,7 @@ export default function RootLayout() {
               <GestureHandlerRootView>
                 <KeyboardProvider>
                   <RootLayoutNav />
+                  <NotificationPermissionModal />
                   <AppTourModal />
                   <PinAuthModal />
                   <EcosystemOnboardingModal />

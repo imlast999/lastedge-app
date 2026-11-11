@@ -647,6 +647,13 @@ export default function SettingsScreen() {
           </View>
         </View>
         <SettingsToggle
+          icon="box"
+          label={isEs ? "Modo Demostración Interactivo" : "Interactive Demo Sandbox"}
+          description={isEs ? "Carga telemetría y órdenes simuladas para explorar sin VPS" : "Loads simulated telemetry and orders to explore without a VPS"}
+          value={settings.demoMode}
+          onValueChange={(v) => updateSetting("demoMode", v)}
+        />
+        <SettingsToggle
           icon="smartphone"
           label={settings.language === 'es' ? "Vibración háptica" : "Haptic feedback"}
           description={settings.language === 'es' ? "Feedback al pulsar botones de prueba" : "Feedback when pressing test buttons"}
