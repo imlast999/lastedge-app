@@ -6,11 +6,19 @@ __pycache__/
 
 # Environment & Secrets
 .env
+*.env
 *.keystore
 !mobile-app/artifacts/mobile/android/app/lastedge-release.keystore
 *.jks
 *.key
 *.pem
+
+# Database & State files
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 
 # Mobile App & Frontend
 node_modules/
@@ -35,4 +43,3 @@ release_summary.txt
 *.apks
 
 data/
-
