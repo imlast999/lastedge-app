@@ -71,7 +71,7 @@ The LastEdge Mobile App is built on **React Native (Expo SDK 54, Hermes Engine)*
 
 ### ⬇️ Download & Installation
 * **Latest GitHub Release**: [**`github.com/imlast999/lastedge-app/releases/latest`**](https://github.com/imlast999/lastedge-app/releases/latest)
-* **Direct APK Download**: [`LastEdge-v1.1.111.apk`](https://github.com/imlast999/lastedge-app/releases/download/v1.1.111/LastEdge-v1.1.111.apk) (or grab from [Latest Release](https://github.com/imlast999/lastedge-app/releases/latest))
+* **Direct APK Download**: [`LastEdge-v1.1.113.apk`](https://github.com/imlast999/lastedge-app/releases/download/v1.1.113/LastEdge-v1.1.113.apk) (or grab from [Latest Release](https://github.com/imlast999/lastedge-app/releases/latest))
 * **Seamless In-Place Updates**: Signed with a persistent release keystore. New APK versions can be installed directly over existing ones without losing session tokens, PIN configurations, or module preferences.
 
 ### 🎨 Typography System
