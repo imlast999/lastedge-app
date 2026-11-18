@@ -8,12 +8,10 @@
 [![Build Android APK](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/imlast999/lastedge-app/actions/workflows/build-apk.yml)
 [![Download APK](https://img.shields.io/badge/Download%20APK-Latest%20Release-brightgreen?logo=android)](https://github.com/imlast999/lastedge-app/releases/latest)
 [![GitHub Release](https://img.shields.io/github/v/release/imlast999/lastedge-app?logo=github&label=Release)](https://github.com/imlast999/lastedge-app/releases/latest)
-[![Tests](https://img.shields.io/badge/Tests-50%2F50%20Passed-success)](https://github.com/imlast999/lastedge-app)
 
 > **Repository:** [`imlast999/lastedge-app`](https://github.com/imlast999/lastedge-app)  
 > **Role:** Unified Control Center, Web Dashboard, Mobile Application & Bot Adapters  
-> **Status:** Production Ready  
-> **Tests:** 50 / 50 Passed (100% Green)  
+> **Status:** In development — no strategy has passed validation yet  
 
 </div>
 
@@ -32,7 +30,7 @@
 ### Key Capabilities:
 - **Ecosystem Onboarding Wizard & Adaptive Modular UI**: Institutional setup dialog prompted on first launch (Web Dashboard & Mobile App) querying active ecosystem components (⚡ `Trading Engine`, 🔬 `Strategy Lab`). Strict validation enforces minimum 1 active module. The interface dynamically adapts navigation tabs and suppresses irrelevant offline alerts, persisting preferences across app updates via `localStorage` and `AsyncStorage` (`@lastedge_ecosystem_modules_v1`).
 - **Web Dashboard (Bento Grid 2.0)**: Modern, responsive glassmorphism dashboard running on port `8080` (`services/dashboard_server.py`) with real-time Chart.js equity tracking, embedded TradingView Lightweight Charts, and educational financial tooltips.
-- **Mobile Native Application (React Native / Expo SDK 54)**: Production-ready Android & iOS client featuring biometric authentication, 1-tap MT5 signal approval, live 1-second countdown tickers, and a 3-section Trades manager (`Abiertas`, `Por aceptar`, `Cerradas`).
+- **Mobile Native Application (React Native / Expo SDK 54)**: In-development Android & iOS client featuring biometric authentication, 1-tap MT5 signal approval, live 1-second countdown tickers, and a 3-section Trades manager (`Abiertas`, `Por aceptar`, `Cerradas`).
 - **Automated GitHub Releases**: Every compiled APK is automatically packaged, signed, and published to [**GitHub Releases (Latest)**](https://github.com/imlast999/lastedge-app/releases/latest) for 1-click downloads.
 - **Confidence-Aware Signal Hub**: Coordinates with Trading Engine's multi-tier scoring matrix to route auto-executed trades (`HIGH`/`VERY_HIGH` $\ge 0.67$) directly to live positions, while holding discretionary setups (`MEDIUM` $0.60 - 0.66$) in the 1-click approval queue.
 - **Decoupled Architecture**: Communicates exclusively via HTTP REST APIs with `Trading Engine` (:8081) and `Strategy Lab` (:8082).
@@ -170,7 +168,7 @@ LastEdge App/
 # Run all LastEdge App tests locally
 python -m pytest tests/ -v
 ```
-Current test suite status: **50 / 50 passed (100% Green)**.
+See the CI badge above for the current test status.
 
 ### CI / Continuous Integration:
 - **App & Control Plane CI**: Automated on every push and pull request via [GitHub Actions](.github/workflows/ci.yml).
@@ -180,7 +178,4 @@ Current test suite status: **50 / 50 passed (100% Green)**.
 
 ## 7. Accessing the Dashboard
 
-The dashboard can be accessed remotely via Tailscale:
-- **Direct Tailscale IP**: `http://100.78.35.94:8080`
-- **Tailscale Funnel (HTTPS)**: `https://vps-dev-eugenio.tail96b8f8.ts.net`
-- **Default System PIN**: `1623`
+Point the app at your own server (see `.env.example`) and set your own `DASHBOARD_PIN`.

@@ -169,25 +169,21 @@ android {
         }
     }
     signingConfigs {
-        release {
-            if (file('lastedge-release.keystore').exists()) {
-                storeFile file('lastedge-release.keystore')
-                storePassword 'lastedge2026'
-                keyAlias 'lastedgekey'
-                keyPassword 'lastedge2026'
-            } else {
-                storeFile file('debug.keystore')
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-            }
-        }
         debug {
-            if (file('lastedge-release.keystore').exists()) {
-                storeFile file('lastedge-release.keystore')
-                storePassword 'lastedge2026'
-                keyAlias 'lastedgekey'
-                keyPassword 'lastedge2026'
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            // Release signing credentials are read from Gradle properties or environment
+            // variables (never commit them). Falls back to the debug keystore when unset.
+            def uploadStoreFile = findProperty('LASTEDGE_UPLOAD_STORE_FILE') ?: System.getenv('LASTEDGE_UPLOAD_STORE_FILE')
+            if (uploadStoreFile && file(uploadStoreFile).exists()) {
+                storeFile file(uploadStoreFile)
+                storePassword findProperty('LASTEDGE_UPLOAD_STORE_PASSWORD') ?: System.getenv('LASTEDGE_UPLOAD_STORE_PASSWORD')
+                keyAlias findProperty('LASTEDGE_UPLOAD_KEY_ALIAS') ?: System.getenv('LASTEDGE_UPLOAD_KEY_ALIAS')
+                keyPassword findProperty('LASTEDGE_UPLOAD_KEY_PASSWORD') ?: System.getenv('LASTEDGE_UPLOAD_KEY_PASSWORD')
             } else {
                 storeFile file('debug.keystore')
                 storePassword 'android'

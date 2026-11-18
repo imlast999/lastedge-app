@@ -21,7 +21,7 @@
 ### Security & Authentication
 | Variable | Type | Default | Description |
 |---|---|---|---|
-| `DASHBOARD_PIN` | `str` | `1623` | Security PIN required to unlock Dashboard control actions and mobile client access. |
+| `DASHBOARD_PIN` | `str` | *(set your own)* | Security PIN required to unlock Dashboard control actions and mobile client access. |
 | `APP_API_TOKEN` | `str` | *None* | Shared secret bearer token for API gateway route authentication. |
 | `TRADING_API_KEY` | `str` | *None* | API authorization key passed when querying Trading Engine endpoints. |
 
@@ -60,7 +60,7 @@ TRADING_ENGINE_URL=http://localhost:8081
 STRATEGY_LAB_URL=http://localhost:8082
 
 # Security & API Authentication
-DASHBOARD_PIN=1623
+DASHBOARD_PIN=change_me
 APP_API_TOKEN=let_trade_secret_key_prod
 TRADING_API_KEY=let_trade_secret_key_prod
 

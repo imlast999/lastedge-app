@@ -8,7 +8,6 @@ __pycache__/
 .env
 *.env
 *.keystore
-!mobile-app/artifacts/mobile/android/app/lastedge-release.keystore
 *.jks
 *.key
 *.pem

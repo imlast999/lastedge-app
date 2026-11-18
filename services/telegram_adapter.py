@@ -127,7 +127,7 @@ I18N = {
         "version_plat": "• *Platform:* `LastEdge Suite v1.0.0`",
         "version_arch": "• *Architecture:* `Decoupled (Fast Probes + REST Gateway)`",
         "version_py": "• *Python Environment:*",
-        "version_status": "• *Status:* `Production Ready`",
+        "version_status": "• *Status:* `In development — no strategy has passed validation yet`",
 
         "chart_title": "📊 *Live Technical Chart — {target}*",
         "chart_tf": "• *Timeframe:* `H1` (Last 80 MT5 candles)",
