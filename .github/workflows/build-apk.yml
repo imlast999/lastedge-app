@@ -79,6 +79,13 @@ jobs:
         run: |
           yes | sdkmanager --licenses || true
 
+      - name: Create throwaway debug keystore (CI only, never committed)
+        run: |
+          cd mobile-app/artifacts/mobile/android/app
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey               -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Build Release APK
         run: |
           cd mobile-app/artifacts/mobile/android

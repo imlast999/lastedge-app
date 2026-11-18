@@ -61,7 +61,7 @@ STRATEGY_LAB_URL=http://localhost:8082
 
 # Security & API Authentication
 DASHBOARD_PIN=change_me
-APP_API_TOKEN=let_trade_secret_key_prod
+APP_API_TOKEN=CHANGE_ME_long_random_string
 TRADING_API_KEY=let_trade_secret_key_prod
 
 # ── Optional Notification Bots (on / off) ───────────────────────────────────
