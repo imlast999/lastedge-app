@@ -27,6 +27,13 @@ on:
 permissions:
   contents: write
 
+# Publishing (GitHub Release, version-sync commit, Telegram/Discord broadcast) happens ONLY on a manual
+# run with create_release=true or on a v* tag push, and then the APK MUST be signed with the upload key
+# (secrets LASTEDGE_UPLOAD_KEYSTORE_B64 / _STORE_PASSWORD / _KEY_ALIAS / _KEY_PASSWORD).
+# A plain push to main only builds (throwaway debug key) and keeps the APK as a 30-day workflow artifact.
+env:
+  PUBLISH: ${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.create_release == 'true' || github.event.inputs.create_release == true)) || startsWith(github.ref, 'refs/tags/v') }}
+
 jobs:
   build-apk:
     name: Build & Package LastEdge APK
@@ -79,6 +86,27 @@ jobs:
         run: |
           yes | sdkmanager --licenses || true
 
+      - name: Upload-key signing (publishing runs)
+        if: env.PUBLISH == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.LASTEDGE_UPLOAD_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.LASTEDGE_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LASTEDGE_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.LASTEDGE_UPLOAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Publishing requires the LASTEDGE_UPLOAD_* secrets (upload key); refusing to publish a debug-signed APK"
+            exit 1
+          fi
+          KS="$RUNNER_TEMP/upload-keystore.p12"
+          echo "$KEYSTORE_B64" | base64 -d > "$KS"
+          {
+            echo "LASTEDGE_UPLOAD_STORE_FILE=$KS"
+            echo "LASTEDGE_UPLOAD_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "LASTEDGE_UPLOAD_KEY_ALIAS=$KEY_ALIAS"
+            echo "LASTEDGE_UPLOAD_KEY_PASSWORD=${KEY_PASSWORD:-$STORE_PASSWORD}"
+          } >> "$GITHUB_ENV"
+
       - name: Create throwaway debug keystore (CI only, never committed)
         run: |
           cd mobile-app/artifacts/mobile/android/app
@@ -123,7 +151,7 @@ jobs:
           python scripts/generate_release_notes.py
 
       - name: Publish GitHub Release
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true'
+        if: env.PUBLISH == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.prepare_apk.outputs.version }}
@@ -135,7 +163,7 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease == true || github.event.inputs.prerelease == 'true' }}
 
       - name: Commit & Push README Version Updates
-        if: github.ref == 'refs/heads/main'
+        if: env.PUBLISH == 'true' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -144,7 +172,7 @@ jobs:
           git push origin main || echo "No changes to push or conflict avoided"
 
       - name: Broadcast Release to Telegram & Discord
-        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == true || github.event.inputs.create_release == 'true') && success()
+        if: env.PUBLISH == 'true' && success()
         continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
