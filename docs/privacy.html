@@ -186,78 +186,101 @@
         </div>
       </div>
       <h1 id="title-text">Privacy Policy for LastEdge</h1>
-      <p class="meta" id="meta-text">Application: <strong>LastEdge</strong> (com.lastedge.app) · Effective Date: November 2026</p>
+      <p class="meta" id="meta-text">Application: <strong>LastEdge</strong> (com.lastedge.app) · Last updated: 20 November 2026</p>
     </header>
 
     <!-- ENGLISH CONTENT (DEFAULT) -->
     <div id="content-en">
       <section>
-        <h2>1. Privacy Commitment</h2>
+        <h2>1. Summary</h2>
         <p>
-          At <strong>LastEdge</strong>, data privacy, user confidentiality, and operational sovereignty are foundational principles. 
-          LastEdge is a client application designed for real-time quantitative monitoring and algorithmic trading telemetry interfaced with MetaTrader 5 (MT5).
+          <strong>LastEdge</strong> (com.lastedge.app) is a mobile client for monitoring <em>your own</em> self-hosted LastEdge server,
+          which runs your trading bot connected to MetaTrader 5 (MT5). The app has no accounts on our side and no central server:
+          it only talks to the server address <strong>you</strong> enter.
         </p>
         <p>
-          <strong>We do not collect, sell, monetize, rent, or share any personal, financial, or trading activity data with third parties.</strong>
+          <strong>The developer does not receive, collect, sell or share any personal, financial or trading data from the app.</strong>
+          There are no analytics, advertising or crash-reporting SDKs.
         </p>
       </section>
 
       <section>
-        <h2>2. Data Storage & Local Client Processing</h2>
-        <p>
-          All sensitive configuration details and credentials necessary for operating the application are stored and processed exclusively <strong>locally</strong> on the user's physical device:
-        </p>
+        <h2>2. What is stored on your device</h2>
         <ul>
-          <li><strong>Server Connection Endpoints (URL/IP) & Ports:</strong> Stored strictly in the device's hardware-backed encrypted keystore (SecureStore / Android KeyStore).</li>
-          <li><strong>API Keys & Authentication Tokens:</strong> Kept locally on device and transmitted exclusively via direct, encrypted HTTPS/WSS channels between the client and the user's private, self-hosted LastEdge server.</li>
-          <li><strong>Historical Trades & Execution Telemetry:</strong> Queried on demand directly from the user's private server and temporarily cached in memory to accelerate high-definition charting renders.</li>
+          <li><strong>Login session token</strong> returned by your server after you enter the dashboard PIN, together with its expiry time:
+            stored in the Android Keystore-backed secure storage (<code>expo-secure-store</code>). The PIN itself is <strong>not</strong> stored.</li>
+          <li><strong>Optional static API token</strong> (advanced users only): stored in the same secure storage.</li>
+          <li><strong>App settings</strong> (server URL, language, notification preferences, demo-mode flag, selected modules, acceptance flag and date
+            of the risk notice, tour / notification-prompt / suggestion-card flags, IDs of trades already notified): stored in the app's private storage (AsyncStorage), not encrypted, not containing secrets.</li>
+          <li><strong>Account and trading data</strong> (balance, equity, positions, signals, trade history, research tracker) is downloaded from
+            your server while the app is open and kept in memory only.</li>
+        </ul>
+        <p>App data is excluded from Android cloud backup and device-to-device transfer.</p>
+      </section>
+
+      <section>
+        <h2>3. Network connections</h2>
+        <ul>
+          <li><strong>Your LastEdge server only.</strong> The app sends requests (including your PIN at login and the session token on every request)
+            to the URL you configure. Whether that traffic is encrypted depends on your setup: with an <code>https://</code> URL it is TLS-encrypted;
+            with a plain <code>http://</code> URL (e.g. a LAN address or an address inside your private VPN) it is <strong>not encrypted by the app</strong>
+            and you should only use it inside a trusted private network or VPN. The Android build explicitly allows plain HTTP
+            (<code>usesCleartextTraffic</code>) for this reason; HTTPS is not enforced.</li>
+          <li><strong>No other services.</strong> The app does not contact the developer, GitHub, analytics or advertising services. Notifications are
+            generated locally on the device; the app does not register with Expo's or Google's push service.</li>
+          <li>External links you tap (Telegram, Instagram, this policy) open in your browser or the corresponding app and are governed by those services' policies.</li>
         </ul>
       </section>
 
       <section>
-        <h2>3. Device Permissions & Technical Justification</h2>
-        <p>The application requests only the minimum set of permissions strictly necessary to execute its technical functions:</p>
-        <ul>
-          <li><strong>Internet Access (<code>INTERNET</code> / <code>ACCESS_NETWORK_STATE</code>):</strong> Required to establish encrypted REST and WebSocket connections with the user's private LastEdge Trading Engine and query account balance, equity, and open positions.</li>
-          <li><strong>Push Notifications (<code>POST_NOTIFICATIONS</code>):</strong> Required to deliver real-time actionable notifications regarding trade executions, Take Profit (TP), Stop Loss (SL) triggers, and Risk Engine circuit breakers.</li>
-          <li><strong>Vibration (<code>VIBRATE</code>):</strong> Required to provide haptic feedback when priority execution alerts and risk warnings are received.</li>
-        </ul>
-        <p>The application <strong>DOES NOT</strong> request or access device camera, contacts, GPS location, microphone, or external shared storage.</p>
+        <h2>4. What the app can do on your server</h2>
+        <p>
+          With a valid session the app can, on <strong>your</strong> server: approve or reject pending signals (an approval goes through your
+          engine's price-drift check and can place an order on your broker account), close one or all positions (closing all always asks for the
+          PIN again) and switch the autonomous mode. The Strategy Lab tab is view-only: it shows research results and never starts, promotes or edits anything.
+        </p>
       </section>
 
       <section>
-        <h2>4. Zero Third-Party Advertising & Tracking</h2>
+        <h2>5. Permissions</h2>
+        <ul>
+          <li><strong>Internet</strong> (<code>INTERNET</code>, and network-state checks that libraries may merge into the manifest): to reach your server.</li>
+          <li><strong>Notifications</strong> (<code>POST_NOTIFICATIONS</code>, Android 13+): local alerts about your bot (signals, closed trades, disconnections). Optional.</li>
+          <li><strong>Vibration</strong> (<code>VIBRATE</code>): haptic feedback.</li>
+        </ul>
+        <p>The app does <strong>not</strong> request location, camera, microphone, contacts, shared storage or overlay access: those permissions are explicitly removed from the Android manifest.</p>
+      </section>
+
+      <section>
+        <h2>6. Your server</h2>
         <p>
-          LastEdge contains zero third-party advertising SDKs, behavioral tracking frameworks, or commercial analytics pixels (no Google AdMob, no Meta Facebook Pixel, no external broker trackers). The application operates with a clean, privacy-first architecture focused on data sovereignty.
+          The data shown in the app lives on the server you operate (your PC or VPS). You are the controller of that data; the developer has no access to it.
         </p>
+      </section>
+
+      <section>
+        <h2>7. Deleting your data</h2>
+        <ul>
+          <li><strong>Settings &gt; Security &gt; Log out and lock</strong>: revokes the session on your server and deletes the token from the device.</li>
+          <li><strong>Settings &gt; Data &gt; Reset settings</strong>: deletes the stored settings and the optional static token.</li>
+          <li><strong>Uninstalling the app</strong> deletes everything the app stored on the device.</li>
+        </ul>
+        <p>Because the developer holds no data about you, there is nothing to request from us.</p>
       </section>
 
       <section class="disclaimer-card">
-        <h2>5. Financial Software Disclaimer</h2>
-        <p>
-          <strong>LastEdge is technical software for quantitative analysis and algorithmic execution telemetry.</strong>
-        </p>
+        <h2>8. Financial risk notice</h2>
         <ul>
-          <li>LastEdge is <strong>NOT</strong> a broker, dealer, investment advisor, or regulated banking institution.</li>
-          <li>LastEdge <strong>DOES NOT</strong> hold client deposits, custody funds, or process fiat or cryptocurrency payment transactions.</li>
-          <li>LastEdge <strong>DOES NOT</strong> provide personalized investment advice or solicitation of financial products.</li>
-          <li>Trading foreign exchange, commodities, and digital assets carries substantial financial risk. Past quantitative performance is not indicative of future returns.</li>
+          <li>LastEdge is software in development. It is <strong>not</strong> a broker, does not hold funds and does not process payments.</li>
+          <li>Nothing in the app is financial advice or an investment recommendation.</li>
+          <li>Trading forex, metals, crypto and CFDs carries a high risk of losing money. No LastEdge strategy has passed validation. Past performance, backtests and demo results do not guarantee future results.</li>
         </ul>
       </section>
 
       <section>
-        <h2>6. Data Sovereignty & Complete Erasure</h2>
+        <h2>9. Changes and contact</h2>
         <p>
-          The user maintains full sovereignty over all stored data at all times. To delete all cached data, connection settings, and credentials, the user can select <strong>"Reset Settings"</strong> within the in-app Settings modal or simply uninstall the application.
-        </p>
-      </section>
-
-      <section>
-        <h2>7. Contact & Support</h2>
-        <p>
-          For technical inquiries, bug disclosures, or questions regarding this Privacy Policy, contact the development team through our official GitHub repository:
-        </p>
-        <p>
+          We will update this page if the app's data handling changes. Questions:
           <a href="https://github.com/imlast999/lastedge-app/issues" target="_blank" rel="noopener noreferrer">https://github.com/imlast999/lastedge-app/issues</a>
         </p>
       </section>
@@ -266,79 +289,103 @@
     <!-- SPANISH CONTENT -->
     <div id="content-es" style="display: none;">
       <section>
-        <h2>1. Compromiso de Privacidad</h2>
+        <h2>1. Resumen</h2>
         <p>
-          En <strong>LastEdge</strong> nos tomamos la privacidad y la soberanía de los datos con el máximo rigor institucional. 
-          LastEdge es una aplicación cliente de monitorización cuantitativa y control de trading algorítmico conectada a MetaTrader 5 (MT5).
+          <strong>LastEdge</strong> (com.lastedge.app) es un cliente móvil para supervisar <em>tu propio</em> servidor LastEdge autoalojado,
+          que ejecuta tu bot de trading conectado a MetaTrader 5 (MT5). No hay cuentas en nuestro lado ni servidor central:
+          la app solo habla con la dirección de servidor que <strong>tú</strong> introduces.
         </p>
         <p>
-          <strong>No recopilamos, no vendemos, no monetizamos ni compartimos ningún dato personal, financiero ni de operativa con terceros.</strong>
+          <strong>El desarrollador no recibe, recopila, vende ni comparte ningún dato personal, financiero ni de trading desde la app.</strong>
+          No hay SDKs de analítica, publicidad ni informes de errores.
         </p>
       </section>
 
       <section>
-        <h2>2. Datos Almacenados y Tratamiento Local</h2>
-        <p>
-          Toda la información sensible necesaria para operar con la aplicación se almacena y procesa exclusivamente de forma <strong>local</strong> en el dispositivo del usuario:
-        </p>
+        <h2>2. Qué se guarda en tu dispositivo</h2>
         <ul>
-          <li><strong>Direcciones de conexión (URL/IP) y puertos:</strong> Se almacenan en el almacenamiento cifrado del dispositivo (SecureStore / KeyStore de Android).</li>
-          <li><strong>Claves de API y credenciales de acceso:</strong> Se guardan localmente y se transmiten únicamente de manera directa y cifrada entre el cliente móvil y el servidor privado autohospedado del usuario.</li>
-          <li><strong>Historial de trades y telemetría:</strong> Se descargan bajo demanda desde el servidor del usuario y se conservan en memoria caché local para agilizar la visualización gráfica.</li>
+          <li><strong>Token de sesión</strong> que devuelve tu servidor tras introducir el PIN del dashboard, con su fecha de caducidad:
+            guardado en el almacenamiento seguro respaldado por el Keystore de Android (<code>expo-secure-store</code>). El PIN <strong>no</strong> se guarda.</li>
+          <li><strong>Token API estático opcional</strong> (solo usuarios avanzados): en el mismo almacenamiento seguro.</li>
+          <li><strong>Ajustes de la app</strong> (URL del servidor, idioma, preferencias de notificación, modo demo, módulos seleccionados, aceptación y fecha
+            del aviso de riesgo, marcas del tour, del aviso de notificaciones y de la tarjeta de sugerencias, IDs de operaciones ya notificadas): en el almacenamiento privado de la app (AsyncStorage), sin cifrar y sin secretos.</li>
+          <li><strong>Datos de cuenta y trading</strong> (balance, equity, posiciones, señales, historial, tracker de investigación): se descargan de tu servidor
+            mientras la app está abierta y solo se mantienen en memoria.</li>
+        </ul>
+        <p>Los datos de la app están excluidos de la copia de seguridad en la nube de Android y de la transferencia entre dispositivos.</p>
+      </section>
+
+      <section>
+        <h2>3. Conexiones de red</h2>
+        <ul>
+          <li><strong>Solo con tu servidor LastEdge.</strong> La app envía peticiones (incluido tu PIN al iniciar sesión y el token de sesión en cada petición)
+            a la URL que configures. Que el tráfico vaya cifrado depende de tu instalación: con una URL <code>https://</code> va cifrado con TLS;
+            con <code>http://</code> (p. ej. una dirección de tu red local o de tu VPN privada) <strong>la app no lo cifra</strong>
+            y solo debes usarlo dentro de una red privada o VPN de confianza. Por eso la versión Android permite expresamente HTTP sin cifrar
+            (<code>usesCleartextTraffic</code>); HTTPS no es obligatorio.</li>
+          <li><strong>Ningún otro servicio.</strong> La app no contacta con el desarrollador, GitHub, servicios de analítica ni de publicidad. Las notificaciones
+            se generan localmente en el dispositivo; la app no se registra en el servicio push de Expo ni de Google.</li>
+          <li>Los enlaces externos que pulses (Telegram, Instagram, esta política) se abren en tu navegador o en la app correspondiente y se rigen por sus políticas.</li>
         </ul>
       </section>
 
       <section>
-        <h2>3. Permisos Requeridos y Finalidad</h2>
-        <p>La aplicación solicita únicamente los permisos estrictamente indispensables para su funcionalidad técnica:</p>
-        <ul>
-          <li><strong>Acceso a Internet (<code>INTERNET</code> / <code>ACCESS_NETWORK_STATE</code>):</strong> Requerido para comunicar con la API REST y WebSockets del servidor LastEdge del usuario y consultar el balance, equity y posiciones de MT5.</li>
-          <li><strong>Notificaciones (<code>POST_NOTIFICATIONS</code>):</strong> Requerido para alertar en tiempo real sobre aperturas de trades, cierres por Take Profit (TP), Stop Loss (SL) y activaciones del Circuit Breaker de riesgo.</li>
-          <li><strong>Vibración (<code>VIBRATE</code>):</strong> Requerido para proveer retroalimentación háptica en la recepción de alertas de trading prioritarias.</li>
-        </ul>
-        <p>La aplicación <strong>NO</strong> solicita acceso a cámara, contactos, ubicación por GPS, micrófono ni almacenamiento de archivos externos.</p>
+        <h2>4. Qué puede hacer la app en tu servidor</h2>
+        <p>
+          Con una sesión válida la app puede, en <strong>tu</strong> servidor: aprobar o rechazar señales pendientes (la aprobación pasa por el control
+          de desvío de precio de tu motor y puede abrir una orden en tu cuenta del bróker), cerrar una o todas las posiciones (cerrar todas siempre vuelve
+          a pedir el PIN) y cambiar el modo autónomo. La pestaña Strategy Lab es de solo lectura: muestra resultados de investigación y nunca lanza,
+          promociona ni edita nada.
+        </p>
       </section>
 
       <section>
-        <h2>4. Ausencia de Rastreadores y Publicidad de Terceros</h2>
+        <h2>5. Permisos</h2>
+        <ul>
+          <li><strong>Internet</strong> (<code>INTERNET</code>, y comprobación del estado de red que las librerías pueden añadir al manifiesto): para conectar con tu servidor.</li>
+          <li><strong>Notificaciones</strong> (<code>POST_NOTIFICATIONS</code>, Android 13+): avisos locales sobre tu bot (señales, cierres, desconexiones). Opcional.</li>
+          <li><strong>Vibración</strong> (<code>VIBRATE</code>): respuesta háptica.</li>
+        </ul>
+        <p>La app <strong>no</strong> solicita ubicación, cámara, micrófono, contactos, almacenamiento compartido ni superposición de pantalla: esos permisos se eliminan expresamente del manifiesto de Android.</p>
+      </section>
+
+      <section>
+        <h2>6. Tu servidor</h2>
         <p>
-          LastEdge no contiene librerías ni SDKs de publicidad invasiva, rastreo conductual o telemetría publicitaria (sin Google AdMob, sin Meta Facebook Pixel, sin brokers comerciales integrados). La aplicación opera bajo una arquitectura limpia y orientada a la soberanía de datos del usuario.
+          Los datos que muestra la app residen en el servidor que tú gestionas (tu PC o VPS). Tú eres el responsable de esos datos; el desarrollador no tiene acceso a ellos.
         </p>
+      </section>
+
+      <section>
+        <h2>7. Borrado de datos</h2>
+        <ul>
+          <li><strong>Ajustes &gt; Seguridad &gt; Cerrar sesión y bloquear</strong>: revoca la sesión en tu servidor y borra el token del dispositivo.</li>
+          <li><strong>Ajustes &gt; Datos &gt; Restablecer ajustes</strong>: borra los ajustes guardados y el token estático opcional.</li>
+          <li><strong>Desinstalar la app</strong> borra todo lo que la app guardó en el dispositivo.</li>
+        </ul>
+        <p>Como el desarrollador no guarda datos tuyos, no hay nada que solicitarnos.</p>
       </section>
 
       <section class="disclaimer-card">
-        <h2>5. Exención de Responsabilidad Financiera (Disclaimer)</h2>
-        <p>
-          <strong>LastEdge es una herramienta de software de análisis técnico y visualización de telemetría algorítmica.</strong>
-        </p>
+        <h2>8. Aviso de riesgo financiero</h2>
         <ul>
-          <li>LastEdge <strong>NO</strong> es un broker ni una entidad financiera regulada.</li>
-          <li>LastEdge <strong>NO</strong> custodia fondos de usuarios, depósitos ni procesa transacciones bancarias.</li>
-          <li>LastEdge <strong>NO</strong> presta servicios de asesoramiento financiero personalizado ni captación de inversiones.</li>
-          <li>El trading en mercados financieros (Forex, Criptomonedas, Materias Primas) conlleva un riesgo de capital significativo. Los rendimientos pasados de algoritmos cuantitativos no garantizan resultados futuros.</li>
+          <li>LastEdge es software en desarrollo. <strong>No</strong> es un bróker, no custodia fondos ni procesa pagos.</li>
+          <li>Nada de lo que muestra la app es asesoramiento financiero ni una recomendación de inversión.</li>
+          <li>Operar con divisas, metales, criptomonedas y CFDs conlleva un riesgo elevado de perder dinero. Ninguna estrategia de LastEdge ha superado la validación. Los resultados pasados, los backtests y los resultados en demo no garantizan resultados futuros.</li>
         </ul>
       </section>
 
       <section>
-        <h2>6. Control de Datos y Eliminación</h2>
+        <h2>9. Cambios y contacto</h2>
         <p>
-          El usuario mantiene el control total de sus datos en todo momento. Para borrar todos los registros, credenciales, historial en caché y configuraciones de conexión, el usuario puede pulsar el botón <strong>"Restablecer Ajustes"</strong> en la pestaña de Ajustes de la app o desinstalar la aplicación en cualquier momento.
-        </p>
-      </section>
-
-      <section>
-        <h2>7. Contacto y Soporte</h2>
-        <p>
-          Para cualquier duda, sugerencia técnica o consulta sobre esta política de privacidad, puedes contactar al equipo de desarrollo a través del repositorio oficial de GitHub:
-        </p>
-        <p>
+          Actualizaremos esta página si cambia el tratamiento de datos de la app. Dudas:
           <a href="https://github.com/imlast999/lastedge-app/issues" target="_blank" rel="noopener noreferrer">https://github.com/imlast999/lastedge-app/issues</a>
         </p>
       </section>
     </div>
 
     <footer>
-      &copy; 2026 LastEdge Quantitative Trading Ecosystem · All rights reserved.
+      &copy; 2026 LastEdge
     </footer>
   </div>
 
@@ -359,7 +406,7 @@
         btnEs.classList.add('active');
         badge.textContent = 'Legal & Privacidad';
         title.textContent = 'Política de Privacidad de LastEdge';
-        meta.innerHTML = 'Aplicación: <strong>LastEdge</strong> (com.lastedge.app) · Última actualización: Noviembre 2026';
+        meta.innerHTML = 'Aplicación: <strong>LastEdge</strong> (com.lastedge.app) · Última actualización: 20 de noviembre de 2026';
         document.documentElement.lang = 'es';
       } else {
         enDiv.style.display = 'block';
@@ -368,7 +415,7 @@
         btnEs.classList.remove('active');
         badge.textContent = 'Compliance & Legal';
         title.textContent = 'Privacy Policy for LastEdge';
-        meta.innerHTML = 'Application: <strong>LastEdge</strong> (com.lastedge.app) · Effective Date: November 2026';
+        meta.innerHTML = 'Application: <strong>LastEdge</strong> (com.lastedge.app) · Last updated: 20 November 2026';
         document.documentElement.lang = 'en';
       }
     }
